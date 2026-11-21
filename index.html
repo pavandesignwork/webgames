@@ -18,17 +18,18 @@
   <a class="card" href="stars.html"><div class="emoji">⭐</div><h2>Star Catcher</h2><p>Catch falling stars, avoid the rocks!</p></a>
   <a class="card" href="test.html"><div class="emoji">🔧</div><h2>Controller Test</h2><p>Check that your controller works</p></a>
 </div>
-<p style="opacity:.85">◀ ▶ choose · ✕ play · in a game: OPTIONS = pause · L1 / L2 = exit back here</p>
+<p style="opacity:.85">◀ ▶ choose · ✕ play · in a game: OPTIONS = pause · L1 / L2 = exit back here · R1 = sound on/off</p>
 <div id="pad">Controller: not connected — press any button on your controller</div>
+<script src="sound.js"></script>
 <script src="input.js"></script>
 <script>
  const cards=[...document.querySelectorAll('.card')]; let sel=0, lock=false;
  function loop(){ const s=Input.poll();
    document.getElementById('pad').textContent = s.padName ? '✅ Controller: '+s.padName : 'Controller: not connected — press any button on your controller';
-   if((s.left||s.right)&&!lock){ sel=(sel+(s.right?1:-1)+cards.length)%cards.length; lock=true; }
+   if((s.left||s.right)&&!lock){ sel=(sel+(s.right?1:-1)+cards.length)%cards.length; lock=true; Sfx.move(); }
    if(!s.left&&!s.right) lock=false;
    cards.forEach((c,i)=>c.classList.toggle('sel',i===sel));
-   if(s.aPressed||s.startPressed) location.href=cards[sel].href;
+   if(s.aPressed||s.startPressed){ Sfx.select(); const h=cards[sel].href; setTimeout(()=>location.href=h,180); }
    requestAnimationFrame(loop); }
  loop();
 </script></body></html>

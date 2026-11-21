@@ -4,6 +4,7 @@
 //   D-pad / Left stick  = move
 //   ✕ (and □ / △)       = jump / select
 //   OPTIONS             = pause
+//   R1                  = sound on/off (keyboard: M)
 //   L1 / L2 / SHARE / HOME / TOUCHPAD = back to the menu
 //   Keyboard: arrows/WASD move, Space = jump, Enter/P = pause, Esc/Backspace = menu
 const Input = (() => {
@@ -63,11 +64,13 @@ const Input = (() => {
       right: n.dright || n.lx >  DZ || k('ArrowRight') || k('KeyD'),
       a:     n.cross || n.square || n.triangle || k('Space') || k('KeyZ'),
       start: n.options || k('Enter') || k('KeyP'),
+      mute:  n.r1,
       back:  n.l1 || n.l2 || n.share || n.home || n.touchpad || k('Escape') || k('Backspace'),
     };
     state.aPressed = cur.a && !prev.a;
     state.startPressed = cur.start && !prev.start;
     state.backPressed = cur.back && !prev.back;
+    if (cur.mute && !prev.mute && typeof Sfx !== 'undefined') Sfx.toggleMute();
     Object.assign(state, cur);
     state.btn = n;
     state.padName = gp ? gp.id : null;

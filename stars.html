@@ -6,13 +6,14 @@
  canvas{border-radius:16px;box-shadow:0 0 40px #ffd84a44;max-width:95vw;max-height:85vh} a{color:#ffd84a}
 </style></head><body>
 <canvas id="c" width="800" height="600"></canvas>
-<p>Left/right = move · ✕ = jump · OPTIONS = pause · L1 / L2 = exit to menu · <a href="index.html">◀ Menu</a></p>
+<p>Left/right = move · ✕ = jump · OPTIONS = pause · L1 / L2 = exit to menu · R1 = sound on/off · <a href="index.html">◀ Menu</a></p>
+<script src="sound.js"></script>
 <script src="input.js"></script>
 <script>
 const cv=document.getElementById('c'), g=cv.getContext('2d'), W=cv.width, H=cv.height;
 const bgStars=[...Array(80)].map(()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.5+.3}));
 let p, items, parts, score, lives, t, state='title', paused=false, combo;
-function reset(){ p={x:W/2,y:H-60,vx:0,vy:0}; items=[]; parts=[]; score=0; lives=3; t=0; combo=0; state='play'; }
+function reset(){ p={x:W/2,y:H-60,vx:0,vy:0}; items=[]; parts=[]; score=0; lives=3; t=0; combo=0; state='play'; Sfx.ready(); }
 function spawn(){
   const lvl=1+Math.floor(score/150), r=Math.random();
   const kind = r<0.22+lvl*0.02 ? 'rock' : r<0.27 ? 'heart' : 'star';
@@ -22,19 +23,19 @@ function burst(x,y,col,n=14){ for(let i=0;i<n;i++){const a=Math.random()*7,s=Mat
 function update(){
   const s=Input.poll();
   if(state!=='play'){ if(s.aPressed||s.startPressed) reset(); return; }
-  if(s.startPressed) paused=!paused; if(paused) return;
+  if(s.startPressed){ paused=!paused; Sfx.pause(); } if(paused) return;
   t++;
   p.vx += (s.right?1.1:0) - (s.left?1.1:0); p.vx*=0.82; p.x=Math.max(40,Math.min(W-40,p.x+p.vx));
-  if(s.aPressed && p.y>=H-60){ p.vy=-11; Input.rumble(60,.3); }
+  if(s.aPressed && p.y>=H-60){ p.vy=-11; Input.rumble(60,.3); Sfx.jump(); }
   p.vy+=0.5; p.y=Math.min(H-60,p.y+p.vy); if(p.y>=H-60) p.vy=0;
   if(t%Math.max(18,45-Math.floor(score/60))===0) spawn();
   for(const it of items){
     it.y+=it.vy; it.rot+=it.vr;
     if(Math.abs(it.x-p.x)<46 && Math.abs(it.y-(p.y-10))<34){
       it.dead=true;
-      if(it.kind==='star'){ combo++; score+=10*Math.min(5,1+Math.floor(combo/5)); burst(it.x,it.y,'#ffd84a'); }
-      if(it.kind==='heart'){ lives=Math.min(5,lives+1); burst(it.x,it.y,'#ff6b9a'); }
-      if(it.kind==='rock'){ lives--; combo=0; burst(it.x,it.y,'#a08070',20); Input.rumble(300,1); if(lives<=0) state='over'; }
+      if(it.kind==='star'){ combo++; score+=10*Math.min(5,1+Math.floor(combo/5)); burst(it.x,it.y,'#ffd84a'); Sfx.star(); }
+      if(it.kind==='heart'){ lives=Math.min(5,lives+1); burst(it.x,it.y,'#ff6b9a'); Sfx.heart(); }
+      if(it.kind==='rock'){ lives--; combo=0; burst(it.x,it.y,'#a08070',20); Input.rumble(300,1); Sfx.hit(); if(lives<=0){ state='over'; Sfx.gameOver(); } }
     }
     if(it.y>H+30){ it.dead=true; if(it.kind==='star') combo=0; }
   }
@@ -72,5 +73,8 @@ function draw(){
     g.fillStyle='#fff'; g.font='24px system-ui'; g.fillText(msg[1],W/2,H/2+30);
     const pn=Input.state.padName; g.font='16px system-ui'; g.fillStyle='#9fe'; g.fillText(pn?'🎮 '+pn:'No controller yet — press any button on it (keyboard works too)',W/2,H/2+90); }
 }
-(function loop(){ update(); draw(); requestAnimationFrame(loop); })();
+let musicOn=false;
+(function loop(){ update(); draw();
+  const want = state==='play' && !paused;
+  if(want && !musicOn){ Sfx.startMusic('stars'); musicOn=true; } else if(!want && musicOn){ Sfx.stopMusic(); musicOn=false; } requestAnimationFrame(loop); })();
 </script></body></html>

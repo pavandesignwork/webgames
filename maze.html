@@ -8,7 +8,8 @@
 </style></head><body>
 <div id="hud"><span id="score">Score 0</span><span id="lives"></span><span id="lvl">Level 1</span></div>
 <canvas id="c"></canvas>
-<p>D-pad / stick = move · OPTIONS = pause · L1 / L2 = exit to menu · <a href="index.html">◀ Menu</a></p>
+<p>D-pad / stick = move · OPTIONS = pause · L1 / L2 = exit to menu · R1 = sound on/off · <a href="index.html">◀ Menu</a></p>
+<script src="sound.js"></script>
 <script src="input.js"></script>
 <script>
 const MAP = [
@@ -45,7 +46,7 @@ function reset(full){
     grid.forEach((r,y)=>r.forEach((c,x)=>{ if(c==='P'){pSpawn=[x,y];r[x]=' ';} if(c==='E'){bugSpawns.push([x,y]);r[x]=' ';} })); }
   player={x:pSpawn[0],y:pSpawn[1],px:pSpawn[0],py:pSpawn[1],dir:[0,0],want:[0,0],t:1,mouth:0};
   bugs=bugSpawns.slice(0,Math.min(4,1+level+ (level>1?1:0))).map((s,i)=>({x:s[0],y:s[1],px:s[0],py:s[1],dir:[0,-1],t:1,c:BUG_COLORS[i],delay:i*90,eaten:false}));
-  state='ready'; timer=90; scared=0;
+  state='ready'; timer=90; scared=0; Sfx.ready();
 }
 function berriesLeft(){ return grid.some(r=>r.includes('.')||r.includes('o')); }
 function step(ent, speed){ // move between tile centres; returns true when arrived at a tile
@@ -53,20 +54,20 @@ function step(ent, speed){ // move between tile centres; returns true when arriv
 
 function update(){
   const s=Input.poll();
-  if(s.startPressed && state==='play') paused=!paused;
+  if(s.startPressed && state==='play'){ paused=!paused; Sfx.pause(); }
   if(state==='over'||state==='win'){ if(s.aPressed||s.startPressed){ if(state==='over'){score=0;lives=3;level=1;} else level++; reset(true);} return; }
   if(paused) return;
   if(state==='ready'){ if(--timer<=0) state='play'; return; }
-  if(state==='dying'){ if(--timer<=0){ if(lives<=0) state='over'; else reset(false);} return; }
+  if(state==='dying'){ if(--timer<=0){ if(lives<=0){ state='over'; Sfx.gameOver(); } else reset(false);} return; }
 
   for(const k in DIRS) if(s[k]) player.want=DIRS[k];
   // player
   if(step(player, 0.13)){
     player.px=player.x; player.py=player.y;
     const c=grid[player.y][player.x];
-    if(c==='.'){ grid[player.y][player.x]=' '; score+=10; }
-    if(c==='o'){ grid[player.y][player.x]=' '; score+=50; scared=420; bugs.forEach(b=>b.eaten=false); Input.rumble(150,.4); }
-    if(!berriesLeft()){ state='win'; Input.rumble(300,.8); return; }
+    if(c==='.'){ grid[player.y][player.x]=' '; score+=10; Sfx.eat(); }
+    if(c==='o'){ grid[player.y][player.x]=' '; score+=50; scared=420; bugs.forEach(b=>b.eaten=false); Sfx.power(); Input.rumble(150,.4); }
+    if(!berriesLeft()){ state='win'; Input.rumble(300,.8); Sfx.win(); return; }
     if(!wall(player.x+player.want[0],player.y+player.want[1])) player.dir=player.want;
     if(!wall(player.x+player.dir[0],player.y+player.dir[1])){
       player.x=(player.x+player.dir[0]+W)%W; player.y+=player.dir[1]; player.t=0;
@@ -95,8 +96,8 @@ function update(){
     const bx=b.px+(b.x-b.px)*b.t, by=b.py+(b.y-b.py)*b.t;
     const pxx=player.px+(player.x-player.px)*player.t, pyy=player.py+(player.y-player.py)*player.t;
     if(Math.hypot(bx-pxx,by-pyy)<0.7 && !b.eaten){
-      if(scared){ b.eaten=true; score+=200; Input.rumble(80,.5); }
-      else { lives--; state='dying'; timer=80; Input.rumble(400,1); }
+      if(scared){ b.eaten=true; score+=200; Sfx.eatBug(); Input.rumble(80,.5); }
+      else { lives--; state='dying'; timer=80; Sfx.die(); Input.rumble(400,1); }
     }
   }
 }
@@ -144,5 +145,9 @@ function draw(){
   document.getElementById('lvl').textContent='Level '+level;
 }
 reset(true);
-(function loop(){ update(); draw(); requestAnimationFrame(loop); })();
+let musicOn=false;
+(function loop(){ update(); draw();
+  const want = state==='play' && !paused;
+  if(want && !musicOn){ Sfx.startMusic('maze'); musicOn=true; } else if(!want && musicOn){ Sfx.stopMusic(); musicOn=false; }
+  if(musicOn) Sfx.setMusicVolume(scared ? 0.06 : 0.13); requestAnimationFrame(loop); })();
 </script></body></html>
