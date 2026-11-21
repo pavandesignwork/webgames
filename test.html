@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Controller Test</title>
+<style>body{background:#111;color:#eee;font-family:monospace;padding:20px;font-size:16px}
+.b{display:inline-block;width:44px;margin:3px;padding:6px 0;text-align:center;background:#333;border-radius:6px}
+.on{background:#4be38a;color:#000}.big{font-size:22px;margin:10px 0}a{color:#9fe}</style></head><body>
+<h1>🎮 Controller Test</h1>
+<p>Click on this page once, then press buttons on your controller. <a href="index.html">◀ Menu</a></p>
+<div id="out" class="big">No controller detected yet. Press any button on it…</div>
+<div id="game" class="big"></div>
+<div id="pads"></div>
+<script src="input.js"></script>
+<script>
+(function loop(){
+  const pads=[...(navigator.getGamepads?navigator.getGamepads():[])].filter(Boolean);
+  document.getElementById('out').textContent = pads.length ? pads.length+' controller(s) found' :
+    (navigator.getGamepads ? 'No controller detected yet. Press any button on it…' : '❌ This browser has no Gamepad API. Use Chrome or Edge.');
+  document.getElementById('pads').innerHTML = pads.map(p=>`<h3>#${p.index}: ${p.id}<br>mapping: "${p.mapping||'(none / non-standard)'}"</h3>
+    <div>Buttons: ${p.buttons.map((b,i)=>`<span class="b ${b.pressed?'on':''}">${i}</span>`).join('')}</div>
+    <div>Axes: ${p.axes.map((a,i)=>`<span class="b ${Math.abs(a)>.5&&Math.abs(a)<=1.05?'on':''}" style="width:90px">${i}: ${a.toFixed(2)}</span>`).join('')}</div>`).join('');
+  const s=Input.poll();
+  document.getElementById('game').textContent='What the games see → '+['up','down','left','right','a','start'].filter(k=>s[k]).join(' + ');
+  requestAnimationFrame(loop);
+})();
+</script></body></html>
