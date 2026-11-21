@@ -44,7 +44,7 @@ function update(){
 }
 function drawStar(x,y,r,rot){ g.save(); g.translate(x,y); g.rotate(rot); g.beginPath();
   for(let i=0;i<10;i++){const rr=i%2?r*.45:r,a=i*Math.PI/5-Math.PI/2; g.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);} g.closePath();
-  g.fillStyle='#ffd84a'; g.shadowColor='#ffd84a'; g.shadowBlur=18; g.fill(); g.restore(); }
+  g.fillStyle='#ffd84a'; g.fill(); g.globalAlpha=.25; g.beginPath(); g.arc(0,0,r*1.3,0,7); g.fill(); g.restore(); }
 function draw(){
   const grd=g.createLinearGradient(0,0,0,H); grd.addColorStop(0,'#0d0b26'); grd.addColorStop(1,'#3a1d5c'); g.fillStyle=grd; g.fillRect(0,0,W,H);
   g.fillStyle='#fff'; for(const b of bgStars){ g.globalAlpha=.4+.6*Math.abs(Math.sin(Date.now()/700+b.x)); g.fillRect(b.x,b.y,b.r*2,b.r*2);} g.globalAlpha=1;
@@ -74,7 +74,11 @@ function draw(){
     const pn=Input.state.padName; g.font='16px system-ui'; g.fillStyle='#9fe'; g.fillText(pn?'🎮 '+pn:'No controller yet — press any button on it (keyboard works too)',W/2,H/2+90); }
 }
 let musicOn=false;
-(function loop(){ update(); draw();
+let last=performance.now(), acc=0;
+(function loop(now=performance.now()){
+  acc+=Math.min(250,now-last); last=now;
+  while(acc>=1000/60){ update(); acc-=1000/60; }
+  draw();
   const want = state==='play' && !paused;
   if(want && !musicOn){ Sfx.startMusic('stars'); musicOn=true; } else if(!want && musicOn){ Sfx.stopMusic(); musicOn=false; } requestAnimationFrame(loop); })();
 </script></body></html>

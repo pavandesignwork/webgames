@@ -61,6 +61,11 @@ function update(){
   if(state==='dying'){ if(--timer<=0){ if(lives<=0){ state='over'; Sfx.gameOver(); } else reset(false);} return; }
 
   for(const k in DIRS) if(s[k]) player.want=DIRS[k];
+  // instant turn-around mid-tile (no waiting to reach the next tile)
+  if(player.t<1 && player.want[0]===-player.dir[0] && player.want[1]===-player.dir[1] && (player.want[0]||player.want[1])){
+    [player.x,player.px]=[player.px,player.x]; [player.y,player.py]=[player.py,player.y];
+    player.t=1-player.t; player.dir=player.want;
+  }
   // player
   if(step(player, 0.13)){
     player.px=player.x; player.py=player.y;
@@ -102,13 +107,20 @@ function update(){
   }
 }
 
+const wallLayer=document.createElement('canvas'); wallLayer.width=cv.width; wallLayer.height=cv.height;
+(()=>{ const w=wallLayer.getContext('2d'); w.fillStyle='#2f6bff';
+  MAP.forEach((r,y)=>[...r].forEach((c,x)=>{ if(c==='#'){ w.beginPath(); w.roundRect(x*T+3,y*T+3,T-6,T-6,8); w.fill(); } })); })();
+const rainbow=document.createElement('canvas'); rainbow.width=rainbow.height=40;
+(()=>{ const r=rainbow.getContext('2d'); r.font='30px serif'; r.textAlign='center'; r.textBaseline='middle'; r.fillText('🌈',20,22); })();
+let hudCache='';
 function draw(){
   g.clearRect(0,0,cv.width,cv.height);
+  g.drawImage(wallLayer,0,0);
+  const pulse=18+Math.sin(performance.now()/150)*4;
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){
     const c=grid[y][x];
-    if(c==='#'){ g.fillStyle='#2f6bff'; g.beginPath(); g.roundRect(x*T+3,y*T+3,T-6,T-6,8); g.fill(); }
     if(c==='.'){ g.fillStyle='#9b6bff'; g.beginPath(); g.arc(x*T+T/2,y*T+T/2,5,0,7); g.fill(); g.fillStyle='#4be38a'; g.fillRect(x*T+T/2-1,y*T+T/2-9,2,4); }
-    if(c==='o'){ const r=9+Math.sin(Date.now()/150)*2; g.font=`${r*2}px serif`; g.textAlign='center'; g.textBaseline='middle'; g.fillText('🌈',x*T+T/2,y*T+T/2); }
+    if(c==='o') g.drawImage(rainbow,x*T+T/2-pulse,y*T+T/2-pulse,pulse*2,pulse*2);
   }
   // player: round teal blob with eyes, squishes as it moves
   const px=(player.px+(player.x-player.px)*player.t)*T+T/2, py=(player.py+(player.y-player.py)*player.t)*T+T/2;
@@ -140,13 +152,19 @@ function draw(){
   }
   const msg = state==='ready'?'GET READY!':state==='over'?'GAME OVER — press ✕':state==='win'?'YOU WIN! 🎉 press ✕':paused?'PAUSED':'';
   if(msg){ g.fillStyle='#000a'; g.fillRect(0,cv.height/2-34,cv.width,68); g.fillStyle='#ffd84a'; g.font='bold 32px system-ui'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(msg,cv.width/2,cv.height/2); }
-  document.getElementById('score').textContent='Score '+score;
-  document.getElementById('lives').textContent='💚'.repeat(Math.max(0,lives));
-  document.getElementById('lvl').textContent='Level '+level;
+  const hud=score+'|'+lives+'|'+level;
+  if(hud!==hudCache){ hudCache=hud;
+    document.getElementById('score').textContent='Score '+score;
+    document.getElementById('lives').textContent='💚'.repeat(Math.max(0,lives));
+    document.getElementById('lvl').textContent='Level '+level; }
 }
 reset(true);
 let musicOn=false;
-(function loop(){ update(); draw();
+let last=performance.now(), acc=0;
+(function loop(now=performance.now()){
+  acc+=Math.min(250,now-last); last=now;
+  while(acc>=1000/60){ update(); acc-=1000/60; }
+  draw();
   const want = state==='play' && !paused;
   if(want && !musicOn){ Sfx.startMusic('maze'); musicOn=true; } else if(!want && musicOn){ Sfx.stopMusic(); musicOn=false; }
   if(musicOn) Sfx.setMusicVolume(scared ? 0.06 : 0.13); requestAnimationFrame(loop); })();
