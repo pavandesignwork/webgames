@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blob Maze</title>
+<style>
+ body{margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#10213d;color:#fff;font-family:system-ui,sans-serif}
+ canvas{background:#0b1630;border-radius:16px;box-shadow:0 0 40px #3fd0ff55;max-width:95vw;max-height:80vh}
+ #hud{font-size:1.4rem;margin:.4rem;display:flex;gap:2rem} a{color:#9fe}
+</style></head><body>
+<div id="hud"><span id="score">Score 0</span><span id="lives"></span><span id="lvl">Level 1</span></div>
+<canvas id="c"></canvas>
+<p>D-pad / left stick to move · Start = pause · <a href="index.html">◀ Menu</a></p>
+<script src="input.js"></script>
+<script>
+const MAP = [
+"###################",
+"#o.......#.......o#",
+"#.##.###.#.###.##.#",
+"#.................#",
+"#.##.#.#####.#.##.#",
+"#....#...#...#....#",
+"####.### # ###.####",
+"   #.#   E   #.#   ",
+"####.# ## ## #.####",
+"    .  #EEE#  .    ",
+"####.# ##### #.####",
+"   #.#       #.#   ",
+"####.# ##### #.####",
+"#........#........#",
+"#.##.###.#.###.##.#",
+"#o.#.....P.....#.o#",
+"##.#.#.#####.#.#.##",
+"#....#...#...#....#",
+"#.######.#.######.#",
+"#.................#",
+"###################"];
+const T=32, W=MAP[0].length, H=MAP.length;
+const cv=document.getElementById('c'), g=cv.getContext('2d'); cv.width=W*T; cv.height=H*T;
+const DIRS={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
+const BUG_COLORS=['#ff5b6e','#ffa53b','#c77dff','#4be38a'];
+let grid, player, bugs, score=0, lives=3, level=1, scared=0, paused=false, state='ready', timer=90, bugSpawns, pSpawn;
+
+function wall(x,y){ if(y<0||y>=H) return true; x=(x+W)%W; return grid[y][x]==='#'; }
+function reset(full){
+  if(full){ grid=MAP.map(r=>r.split('')); bugSpawns=[]; 
+    grid.forEach((r,y)=>r.forEach((c,x)=>{ if(c==='P'){pSpawn=[x,y];r[x]=' ';} if(c==='E'){bugSpawns.push([x,y]);r[x]=' ';} })); }
+  player={x:pSpawn[0],y:pSpawn[1],px:pSpawn[0],py:pSpawn[1],dir:[0,0],want:[0,0],t:1,mouth:0};
+  bugs=bugSpawns.slice(0,Math.min(4,1+level+ (level>1?1:0))).map((s,i)=>({x:s[0],y:s[1],px:s[0],py:s[1],dir:[0,-1],t:1,c:BUG_COLORS[i],delay:i*90,eaten:false}));
+  state='ready'; timer=90; scared=0;
+}
+function berriesLeft(){ return grid.some(r=>r.includes('.')||r.includes('o')); }
+function step(ent, speed){ // move between tile centres; returns true when arrived at a tile
+  ent.t+=speed; if(ent.t>=1){ ent.t=1; return true; } return false; }
+
+function update(){
+  const s=Input.poll();
+  if(s.startPressed && state==='play') paused=!paused;
+  if(state==='over'||state==='win'){ if(s.aPressed||s.startPressed){ if(state==='over'){score=0;lives=3;level=1;} else level++; reset(true);} return; }
+  if(paused) return;
+  if(state==='ready'){ if(--timer<=0) state='play'; return; }
+  if(state==='dying'){ if(--timer<=0){ if(lives<=0) state='over'; else reset(false);} return; }
+
+  for(const k in DIRS) if(s[k]) player.want=DIRS[k];
+  // player
+  if(step(player, 0.13)){
+    player.px=player.x; player.py=player.y;
+    const c=grid[player.y][player.x];
+    if(c==='.'){ grid[player.y][player.x]=' '; score+=10; }
+    if(c==='o'){ grid[player.y][player.x]=' '; score+=50; scared=420; bugs.forEach(b=>b.eaten=false); Input.rumble(150,.4); }
+    if(!berriesLeft()){ state='win'; Input.rumble(300,.8); return; }
+    if(!wall(player.x+player.want[0],player.y+player.want[1])) player.dir=player.want;
+    if(!wall(player.x+player.dir[0],player.y+player.dir[1])){
+      player.x=(player.x+player.dir[0]+W)%W; player.y+=player.dir[1]; player.t=0;
+      if(Math.abs(player.x-player.px)>1) player.px=player.x; // wrap tunnel
+    }
+  }
+  player.mouth+=0.25;
+  if(scared>0) scared--;
+  // bugs
+  const bugSpeed=(scared?0.05:0.07+level*0.008);
+  for(const b of bugs){
+    if(b.delay>0){ b.delay--; continue; }
+    if(step(b, b.eaten?0.2:bugSpeed)){
+      b.px=b.x; b.py=b.y;
+      if(b.eaten && b.x===bugSpawns[1][0] && b.y===bugSpawns[1][1]) b.eaten=false;
+      const opts=Object.values(DIRS).filter(d=>!wall(b.x+d[0],b.y+d[1]) && !(d[0]===-b.dir[0]&&d[1]===-b.dir[1]) && !(grid[b.y+d[1]]?.[b.x+d[0]]===undefined));
+      const choices=opts.length?opts:[[-b.dir[0],-b.dir[1]]];
+      const target = b.eaten ? bugSpawns[1] : [player.x,player.y];
+      choices.sort((d1,d2)=>{ const f=d=>Math.hypot(b.x+d[0]-target[0], b.y+d[1]-target[1]); return f(d1)-f(d2); });
+      let pick = choices[0];
+      if(!b.eaten && (scared || Math.random()<0.35)) pick = scared ? choices[choices.length-1] : choices[Math.floor(Math.random()*choices.length)];
+      b.dir=pick; b.x=(b.x+pick[0]+W)%W; b.y+=pick[1]; b.t=0;
+      if(Math.abs(b.x-b.px)>1) b.px=b.x;
+    }
+    // collision
+    const bx=b.px+(b.x-b.px)*b.t, by=b.py+(b.y-b.py)*b.t;
+    const pxx=player.px+(player.x-player.px)*player.t, pyy=player.py+(player.y-player.py)*player.t;
+    if(Math.hypot(bx-pxx,by-pyy)<0.7 && !b.eaten){
+      if(scared){ b.eaten=true; score+=200; Input.rumble(80,.5); }
+      else { lives--; state='dying'; timer=80; Input.rumble(400,1); }
+    }
+  }
+}
+
+function draw(){
+  g.clearRect(0,0,cv.width,cv.height);
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const c=grid[y][x];
+    if(c==='#'){ g.fillStyle='#2f6bff'; g.beginPath(); g.roundRect(x*T+3,y*T+3,T-6,T-6,8); g.fill(); }
+    if(c==='.'){ g.fillStyle='#9b6bff'; g.beginPath(); g.arc(x*T+T/2,y*T+T/2,5,0,7); g.fill(); g.fillStyle='#4be38a'; g.fillRect(x*T+T/2-1,y*T+T/2-9,2,4); }
+    if(c==='o'){ const r=9+Math.sin(Date.now()/150)*2; g.font=`${r*2}px serif`; g.textAlign='center'; g.textBaseline='middle'; g.fillText('🌈',x*T+T/2,y*T+T/2); }
+  }
+  // player: round teal blob with eyes, squishes as it moves
+  const px=(player.px+(player.x-player.px)*player.t)*T+T/2, py=(player.py+(player.y-player.py)*player.t)*T+T/2;
+  const sq=1+Math.sin(player.mouth)*0.08;
+  g.save(); g.translate(px,py); g.scale(sq,2-sq);
+  if(state==='dying') g.scale(timer/80,timer/80);
+  g.fillStyle='#3ff2d0'; g.beginPath(); g.arc(0,0,13,0,7); g.fill();
+  g.fillStyle='#fff'; g.beginPath(); g.arc(-5+player.dir[0]*3,-3+player.dir[1]*3,4.5,0,7); g.arc(5+player.dir[0]*3,-3+player.dir[1]*3,4.5,0,7); g.fill();
+  g.fillStyle='#123'; g.beginPath(); g.arc(-5+player.dir[0]*4.5,-3+player.dir[1]*4.5,2,0,7); g.arc(5+player.dir[0]*4.5,-3+player.dir[1]*4.5,2,0,7); g.fill();
+  g.fillStyle='#ff7aa8'; g.beginPath(); g.arc(-9,4,2.5,0,7); g.arc(9,4,2.5,0,7); g.fill();
+  g.restore();
+  // bugs: little beetles with legs & antennae
+  for(const b of bugs){
+    const bx=(b.px+(b.x-b.px)*b.t)*T+T/2, by=(b.py+(b.y-b.py)*b.t)*T+T/2;
+    g.save(); g.translate(bx,by);
+    const flash = scared>0 && scared<120 && Math.floor(scared/10)%2;
+    if(!b.eaten){
+      g.strokeStyle='#000a'; g.lineWidth=2; const w=Math.sin(Date.now()/80)*2;
+      for(const sx of [-1,1]) for(const ly of [-5,0,5]){ g.beginPath(); g.moveTo(sx*8,ly); g.lineTo(sx*14,ly+w*sx); g.stroke(); }
+      g.beginPath(); g.moveTo(-3,-10); g.lineTo(-7,-16); g.moveTo(3,-10); g.lineTo(7,-16); g.stroke();
+      g.fillStyle = scared ? (flash?'#fff':'#5a8cff') : b.c;
+      g.beginPath(); g.ellipse(0,0,10,12,0,0,7); g.fill();
+      g.strokeStyle='#0005'; g.beginPath(); g.moveTo(0,-8); g.lineTo(0,12); g.stroke();
+    }
+    g.fillStyle='#fff'; g.beginPath(); g.arc(-4,-6,3.5,0,7); g.arc(4,-6,3.5,0,7); g.fill();
+    g.fillStyle='#000'; g.beginPath(); g.arc(-4+b.dir[0]*1.5,-6+b.dir[1]*1.5,1.6,0,7); g.arc(4+b.dir[0]*1.5,-6+b.dir[1]*1.5,1.6,0,7); g.fill();
+    if(!scared && !b.eaten){ g.strokeStyle='#000'; g.lineWidth=2; g.beginPath(); g.moveTo(-7,-11); g.lineTo(-2,-9); g.moveTo(7,-11); g.lineTo(2,-9); g.stroke(); }
+    g.restore();
+  }
+  const msg = state==='ready'?'GET READY!':state==='over'?'GAME OVER — press A':state==='win'?'YOU WIN! 🎉 press A':paused?'PAUSED':'';
+  if(msg){ g.fillStyle='#000a'; g.fillRect(0,cv.height/2-34,cv.width,68); g.fillStyle='#ffd84a'; g.font='bold 32px system-ui'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(msg,cv.width/2,cv.height/2); }
+  document.getElementById('score').textContent='Score '+score;
+  document.getElementById('lives').textContent='💚'.repeat(Math.max(0,lives));
+  document.getElementById('lvl').textContent='Level '+level;
+}
+reset(true);
+(function loop(){ update(); draw(); requestAnimationFrame(loop); })();
+</script></body></html>

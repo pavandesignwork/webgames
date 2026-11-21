@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Star Catcher</title>
+<style>
+ body{margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0d0b26;color:#fff;font-family:system-ui,sans-serif}
+ canvas{border-radius:16px;box-shadow:0 0 40px #ffd84a44;max-width:95vw;max-height:85vh} a{color:#ffd84a}
+</style></head><body>
+<canvas id="c" width="800" height="600"></canvas>
+<p>Left/right to move · A = jump-boost · Start = pause · <a href="index.html">◀ Menu</a></p>
+<script src="input.js"></script>
+<script>
+const cv=document.getElementById('c'), g=cv.getContext('2d'), W=cv.width, H=cv.height;
+const bgStars=[...Array(80)].map(()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.5+.3}));
+let p, items, parts, score, lives, t, state='title', paused=false, combo;
+function reset(){ p={x:W/2,y:H-60,vx:0,vy:0}; items=[]; parts=[]; score=0; lives=3; t=0; combo=0; state='play'; }
+function spawn(){
+  const lvl=1+Math.floor(score/150), r=Math.random();
+  const kind = r<0.22+lvl*0.02 ? 'rock' : r<0.27 ? 'heart' : 'star';
+  items.push({kind,x:30+Math.random()*(W-60),y:-30,vy:1.5+Math.random()*1.5+lvl*0.35,rot:0,vr:(Math.random()-.5)*.1});
+}
+function burst(x,y,col,n=14){ for(let i=0;i<n;i++){const a=Math.random()*7,s=Math.random()*4+1; parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:40,col});} }
+function update(){
+  const s=Input.poll();
+  if(state!=='play'){ if(s.aPressed||s.startPressed) reset(); return; }
+  if(s.startPressed) paused=!paused; if(paused) return;
+  t++;
+  p.vx += (s.right?1.1:0) - (s.left?1.1:0); p.vx*=0.82; p.x=Math.max(40,Math.min(W-40,p.x+p.vx));
+  if(s.aPressed && p.y>=H-60){ p.vy=-11; Input.rumble(60,.3); }
+  p.vy+=0.5; p.y=Math.min(H-60,p.y+p.vy); if(p.y>=H-60) p.vy=0;
+  if(t%Math.max(18,45-Math.floor(score/60))===0) spawn();
+  for(const it of items){
+    it.y+=it.vy; it.rot+=it.vr;
+    if(Math.abs(it.x-p.x)<46 && Math.abs(it.y-(p.y-10))<34){
+      it.dead=true;
+      if(it.kind==='star'){ combo++; score+=10*Math.min(5,1+Math.floor(combo/5)); burst(it.x,it.y,'#ffd84a'); }
+      if(it.kind==='heart'){ lives=Math.min(5,lives+1); burst(it.x,it.y,'#ff6b9a'); }
+      if(it.kind==='rock'){ lives--; combo=0; burst(it.x,it.y,'#a08070',20); Input.rumble(300,1); if(lives<=0) state='over'; }
+    }
+    if(it.y>H+30){ it.dead=true; if(it.kind==='star') combo=0; }
+  }
+  items=items.filter(i=>!i.dead);
+  for(const q of parts){ q.x+=q.vx; q.y+=q.vy; q.vy+=.12; q.life--; } parts=parts.filter(q=>q.life>0);
+}
+function drawStar(x,y,r,rot){ g.save(); g.translate(x,y); g.rotate(rot); g.beginPath();
+  for(let i=0;i<10;i++){const rr=i%2?r*.45:r,a=i*Math.PI/5-Math.PI/2; g.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);} g.closePath();
+  g.fillStyle='#ffd84a'; g.shadowColor='#ffd84a'; g.shadowBlur=18; g.fill(); g.restore(); }
+function draw(){
+  const grd=g.createLinearGradient(0,0,0,H); grd.addColorStop(0,'#0d0b26'); grd.addColorStop(1,'#3a1d5c'); g.fillStyle=grd; g.fillRect(0,0,W,H);
+  g.fillStyle='#fff'; for(const b of bgStars){ g.globalAlpha=.4+.6*Math.abs(Math.sin(Date.now()/700+b.x)); g.fillRect(b.x,b.y,b.r*2,b.r*2);} g.globalAlpha=1;
+  g.fillStyle='#2b1747'; g.fillRect(0,H-25,W,25);
+  if(state==='play'||state==='over'){
+    for(const it of items){
+      if(it.kind==='star') drawStar(it.x,it.y,20,it.rot);
+      else { g.font='38px serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(it.kind==='rock'?'🪨':'💖',it.x,it.y); }
+    }
+    // player: a little rocket-cart with a net
+    g.save(); g.translate(p.x,p.y); g.rotate(p.vx*0.02);
+    g.fillStyle='#4cc9ff'; g.beginPath(); g.roundRect(-40,-10,80,30,12); g.fill();
+    g.strokeStyle='#fff'; g.lineWidth=3; g.beginPath(); g.moveTo(-40,-10); g.quadraticCurveTo(0,-45,40,-10); g.stroke();
+    g.fillStyle='#fff'; g.beginPath(); g.arc(-12,4,6,0,7); g.arc(12,4,6,0,7); g.fill();
+    g.fillStyle='#123'; g.beginPath(); g.arc(-12+p.vx*.5,4,3,0,7); g.arc(12+p.vx*.5,4,3,0,7); g.fill();
+    g.fillStyle='#ff9f43'; g.beginPath(); g.arc(-26,24,7,0,7); g.arc(26,24,7,0,7); g.fill();
+    g.restore();
+    for(const q of parts){ g.globalAlpha=q.life/40; g.fillStyle=q.col; g.fillRect(q.x,q.y,4,4);} g.globalAlpha=1;
+    g.fillStyle='#fff'; g.font='bold 26px system-ui'; g.textAlign='left'; g.textBaseline='top';
+    g.fillText('⭐ '+score,16,14); g.textAlign='right'; g.fillText('💖'.repeat(lives),W-16,14);
+    if(combo>=5){ g.textAlign='center'; g.fillStyle='#ffd84a'; g.fillText('Combo x'+Math.min(5,1+Math.floor(combo/5))+'!',W/2,14); }
+  }
+  const msg = state==='title'?['⭐ STAR CATCHER ⭐','Press A or Start to play']:state==='over'?['Game Over! Score: '+score,'Press A to play again']:paused?['PAUSED','']:null;
+  if(msg){ g.fillStyle='#0008'; g.fillRect(0,H/2-70,W,140); g.textAlign='center'; g.textBaseline='middle';
+    g.fillStyle='#ffd84a'; g.font='bold 48px system-ui'; g.fillText(msg[0],W/2,H/2-18);
+    g.fillStyle='#fff'; g.font='24px system-ui'; g.fillText(msg[1],W/2,H/2+30);
+    const pn=Input.state.padName; g.font='16px system-ui'; g.fillStyle='#9fe'; g.fillText(pn?'🎮 '+pn:'No controller yet — press any button on it (keyboard works too)',W/2,H/2+90); }
+}
+(function loop(){ update(); draw(); requestAnimationFrame(loop); })();
+</script></body></html>
