@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dig & Load — graphics preview</title>
+<style>body{margin:0;background:#1b2238;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#fff;font-family:system-ui}
+canvas{border-radius:16px;max-width:96vw;box-shadow:0 10px 40px #0008}</style></head><body>
+<canvas id="c" width="1200" height="675"></canvas>
+<p>Graphics preview — Dig & Load (the arm moves to show the animation)</p>
+<script>
+const cv=document.getElementById('c'), g=cv.getContext('2d'), W=cv.width, H=cv.height, GROUND=470;
+const rr=(x,y,w,h,r,fill,stroke)=>{g.beginPath();g.roundRect(x,y,w,h,r);if(fill){g.fillStyle=fill;g.fill();}if(stroke){g.strokeStyle=stroke;g.lineWidth=3;g.stroke();}};
+const circ=(x,y,r,fill)=>{g.beginPath();g.arc(x,y,r,0,7);g.fillStyle=fill;g.fill();};
+
+// ---- dirt terrain: a column height map we can dig into later ----
+const cols=[]; for(let x=0;x<=W;x+=6) cols.push(GROUND + (x>520&&x<860 ? 0 : 0));
+const pileX=640; // dirt mound to dig
+for(let i=0;i<cols.length;i++){ const x=i*6, d=Math.abs(x-pileX); if(d<170) cols[i]-=Math.cos(d/170*Math.PI/2)*95; }
+// a dug hole
+for(let i=0;i<cols.length;i++){ const x=i*6, d=Math.abs(x-740); if(d<40) cols[i]+=Math.cos(d/40*Math.PI/2)*30; }
+
+function sky(){
+  const s=g.createLinearGradient(0,0,0,GROUND); s.addColorStop(0,'#5ec8ff'); s.addColorStop(1,'#cdeeff'); g.fillStyle=s; g.fillRect(0,0,W,GROUND+60);
+  circ(700,85,48,'#fff3a0'); circ(700,85,38,'#ffe14d');
+  const cloud=(x,y,s)=>{ g.fillStyle='#fff'; [[0,0,30],[30,-12,36],[64,0,28],[34,8,30]].forEach(([a,b,r])=>{g.beginPath();g.arc(x+a*s,y+b*s,r*s,0,7);g.fill();}); };
+  cloud(140+(t*8)%1400-100,90,1); cloud(520+(t*5)%1400-200,60,.8); cloud(820+(t*6)%1400-300,130,.6);
+  // far hills & city
+  g.fillStyle='#8fd18a'; g.beginPath(); g.moveTo(0,GROUND); for(let x=0;x<=W;x+=20) g.lineTo(x,GROUND-60-Math.sin(x/160)*30-Math.sin(x/53)*8); g.lineTo(W,GROUND); g.fill();
+  g.fillStyle='#b9c7d8'; [[60,90,50],[120,140,40],[170,110,60],[960,120,45],[1015,170,55],[1075,100,40]].forEach(([x,h,w])=>g.fillRect(x,GROUND-60-h,w,h+40));
+  g.fillStyle='#9fb0c4'; [[60,90,50],[120,140,40],[170,110,60],[960,120,45],[1015,170,55],[1075,100,40]].forEach(([x,h,w])=>{for(let yy=GROUND-50-h;yy<GROUND-70;yy+=18)for(let xx=x+8;xx<x+w-8;xx+=14)g.fillRect(xx,yy,7,9);});
+  // crane in background
+  g.strokeStyle='#e8a33c'; g.lineWidth=4; g.beginPath(); g.moveTo(900,GROUND-60); g.lineTo(900,150); g.lineTo(760,150); g.moveTo(900,150); g.lineTo(950,150); g.moveTo(900,170); g.lineTo(780,150); g.stroke();
+  g.lineWidth=1.5; g.beginPath(); g.moveTo(800,150); g.lineTo(800,200+Math.sin(t)*10); g.stroke(); rr(790,200+Math.sin(t)*10,20,14,2,'#7a5a3a');
+}
+function ground(){
+  // dirt with layers
+  g.beginPath(); g.moveTo(0,H); for(let i=0;i<cols.length;i++) g.lineTo(i*6,cols[i]); g.lineTo(W,H); g.closePath();
+  const d=g.createLinearGradient(0,GROUND-100,0,H); d.addColorStop(0,'#c98a4b'); d.addColorStop(.35,'#a86b36'); d.addColorStop(1,'#6e4423'); g.fillStyle=d; g.fill();
+  // grass strip on flat parts
+  g.fillStyle='#5fbf4a'; for(let i=0;i<cols.length;i++){ if(cols[i]>=GROUND-1&&cols[i]<=GROUND+1) g.fillRect(i*6,GROUND-4,6,8); }
+  // pebbles
+  g.fillStyle='#00000022'; for(let i=0;i<70;i++){ const x=(i*137)%W, y=GROUND+30+((i*53)%170); circ(x,y,3+(i%3),'#5a361a55'); }
+  // cones & sign
+  [[60],[1130]].forEach(([x])=>{ g.fillStyle='#ff7a1a'; g.beginPath(); g.moveTo(x,GROUND-34); g.lineTo(x+14,GROUND); g.lineTo(x-14,GROUND); g.fill(); g.fillStyle='#fff'; g.fillRect(x-8,GROUND-20,16,5); rr(x-18,GROUND-4,36,6,2,'#ff7a1a'); });
+  rr(130,GROUND-90,80,50,6,'#ffd400','#222'); g.fillStyle='#222'; g.font='bold 15px system-ui'; g.textAlign='center'; g.fillText('DIG',170,GROUND-68); g.fillText('ZONE',170,GROUND-50);
+  g.fillStyle='#555'; g.fillRect(146,GROUND-40,5,40); g.fillRect(189,GROUND-40,5,40);
+}
+
+// ---- excavator (generic yellow digger) ----
+function excavator(x, boomA, stickA, bucketA){
+  const y=GROUND;
+  // tracks
+  rr(x-110,y-46,220,46,23,'#2b2b2b'); rr(x-102,y-40,204,34,17,'#444');
+  for(let i=0;i<5;i++) circ(x-80+i*40,y-23,13,'#666'), circ(x-80+i*40,y-23,6,'#999');
+  g.strokeStyle='#1a1a1a'; g.lineWidth=2; for(let i=0;i<22;i++){ const xx=x-104+((i*10+t*20)%208); g.beginPath(); g.moveTo(xx,y-46); g.lineTo(xx,y-40); g.stroke(); }
+  // turntable & body
+  rr(x-70,y-62,140,18,6,'#333');
+  rr(x-100,y-140,190,82,14,'#ffc21a','#b07d00');
+  rr(x-100,y-140,60,82,[14,0,0,14],'#ffb000');                // counterweight
+  g.fillStyle='#222'; for(let i=0;i<4;i++) g.fillRect(x-92,y-128+i*16,40,6); // grill
+  // cab
+  rr(x-10,y-215,90,110,12,'#ffc21a','#b07d00');
+  rr(x+2,y-204,66,56,8,'#9be3ff'); g.fillStyle='#ffffff88'; g.beginPath(); g.moveTo(x+8,y-200); g.lineTo(x+30,y-200); g.lineTo(x+12,y-156); g.lineTo(x+8,y-156); g.fill();
+  // driver (simple, friendly)
+  circ(x+40,y-170,11,'#f2c29b'); rr(x+27,y-188,26,9,4,'#ff8c1a'); rr(x+30,y-182,20,4,2,'#ff8c1a');
+  circ(x+44,y-171,1.8,'#222');
+  g.fillStyle='#333'; g.fillRect(x-60,y-162,8,24); // exhaust
+  g.fillStyle='#ffffff55'; circ(x-56,y-170-(t*30%30),6+(t*30%30)/5,'#aaaaaa55');
+  rr(x-80,y-80,40,10,3,'#222'); g.fillStyle='#ffc21a';
+  g.fillStyle='#222'; g.font='bold 18px system-ui'; g.textAlign='left'; g.fillText('DIGGO',x-20,y-75);
+  // arm: boom from pivot, stick, bucket
+  const px=x+80, py=y-120;
+  const bx=px+Math.cos(boomA)*170, by=py+Math.sin(boomA)*170;
+  const sx=bx+Math.cos(stickA)*130, sy=by+Math.sin(stickA)*130;
+  const seg=(x1,y1,x2,y2,w,col)=>{ g.strokeStyle='#b07d00'; g.lineWidth=w+6; g.lineCap='round'; g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.stroke(); g.strokeStyle=col; g.lineWidth=w; g.stroke(); };
+  seg(px,py,bx,by,28,'#ffc21a'); seg(bx,by,sx,sy,20,'#ffc21a');
+  // hydraulic pistons
+  g.strokeStyle='#ccc'; g.lineWidth=7; g.beginPath(); g.moveTo(x+60,y-90); g.lineTo(px+Math.cos(boomA)*80,py+Math.sin(boomA)*80+8); g.stroke();
+  g.strokeStyle='#888'; g.lineWidth=11; g.beginPath(); g.moveTo(x+60,y-90); g.lineTo(x+60+(px+Math.cos(boomA)*80-x-60)*.5,y-90+(py+Math.sin(boomA)*80+8-y+90)*.5); g.stroke();
+  // bucket
+  g.save(); g.translate(sx,sy); g.rotate(bucketA);
+  g.fillStyle='#555'; g.beginPath(); g.moveTo(-8,-14); g.lineTo(52,-6); g.quadraticCurveTo(60,40,10,46); g.lineTo(-14,20); g.closePath(); g.fill();
+  g.fillStyle='#7a7a7a'; g.beginPath(); g.moveTo(-4,-8); g.lineTo(44,-2); g.quadraticCurveTo(50,34,10,38); g.lineTo(-8,18); g.closePath(); g.fill();
+  // dirt in bucket
+  g.fillStyle='#a86b36'; g.beginPath(); g.ellipse(22,4,22,12,0.1,Math.PI,0); g.fill();
+  g.fillStyle='#ddd'; for(let i=0;i<4;i++){ g.beginPath(); g.moveTo(52-i*3,-6+i*12); g.lineTo(62-i*3,-2+i*12); g.lineTo(50-i*3,4+i*12); g.fill(); }
+  g.restore();
+  [[px,py],[bx,by],[sx,sy]].forEach(([a,b])=>{circ(a,b,9,'#333');circ(a,b,4,'#aaa');});
+}
+
+// ---- dump truck ----
+function truck(x, fill){
+  const y=GROUND;
+  // dump bed
+  rr(x-170,y-150,230,90,8,'#e8442e','#9c2414');
+  g.fillStyle='#c73622'; for(let i=0;i<4;i++) g.fillRect(x-160+i*56,y-146,8,82);
+  // dirt load
+  if(fill>0){ g.fillStyle='#a86b36'; g.beginPath(); g.moveTo(x-166,y-150); g.quadraticCurveTo(x-55,y-150-fill*80,x+56,y-150); g.fill();
+    g.fillStyle='#8a5428'; for(let i=0;i<10;i++) circ(x-150+i*21,y-152-Math.sin(i/9*Math.PI)*fill*55,5,'#8a5428'); }
+  // chassis & cab
+  rr(x-180,y-64,330,20,6,'#333');
+  rr(x+70,y-150,90,92,[12,22,6,6],'#2e8de8','#14549c');
+  rr(x+92,y-140,58,40,[6,14,4,4],'#9be3ff'); g.fillStyle='#ffffff88'; g.fillRect(x+98,y-136,10,32);
+  rr(x+150,y-80,14,14,3,'#ffe14d'); rr(x+64,y-170,30,14,4,'#ff9c1a');
+  circ(x+120,y-118,9,'#f2c29b'); rr(x+110,y-132,20,7,3,'#ff8c1a');
+  // wheels
+  [-130,-75,115].forEach(dx=>{ circ(x+dx,y-20,28,'#222'); circ(x+dx,y-20,14,'#bbb'); circ(x+dx,y-20,5,'#444'); });
+  // load meter
+  rr(x-160,y-200,200,22,11,'#0005'); rr(x-158,y-198,196*fill,18,9,fill>=1?'#4be38a':'#ffd84a');
+  g.fillStyle='#fff'; g.font='bold 14px system-ui'; g.textAlign='center'; g.fillText(Math.round(fill*100)+'% FULL',x-60,y-184);
+}
+function hud(){
+  rr(20,20,260,54,14,'#0007'); g.fillStyle='#fff'; g.font='bold 26px system-ui'; g.textAlign='left'; g.fillText('🚚 Trucks: 3',36,57);
+  rr(W-240,20,220,54,14,'#0007'); g.fillText('⭐ 450',W-220,57);
+  // falling dirt particles near bucket
+}
+let t=0;
+function frame(){
+  t+=1/60;
+  sky(); ground();
+  const s=Math.sin(t*.9);
+  truck(1000, .55+Math.sin(t*.5)*.1);
+  excavator(380, -0.55+s*0.25, 0.75+s*0.35, 0.4+s*0.6);
+  // dirt particles from the bucket
+  for(let i=0;i<8;i++){ const ph=(t*2+i*.37)%1; circ(1000-60+i*7+Math.sin(i)*20, 270+ph*120, 4, `rgba(168,107,54,${1-ph})`); }
+  hud();
+  requestAnimationFrame(frame);
+}
+frame();
+</script></body></html>
