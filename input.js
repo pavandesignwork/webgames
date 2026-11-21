@@ -4,7 +4,7 @@
 //   D-pad / Left stick  = move
 //   ✕ (and □ / △)       = jump / select
 //   OPTIONS             = pause
-//   SHARE / HOME / TOUCHPAD = back to the menu
+//   L1 / L2 / SHARE / HOME / TOUCHPAD = back to the menu
 //   Keyboard: arrows/WASD move, Space = jump, Enter/P = pause, Esc/Backspace = menu
 const Input = (() => {
   const keys = {}, taps = {};
@@ -63,7 +63,7 @@ const Input = (() => {
       right: n.dright || n.lx >  DZ || k('ArrowRight') || k('KeyD'),
       a:     n.cross || n.square || n.triangle || k('Space') || k('KeyZ'),
       start: n.options || k('Enter') || k('KeyP'),
-      back:  n.share || n.home || n.touchpad || k('Escape') || k('Backspace'),
+      back:  n.l1 || n.l2 || n.share || n.home || n.touchpad || k('Escape') || k('Backspace'),
     };
     state.aPressed = cur.a && !prev.a;
     state.startPressed = cur.start && !prev.start;

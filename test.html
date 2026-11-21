@@ -57,11 +57,11 @@
   <tr data-k="move"><td>D-pad / Left stick</td><td>🏃 Move</td></tr>
   <tr data-k="a"><td>✕ (also □ △)</td><td>⬆️ Jump / Select</td></tr>
   <tr data-k="start"><td>OPTIONS</td><td>⏸️ Pause</td></tr>
-  <tr data-k="back"><td>SHARE / HOME / TOUCH PAD</td><td>🏠 Back to menu</td></tr>
-  <tr data-k="none"><td>○, L1, R1, L2, R2, R-stick</td><td>— not used —</td></tr>
+  <tr data-k="back"><td>L1 / L2 / SHARE / HOME / TOUCH PAD</td><td>🏠 Back to menu</td></tr>
+  <tr data-k="none"><td>○, R1, R2, R-stick</td><td>— not used —</td></tr>
 </table>
 </div>
-<div id="back">On this page, <b>hold SHARE or HOME for 2 seconds</b> to go back to the menu · <a href="index.html" style="color:#ffd84a">◀ Menu</a></div>
+<div id="back">On this page, <b>hold L1, L2, SHARE or HOME for 2 seconds</b> to go back to the menu · <a href="index.html" style="color:#ffd84a">◀ Menu</a></div>
 <details><summary>Technical details (send me this if something is wrong)</summary><div id="raw"></div></details>
 <script src="input.js"></script>
 <script>
@@ -70,7 +70,7 @@ const NAMES={cross:'✕ Cross',circle:'○ Circle',square:'□ Square',triangle:
   share:'SHARE',options:'OPTIONS',l3:'Left stick click',r3:'Right stick click',home:'HOME',touchpad:'TOUCH PAD',
   dup:'D-pad Up',ddown:'D-pad Down',dleft:'D-pad Left',dright:'D-pad Right'};
 const DOES={cross:'Jump / Select',square:'Jump / Select',triangle:'Jump / Select',options:'Pause',share:'Back to menu',home:'Back to menu',
-  touchpad:'Back to menu',dup:'Move up',ddown:'Move down',dleft:'Move left',dright:'Move right'};
+  touchpad:'Back to menu',l1:'Back to menu',l2:'Back to menu',dup:'Move up',ddown:'Move down',dleft:'Move left',dright:'Move right'};
 let holdBack=0;
 (function loop(){
   const s=Input.poll(), n=s.btn;
@@ -90,10 +90,10 @@ let holdBack=0;
   if(!txt && Math.hypot(n.lx||0,n.ly||0)>.45) txt='Left stick → Move';
   if(!txt && Math.hypot(n.rx||0,n.ry||0)>.45) txt='Right stick → not used';
   document.getElementById('now').textContent = txt || ' ';
-  const act={move:s.up||s.down||s.left||s.right,a:s.a,start:s.start,back:s.back,none:n.circle||n.l1||n.r1||n.l2||n.r2||n.r3};
+  const act={move:s.up||s.down||s.left||s.right,a:s.a,start:s.start,back:s.back,none:n.circle||n.r1||n.r2||n.r3};
   document.querySelectorAll('#map tr').forEach(tr=>tr.classList.toggle('on',!!act[tr.dataset.k]));
   // hold SHARE/HOME 2s to leave
-  if(n.share||n.home){ if(++holdBack>120) location.href='index.html'; } else holdBack=0;
+  if(n.share||n.home||n.l1||n.l2){ if(++holdBack>120) location.href='index.html'; } else holdBack=0;
   // raw info
   const gp=[...navigator.getGamepads()].filter(Boolean);
   document.getElementById('raw').innerHTML=gp.map(p=>`<p>#${p.index} ${p.id} — mapping: "${p.mapping||'raw'}"</p>
