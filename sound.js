@@ -27,12 +27,12 @@ const Sfx = (() => {
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(g); g.connect(out); o.start(t); o.stop(t + dur + 0.02);
   }
-  function noise(dur, vol = 1, delay = 0) {
+  function noise(dur, vol = 1, delay = 0, ftype = 'lowpass', ffreq = 900) {
     if (!ctx || ctx.state !== 'running') return;
     const t = ctx.currentTime + delay, len = ctx.sampleRate * dur, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
     const s = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
-    f.type = 'lowpass'; f.frequency.value = 900; s.buffer = buf; g.gain.value = vol;
+    f.type = ftype; f.frequency.value = ffreq; s.buffer = buf; g.gain.value = vol;
     s.connect(f); f.connect(g); g.connect(sfxGain); s.start(t);
   }
   const notes = (seq, type = 'square', vol = .6) => seq.forEach(([f, d, at]) => tone(f, d, { type, vol, delay: at }));
@@ -50,10 +50,39 @@ const Sfx = (() => {
     hit()     { noise(.35, .9); tone(160, .3, { type: 'square', vol: .4, slide: -100 }); },
     jump()    { tone(300, .2, { type: 'square', vol: .25, slide: 500 }); },
     gameOver(){ notes([[523,.25,0],[466,.25,.25],[415,.25,.5],[349,.7,.75]], 'triangle', .6); },
+    // --- construction game sounds ---
+    honk()    { tone(370, .4, { type: 'square', vol: .3 }); tone(466, .4, { type: 'square', vol: .25 }); },
+    truckHorn(){ tone(311, .18, { type: 'sawtooth', vol: .25 }); tone(311, .25, { type: 'sawtooth', vol: .25, delay: .24 }); },
+    thud()    { noise(.25, .9, 0, 'lowpass', 400); tone(90, .25, { type: 'sine', vol: .7, slide: -40 }); },
+    scoop()   { noise(.15, .45, 0, 'lowpass', 1400); },
+    pour()    { noise(.35, .25, 0, 'bandpass', 1200); },
+    clunk()   { tone(240, .08, { type: 'square', vol: .45 }); noise(.08, .6, 0, 'highpass', 2000); },
+    splash()  { noise(1.2, .7, 0, 'highpass', 1500); tone(200, .5, { type: 'sine', vol: .3, slide: 300 }); },
+    treasure(){ notes([[784,.1,0],[988,.1,.1],[1175,.1,.2],[1568,.35,.3]], 'triangle', .55); },
+    crash()   { noise(.6, .9, 0, 'lowpass', 700); tone(150, .5, { type: 'sawtooth', vol: .3, slide: -100 }); },
+    tick()    { tone(1200, .03, { type: 'square', vol: .15 }); },
     move()    { tone(660, .05, { type: 'square', vol: .2 }); },
     select()  { notes([[660,.08,0],[990,.15,.08]], 'square', .3); },
     pause()   { tone(500, .1, { type: 'square', vol: .3 }); },
   };
+
+
+  // --- continuous engine hum, one per player slot ---
+  const engines = {};
+  function engine(slot, throttle) {
+    if (!ctx || ctx.state !== 'running') return;
+    let e = engines[slot];
+    if (!e) {
+      const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), gn = ctx.createGain();
+      o.type = 'sawtooth'; f.type = 'lowpass'; f.frequency.value = 380; gn.gain.value = 0;
+      o.connect(f); f.connect(gn); gn.connect(sfxGain); o.start();
+      e = engines[slot] = { o, gn };
+    }
+    const t = ctx.currentTime;
+    e.o.frequency.setTargetAtTime(42 + slot * 6 + throttle * 50, t, .12);
+    e.gn.gain.setTargetAtTime(.06 + throttle * .08, t, .12);
+  }
+  function engineStop() { for (const k in engines) engines[k].gn.gain.setTargetAtTime(0, ctx.currentTime, .05); }
 
   // --- simple looping background tune (original) ---
   let musicTimer = null, step = 0, song = null;
@@ -90,5 +119,5 @@ const Sfx = (() => {
     el.textContent = t; el.style.opacity = 1; clearTimeout(el._t); el._t = setTimeout(() => el.style.opacity = 0, 1200);
   }
   addEventListener('keydown', e => { if (e.code === 'KeyM') toggleMute(); });
-  return { ...fx, startMusic, stopMusic, setMusicVolume, toggleMute, get muted() { return muted; } };
+  return { ...fx, engine, engineStop, startMusic, stopMusic, setMusicVolume, toggleMute, get muted() { return muted; } };
 })();

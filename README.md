@@ -3,6 +3,7 @@
 Two small browser games built to work with a Bluetooth gamepad (made for a Kreo Mirage, but any controller works).
 
 - **Blob Maze** (`maze.html`): eat every berry and stay away from the grumpy bugs. Grab a 🌈 and the bugs get scared, so you can catch them.
+- **Dig & Load** (`dig.html`): a construction game with a digger, loader, bulldozer and crane. 8 jobs with stars, free play, a garage for upgrades, and a 2-player split-screen battle.
 - **Star Catcher** (`stars.html`): catch falling stars, collect hearts, dodge rocks.
 
 ## Playing with the controller
