@@ -6,7 +6,7 @@
  canvas{border-radius:16px;box-shadow:0 0 40px #ffd84a44;max-width:95vw;max-height:85vh} a{color:#ffd84a}
 </style></head><body>
 <canvas id="c" width="800" height="600"></canvas>
-<p>Left/right to move · A = jump-boost · Start = pause · <a href="index.html">◀ Menu</a></p>
+<p>Left/right = move · ✕ = jump · OPTIONS = pause · SHARE / HOME = menu · <a href="index.html">◀ Menu</a></p>
 <script src="input.js"></script>
 <script>
 const cv=document.getElementById('c'), g=cv.getContext('2d'), W=cv.width, H=cv.height;
@@ -66,7 +66,7 @@ function draw(){
     g.fillText('⭐ '+score,16,14); g.textAlign='right'; g.fillText('💖'.repeat(lives),W-16,14);
     if(combo>=5){ g.textAlign='center'; g.fillStyle='#ffd84a'; g.fillText('Combo x'+Math.min(5,1+Math.floor(combo/5))+'!',W/2,14); }
   }
-  const msg = state==='title'?['⭐ STAR CATCHER ⭐','Press A or Start to play']:state==='over'?['Game Over! Score: '+score,'Press A to play again']:paused?['PAUSED','']:null;
+  const msg = state==='title'?['⭐ STAR CATCHER ⭐','Press ✕ to play']:state==='over'?['Game Over! Score: '+score,'Press ✕ to play again']:paused?['PAUSED','']:null;
   if(msg){ g.fillStyle='#0008'; g.fillRect(0,H/2-70,W,140); g.textAlign='center'; g.textBaseline='middle';
     g.fillStyle='#ffd84a'; g.font='bold 48px system-ui'; g.fillText(msg[0],W/2,H/2-18);
     g.fillStyle='#fff'; g.font='24px system-ui'; g.fillText(msg[1],W/2,H/2+30);

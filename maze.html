@@ -8,7 +8,7 @@
 </style></head><body>
 <div id="hud"><span id="score">Score 0</span><span id="lives"></span><span id="lvl">Level 1</span></div>
 <canvas id="c"></canvas>
-<p>D-pad / left stick to move · Start = pause · <a href="index.html">◀ Menu</a></p>
+<p>D-pad / stick = move · OPTIONS = pause · SHARE / HOME = menu · <a href="index.html">◀ Menu</a></p>
 <script src="input.js"></script>
 <script>
 const MAP = [
@@ -137,7 +137,7 @@ function draw(){
     if(!scared && !b.eaten){ g.strokeStyle='#000'; g.lineWidth=2; g.beginPath(); g.moveTo(-7,-11); g.lineTo(-2,-9); g.moveTo(7,-11); g.lineTo(2,-9); g.stroke(); }
     g.restore();
   }
-  const msg = state==='ready'?'GET READY!':state==='over'?'GAME OVER — press A':state==='win'?'YOU WIN! 🎉 press A':paused?'PAUSED':'';
+  const msg = state==='ready'?'GET READY!':state==='over'?'GAME OVER — press ✕':state==='win'?'YOU WIN! 🎉 press ✕':paused?'PAUSED':'';
   if(msg){ g.fillStyle='#000a'; g.fillRect(0,cv.height/2-34,cv.width,68); g.fillStyle='#ffd84a'; g.font='bold 32px system-ui'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(msg,cv.width/2,cv.height/2); }
   document.getElementById('score').textContent='Score '+score;
   document.getElementById('lives').textContent='💚'.repeat(Math.max(0,lives));

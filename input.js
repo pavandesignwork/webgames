@@ -1,80 +1,86 @@
-// Shared input: Kreo Mirage (or any) gamepad via the browser Gamepad API + keyboard fallback.
-// Handles "standard" mapped pads AND non-standard ones (DirectInput / Switch / Android modes
-// over Bluetooth often report the D-pad as a hat axis and use different button numbers).
+// Shared input for all games: PS-style controller (Kreo Mirage) or any gamepad, plus keyboard.
+//
+// CONTROLS (same in every game):
+//   D-pad / Left stick  = move
+//   ✕ (and □ / △)       = jump / select
+//   OPTIONS             = pause
+//   SHARE / HOME / TOUCHPAD = back to the menu
+//   Keyboard: arrows/WASD move, Space = jump, Enter/P = pause, Esc/Backspace = menu
 const Input = (() => {
   const keys = {}, taps = {};
   let prev = {}, activeIndex = null;
-  const state = { up:false, down:false, left:false, right:false, a:false, start:false,
-                  aPressed:false, startPressed:false, padName:null, mapping:null };
+  const state = { up:false, down:false, left:false, right:false, a:false, start:false, back:false,
+                  aPressed:false, startPressed:false, backPressed:false, padName:null, mapping:null, btn:{} };
   addEventListener('keydown', e => { keys[e.code] = true; taps[e.code] = true;
-    if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); });
+    if (e.code.startsWith('Arrow') || e.code === 'Space' || e.code === 'Backspace') e.preventDefault(); });
   addEventListener('keyup', e => { keys[e.code] = false; });
-  addEventListener('gamepadconnected', e => { console.log('Gamepad connected:', e.gamepad.id, e.gamepad.mapping); });
 
-  function anyInput(p) {
-    return p.buttons.some(b => b.pressed) || p.axes.some((a, i) => Math.abs(a) > 0.5 && !isHat(p, i, a));
+  const OFF = v => v === undefined || Math.abs(v) > 1.05; // resting hat switches read ~1.28
+  function hatDir(v) { // -1 = up, then clockwise in steps of 2/7
+    if (OFF(v)) return {};
+    const i = Math.round((v + 1) / (2 / 7));
+    return { up:[0,1,7].includes(i), right:[1,2,3].includes(i), down:[3,4,5].includes(i), left:[5,6,7].includes(i) };
   }
-  // A resting hat switch often reads ~1.28 (out of range); treat that as "not pressed".
-  function isHat(p, i, a) { return Math.abs(a) > 1.05; }
 
-  function hatDir(v) { // hat axis: -1 up, -0.71 up-right, -0.43 right, ... 0.71 up-left, >1 = centre
-    if (v === undefined || Math.abs(v) > 1.05) return {};
-    const idx = Math.round((v + 1) / (2 / 7)); // 0..7
-    return { up: [0,1,7].includes(idx), right: [1,2,3].includes(idx),
-             down: [3,4,5].includes(idx), left: [5,6,7].includes(idx) };
+  // Turn any gamepad into named PS-style buttons.
+  function named(gp) {
+    const n = {};
+    if (!gp) return n;
+    const b = i => !!(gp.buttons[i] && gp.buttons[i].pressed);
+    const v = i => (gp.buttons[i] ? gp.buttons[i].value : 0);
+    const ax = i => OFF(gp.axes[i]) ? 0 : gp.axes[i];
+    n.lx = ax(0); n.ly = ax(1);
+    if (gp.mapping === 'standard') {          // XInput / browser-recognised DualShock layout
+      Object.assign(n, { cross:b(0), circle:b(1), square:b(2), triangle:b(3), l1:b(4), r1:b(5),
+        l2:b(6), r2:b(7), l2v:v(6), r2v:v(7), share:b(8), options:b(9), l3:b(10), r3:b(11),
+        dup:b(12), ddown:b(13), dleft:b(14), dright:b(15), home:b(16), touchpad:b(17) });
+      n.rx = ax(2); n.ry = ax(3);
+    } else {                                  // raw DirectInput PS-style layout (common over Bluetooth)
+      Object.assign(n, { square:b(0), cross:b(1), circle:b(2), triangle:b(3), l1:b(4), r1:b(5),
+        l2:b(6), r2:b(7), l2v:v(6), r2v:v(7), share:b(8), options:b(9), l3:b(10), r3:b(11),
+        home:b(12), touchpad:b(13) });
+      let h = {};
+      if (gp.axes.length > 9 && !OFF(gp.axes[9])) h = hatDir(gp.axes[9]);
+      else for (let i = 2; i < gp.axes.length; i++) if (Math.abs(gp.axes[i]) > 1.05 || i === 9) { const d = hatDir(gp.axes[i]); if (d.up||d.down||d.left||d.right) h = d; }
+      n.dup = !!h.up; n.ddown = !!h.down; n.dleft = !!h.left; n.dright = !!h.right;
+      n.rx = ax(2); n.ry = gp.axes.length > 5 ? ax(5) : ax(3);
+    }
+    return n;
   }
 
   function getPad() {
     const pads = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(p => p && p.connected);
-    // Switch to whichever pad the player is actually pressing (skips phantom/virtual devices)
-    for (const p of pads) if (anyInput(p)) { activeIndex = p.index; break; }
+    for (const p of pads) if (p.buttons.some(x => x.pressed)) { activeIndex = p.index; break; }
     return pads.find(p => p.index === activeIndex) || pads[0] || null;
   }
 
   function poll() {
-    const gp = getPad();
-    const b = i => !!(gp && gp.buttons[i] && gp.buttons[i].pressed);
-    const ax = i => (gp && gp.axes[i] !== undefined && Math.abs(gp.axes[i]) <= 1.05) ? gp.axes[i] : 0;
-    const DZ = 0.45;
-    const k = c => keys[c] || taps[c];
-    let up=false, down=false, left=false, right=false, a=false, start=false;
-    if (gp) {
-      up = ax(1) < -DZ; down = ax(1) > DZ; left = ax(0) < -DZ; right = ax(0) > DZ;
-      if (gp.mapping === 'standard') {
-        up ||= b(12); down ||= b(13); left ||= b(14); right ||= b(15);
-        a = b(0) || b(1) || b(2) || b(3);
-        start = b(9);
-      } else {
-        // Non-standard: D-pad may be a hat axis (often axes[9]) or axes 6/7 / 4/5, or buttons 12-15
-        for (let i = 2; i < gp.axes.length; i++) {
-          const v = gp.axes[i];
-          if (i === 9 || Math.abs(v) > 1.05) { const h = hatDir(v); up ||= !!h.up; down ||= !!h.down; left ||= !!h.left; right ||= !!h.right; }
-        }
-        if (gp.axes.length >= 8) { up ||= gp.axes[7] < -DZ; down ||= gp.axes[7] > DZ; left ||= gp.axes[6] < -DZ; right ||= gp.axes[6] > DZ; }
-        up ||= b(12); down ||= b(13); left ||= b(14); right ||= b(15);
-        a = b(0) || b(1) || b(2) || b(3);           // any face button jumps/selects
-        start = b(9) || b(11);                     // Start/Plus on most layouts
-        start ||= b(8) && gp.buttons.length <= 12;   // some DInput pads put Start at 8
-      }
-    }
+    const gp = getPad(), n = named(gp), k = c => keys[c] || taps[c], DZ = 0.45;
     const cur = {
-      up: up || k('ArrowUp') || k('KeyW'), down: down || k('ArrowDown') || k('KeyS'),
-      left: left || k('ArrowLeft') || k('KeyA'), right: right || k('ArrowRight') || k('KeyD'),
-      a: a || k('Space') || k('KeyZ'), start: start || k('Enter') || k('Escape') || k('KeyP'),
+      up:    n.dup    || n.ly < -DZ || k('ArrowUp')    || k('KeyW'),
+      down:  n.ddown  || n.ly >  DZ || k('ArrowDown')  || k('KeyS'),
+      left:  n.dleft  || n.lx < -DZ || k('ArrowLeft')  || k('KeyA'),
+      right: n.dright || n.lx >  DZ || k('ArrowRight') || k('KeyD'),
+      a:     n.cross || n.square || n.triangle || k('Space') || k('KeyZ'),
+      start: n.options || k('Enter') || k('KeyP'),
+      back:  n.share || n.home || n.touchpad || k('Escape') || k('Backspace'),
     };
     state.aPressed = cur.a && !prev.a;
     state.startPressed = cur.start && !prev.start;
+    state.backPressed = cur.back && !prev.back;
     Object.assign(state, cur);
+    state.btn = n;
     state.padName = gp ? gp.id : null;
-    state.mapping = gp ? (gp.mapping || 'non-standard') : null;
+    state.mapping = gp ? (gp.mapping || 'raw') : null;
     prev = cur;
     for (const c in taps) delete taps[c];
+    // Back to menu from any game page
+    if (state.backPressed && Input.autoBack && !/index\.html$|\/$/.test(location.pathname)) location.href = 'index.html';
     return state;
   }
   function rumble(ms = 120, strength = 0.6) {
-    const gp = getPad();
-    gp?.vibrationActuator?.playEffect?.('dual-rumble',
+    getPad()?.vibrationActuator?.playEffect?.('dual-rumble',
       { duration: ms, strongMagnitude: strength, weakMagnitude: strength }).catch(() => {});
   }
-  return { poll, rumble, state };
+  return { poll, rumble, named, state, autoBack: true };
 })();
