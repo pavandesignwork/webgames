@@ -122,6 +122,23 @@ const Sfx = (() => {
   }
   function cheer(dur = 2) { if (!ctx || ctx.state !== 'running') return; noise(dur, .5, 0, 'bandpass', 1800); noise(dur * .8, .35, .2, 'bandpass', 900); }
 
+
+  // --- recorded sound files (e.g. real fart samples) ---
+  const samples = {};
+  async function loadSample(name, url) {
+    if (!ctx) return false;
+    try { const r = await fetch(url); samples[name] = await ctx.decodeAudioData(await r.arrayBuffer()); return true; }
+    catch (e) { console.warn('could not load sound', name, e); return false; }
+  }
+  function playSample(name, { rate = 1, vol = 1 } = {}) {
+    const b = samples[name]; if (!b || !ctx || ctx.state !== 'running') return null;
+    const src = ctx.createBufferSource(), g = ctx.createGain();
+    src.buffer = b; src.playbackRate.value = rate; g.gain.value = vol; src.connect(g); g.connect(sfxGain); src.start();
+    return { dur: b.duration / rate, t0: ctx.currentTime, stop() { try { g.gain.setTargetAtTime(0, ctx.currentTime, .03); src.stop(ctx.currentTime + .2); } catch (e) {} } };
+  }
+  const hasSample = n => !!samples[n];
+  const now = () => ctx ? ctx.currentTime : 0;
+
   // --- simple looping background tune (original) ---
   let musicTimer = null, step = 0, song = null;
   const SONGS = {
@@ -157,5 +174,5 @@ const Sfx = (() => {
     el.textContent = t; el.style.opacity = 1; clearTimeout(el._t); el._t = setTimeout(() => el.style.opacity = 0, 1200);
   }
   addEventListener('keydown', e => { if (e.code === 'KeyM') toggleMute(); });
-  return { ...fx, fart, fartStart, fartStop, fartStopAll, cheer, engine, engineStop, startMusic, stopMusic, setMusicVolume, toggleMute, get muted() { return muted; } };
+  return { ...fx, loadSample, playSample, hasSample, now, fart, fartStart, fartStop, fartStopAll, cheer, engine, engineStop, startMusic, stopMusic, setMusicVolume, toggleMute, get muted() { return muted; } };
 })();

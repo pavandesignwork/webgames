@@ -5,52 +5,76 @@
 <title>Toot Games: phone controller</title>
 <style>
  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
- html,body{margin:0;height:100%;background:#1b1440;color:#fff;font-family:system-ui,sans-serif;overflow:hidden;touch-action:none;overscroll-behavior:none}
- #join{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;padding:20px;text-align:center}
- h1{margin:0;font-size:30px;color:#ffd84a} .sub{opacity:.8;margin:0}
- input{font-size:34px;text-align:center;width:220px;padding:10px;border-radius:14px;border:3px solid #ffd84a;background:#0006;color:#fff;user-select:text;-webkit-user-select:text}
- #name{font-size:22px;width:240px;border-color:#7dc4ff}
+ html,body{margin:0;height:100%;color:#fff;font-family:system-ui,-apple-system,sans-serif;overflow:hidden;touch-action:none;overscroll-behavior:none;
+   background:radial-gradient(circle at 20% 10%,#5a35b8 0,transparent 45%),radial-gradient(circle at 90% 90%,#2c7a2a55 0,transparent 40%),linear-gradient(#2a1660,#140a33)}
  button{font:inherit;cursor:pointer}
- .big{font-size:26px;font-weight:bold;padding:14px 40px;border-radius:999px;border:0;background:#4be38a;color:#063}
- #err{color:#ff8a8a;min-height:1.2em;margin:0}
- #pad{display:none;height:100%;position:relative;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
- #top{position:absolute;left:0;right:0;top:0;height:64px;display:flex;align-items:center;gap:12px;padding:6px 12px;background:#0005}
- #chip{width:34px;height:34px;border-radius:50%;border:3px solid #fff;flex:none}
- #who{font-weight:bold;font-size:18px;white-space:nowrap}
- #status{flex:1;text-align:center;font-weight:bold;font-size:22px;color:#ffd84a;white-space:nowrap;overflow:hidden}
- .bar{width:120px;height:14px;background:#fff3;border-radius:7px;overflow:hidden;flex:none} .bar i{display:block;height:100%;width:0;background:#7dffa8}
- #foot{position:absolute;left:env(safe-area-inset-left);right:env(safe-area-inset-right);top:calc(64px + env(safe-area-inset-top));bottom:calc(44px + env(safe-area-inset-bottom));display:flex}
- .btn{flex:1;margin:8px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:26px;font-weight:bold;border:4px solid #ffffff55;background:#2b3a78;touch-action:none}
- .btn span{font-size:56px;line-height:1.1}
- .btn.on{background:#ffd84a;color:#222;border-color:#fff;transform:scale(.97)}
- #fart{flex:.8;background:#2f7a3a} #fart.on{background:#7dffa8}
- #tools{position:absolute;bottom:calc(6px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:3}
- #tools button{font-size:13px;padding:7px 12px;border-radius:999px;border:0;background:#000a;color:#fff}
- #lean{position:absolute;top:70px;left:50%;transform:translateX(-50%);width:180px;height:10px;background:#fff2;border-radius:5px;z-index:3;pointer-events:none}
- #lean i{position:absolute;top:-5px;width:20px;height:20px;border-radius:50%;background:#ffd84a;left:80px}
- #startBtn{position:absolute;top:92px;left:50%;transform:translateX(-50%);z-index:4;display:none;font-size:22px;padding:12px 30px}
+ /* ---------- join screen ---------- */
+ #join{display:flex;align-items:center;justify-content:center;height:100%;padding:16px;overflow:auto}
+ .jcard{width:min(400px,100%);background:#2a1b52e8;border:3px solid #6d4fd6;border-radius:28px;padding:22px 22px 18px;text-align:center;box-shadow:0 14px 40px #0009,inset 0 2px 0 #ffffff18;position:relative}
+ .logo{font-weight:900;line-height:.92;transform:rotate(-4deg);margin:2px 0 8px}
+ .logo .a{font-size:40px;color:#b6f52b;-webkit-text-stroke:3px #3b1a6b;text-shadow:0 4px 0 #3b1a6b} .logo .b{font-size:46px;color:#ff7ad9;-webkit-text-stroke:3px #3b1a6b;text-shadow:0 4px 0 #3b1a6b}
+ .pill{display:inline-block;background:#3b1a6b;border-radius:999px;padding:4px 14px;font-size:13px;font-weight:bold;margin-bottom:16px}
+ .lbl{display:block;text-align:left;font-size:13px;font-weight:bold;opacity:.8;margin:10px 4px 6px;letter-spacing:.5px}
+ .codewrap{display:flex;align-items:center;background:#140a33;border:3px solid #a6ef2b;border-radius:18px;padding:4px 8px;box-shadow:0 0 18px #a6ef2b44}
+ .codewrap span{font-size:26px;font-weight:900;font-style:italic;color:#a6ef2b;padding-left:6px}
+ input{font:inherit;color:#fff;background:transparent;border:0;outline:none;user-select:text;-webkit-user-select:text}
+ #code{font-size:40px;font-weight:900;letter-spacing:10px;width:100%;text-align:center}
+ #name{font-size:22px;width:100%;background:#140a33;border:3px solid #6d4fd6;border-radius:16px;padding:10px 14px}
+ #name:focus{border-color:#ff7ad9}
+ #go{margin-top:18px;width:100%;font-size:28px;font-weight:900;padding:14px;border:0;border-radius:22px;color:#1a2b00;background:linear-gradient(#c8ff4a,#86d60f);box-shadow:0 6px 0 #4a7a00,0 0 26px #a6ef2b77}
+ #go:active{transform:translateY(4px);box-shadow:0 2px 0 #4a7a00} #go:disabled{filter:grayscale(.6) brightness(.8)}
+ #err{color:#ff9ab0;min-height:1.3em;margin:10px 0 0;font-weight:bold}
+ .hint{font-size:13px;opacity:.75;margin:6px 0 0}
+ #ios{display:none;font-size:13px;background:#ffffff14;border-radius:14px;padding:10px 12px;margin-top:12px;text-align:left;line-height:1.45}
+ .puff{position:absolute;border-radius:50%;background:#a6ef2b;opacity:.25;filter:blur(2px);pointer-events:none}
+ /* ---------- controller ---------- */
+ #pad{display:none;height:100%;position:relative}
+ #top{position:absolute;left:calc(10px + env(safe-area-inset-left));right:calc(10px + env(safe-area-inset-right));top:calc(8px + env(safe-area-inset-top));height:56px;display:flex;align-items:center;gap:10px;padding:0 14px 0 6px;background:#2a1b52e8;border:2px solid #6d4fd6;border-radius:20px}
+ #chip{width:44px;height:44px;border-radius:50%;border:3px solid #fff;flex:none;display:flex;align-items:center;justify-content:center;font-size:24px;background:#fff2}
+ #who{font-weight:900;font-size:17px;white-space:nowrap;max-width:28vw;overflow:hidden;text-overflow:ellipsis}
+ #status{flex:1;text-align:center;font-weight:bold;font-size:17px;color:#ffe066;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .gaslbl{font-size:11px;font-weight:900;color:#a6ef2b}
+ .bar{width:110px;height:16px;background:#140a33;border:2px solid #ffffff33;border-radius:9px;overflow:hidden;flex:none} .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#86d60f,#d6ff6a);border-radius:9px;transition:width .2s}
+ #foot{position:absolute;left:env(safe-area-inset-left);right:env(safe-area-inset-right);top:calc(70px + env(safe-area-inset-top));bottom:calc(46px + env(safe-area-inset-bottom));display:flex;padding:4px 6px}
+ .btn{flex:1;margin:6px;border-radius:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;font-weight:900;letter-spacing:.5px;touch-action:none;
+   background:linear-gradient(#5b7cff,#3b52d6);border:3px solid #ffffff44;box-shadow:0 8px 0 #22307e,inset 0 3px 0 #ffffff40;transition:transform .05s}
+ .btn span{font-size:54px;line-height:1.05;filter:drop-shadow(0 3px 0 #0004)}
+ .btn.on{transform:translateY(6px);box-shadow:0 2px 0 #22307e,inset 0 3px 0 #ffffff40;filter:brightness(1.25)}
+ #fart{flex:1.15;background:linear-gradient(#c8ff4a,#7fcf0d);color:#1a2b00;box-shadow:0 8px 0 #4a7a00,0 0 30px #a6ef2b55,inset 0 3px 0 #ffffff70}
+ #fart.on{box-shadow:0 2px 0 #4a7a00,0 0 50px #a6ef2baa}
+ #bl.brake{background:linear-gradient(#ff6b7a,#d63a4b);box-shadow:0 8px 0 #7e1f2b,inset 0 3px 0 #ffffff40}
+ #tools{position:absolute;bottom:calc(8px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:3}
+ #tools button{font-size:12px;font-weight:bold;padding:7px 12px;border-radius:999px;border:2px solid #6d4fd6;background:#2a1b52;color:#fff;white-space:nowrap}
+ #lean{position:absolute;top:calc(68px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:160px;height:8px;background:#ffffff22;border-radius:5px;z-index:3;pointer-events:none}
+ #lean i{position:absolute;top:-5px;width:18px;height:18px;border-radius:50%;background:#ffe066;left:71px;box-shadow:0 0 8px #ffe066}
+ #startBtn{position:absolute;top:calc(84px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:7;display:none;font-size:22px;font-weight:900;padding:12px 30px;border:3px solid #fff;border-radius:999px;color:#1a2b00;background:linear-gradient(#c8ff4a,#86d60f);box-shadow:0 6px 0 #4a7a00,0 6px 30px #0008;white-space:nowrap}
+ #seatbox{position:absolute;top:calc(84px + env(safe-area-inset-top));right:calc(14px + env(safe-area-inset-right));z-index:6;display:none;background:#2a1b52f2;border:2px solid #6d4fd6;border-radius:16px;padding:7px;text-align:center;font-size:11px;font-weight:bold}
+ #seatbox .g{display:grid;grid-template-columns:46px 46px;gap:5px;margin-top:4px} #seatbox button{height:40px;border-radius:12px;border:2px solid #ffffff44;background:#ffffff18;color:#fff;font-size:12px;font-weight:900;padding:0}
+ #seatbox button.me{background:#ffe066;color:#222;border-color:#fff} #seatbox button.taken{opacity:.3}
  @media (orientation:portrait){
-   #foot{flex-wrap:wrap;align-content:stretch} #fart{order:-1;flex:0 0 calc(100% - 16px);height:calc(38% - 16px)} #bl,#br{flex:1 1 40%;height:calc(62% - 16px)}
-   #status{font-size:16px} .bar{width:70px} #who{display:none} #tools button{font-size:12px;padding:6px 9px} }
- #tools button{white-space:nowrap}
+   #foot{flex-wrap:wrap;align-content:stretch} #fart{order:-1;flex:0 0 calc(100% - 12px);height:calc(40% - 12px)} #bl,#br{flex:1 1 40%;height:calc(60% - 12px)}
+   #status{font-size:14px} .bar{width:64px} #who{display:none} #tools button{font-size:11px;padding:6px 9px}
+   #startBtn{top:auto;bottom:calc(60px + env(safe-area-inset-bottom))} }
  #flash{position:fixed;inset:0;pointer-events:none;z-index:8;background:#ff3b3b;opacity:0;transition:opacity .35s}
- #ios{display:none;font-size:14px;background:#ffffff18;border-radius:12px;padding:10px 14px;max-width:340px}
  .hap{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;left:-10px}
- #big{position:absolute;inset:64px 0 0 0;display:flex;align-items:center;justify-content:center;font-size:90px;font-weight:900;color:#fff;text-shadow:0 4px 0 #000a;pointer-events:none;z-index:5}
+ #big{position:absolute;inset:64px 0 0 0;display:flex;align-items:center;justify-content:center;font-size:84px;font-weight:900;color:#fff;-webkit-text-stroke:4px #3b1a6b;text-shadow:0 6px 0 #3b1a6b;pointer-events:none;z-index:9;text-align:center}
 </style></head><body>
-<div id="join">
-  <h1>💨 Toot Games</h1>
-  <p class="sub">Phone controller</p>
-  <input id="code" inputmode="numeric" maxlength="4" placeholder="CODE" autocomplete="off">
-  <input id="name" maxlength="12" placeholder="Your name" autocomplete="off">
-  <button class="big" id="go">JOIN</button>
+<div id="join"><div class="jcard">
+  <div class="puff" style="width:70px;height:70px;left:-20px;top:-20px"></div><div class="puff" style="width:46px;height:46px;right:-12px;top:40px"></div>
+  <div class="logo"><div class="a">TOOT TUB</div><div class="b">RAPIDS!</div></div>
+  <div class="pill">📱 Phone controller</div>
+  <label class="lbl" for="code">ROOM CODE (on the TV)</label>
+  <div class="codewrap"><span>TOOT-</span><input id="code" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off"></div>
+  <label class="lbl" for="name">YOUR NAME</label>
+  <input id="name" maxlength="12" placeholder="e.g. Super Tooter" autocomplete="off">
+  <button id="go">JOIN GAME 💨</button>
   <p id="err"></p>
-  <p class="sub" style="font-size:14px">Works sideways or upright.</p>
-  <p id="ios">🍎 <b>iPhone tip:</b> tap <b>Share ⬆️ → Add to Home Screen</b>, then open it from there for full screen with no address bar. When asked, tap <b>Allow</b> for motion so tilting can steer.</p>
-</div>
+  <p class="hint">Works upright or sideways · up to 4 players</p>
+  <p id="ios">🍎 <b>iPhone tip:</b> tap <b>Share ⬆️ → Add to Home Screen</b> and open it from there for full screen. When asked, tap <b>Allow</b> for motion so tilting can steer.</p>
+</div></div>
 <div id="pad">
   <div id="top"><div id="chip"></div><div id="who"></div><div id="status">Connecting…</div>
-    <div style="font-size:12px">GAS</div><div class="bar"><i id="gas"></i></div></div>
+    <div class="gaslbl">GAS</div><div class="bar"><i id="gas"></i></div></div>
   <div id="lean"><i id="leanDot"></i></div>
   <button class="big" id="startBtn">▶ START RACE</button>
   <div id="foot">
@@ -60,6 +84,7 @@
   </div>
   <div id="tools"><button id="cal">⚖️ Set straight</button><button id="flipT">🔄 Flip tilt</button><button id="tiltT">📱 Tilt: ON</button></div>
   <div id="big"></div>
+  <div id="seatbox">💺 SEAT · front ▲<div class="g"><button data-k="FL">FL</button><button data-k="FR">FR</button><button data-k="BL">BL</button><button data-k="BR">BR</button></div></div>
 </div>
 <div id="flash"></div>
 <label class="hap" id="hapL"><input type="checkbox" switch id="hapI"></label>
@@ -85,7 +110,7 @@ $('tiltT').textContent='📱 Tilt: '+(tiltOn?'ON':'OFF');
 
 // ---------- join ----------
 $('go').onclick=async()=>{
-  const code=$('code').value.replace(/\D/g,''); if(code.length!==4){ $('err').textContent='Type the 4-digit code from the game screen.'; return; }
+  const code=$('code').value.replace(/\D/g,'').slice(-4); if(code.length!==4){ $('err').textContent='Type the 4-digit code from the game screen.'; return; }
   const name=($('name').value.trim()||'Player').slice(0,12); localStorage.setItem('toot-name',name);
   $('err').textContent='Connecting…'; $('go').disabled=true;
   // ask for motion permission (iPhone) + keep screen on + fullscreen, all need this tap
@@ -103,10 +128,14 @@ $('go').onclick=async()=>{
 function setStatus(t){ $('status').textContent=t; }
 let bigT=0; function show(t,ms=1200){ $('big').textContent=t; clearTimeout(bigT); if(ms) bigT=setTimeout(()=>$('big').textContent='',ms); }
 function onMsg(m){
+  if(m.t==='layout'&&'seats' in m) $('seatbox').style.display=m.seats?'block':'none';
+  if(m.t==='stat'&&'seat' in m) document.querySelectorAll('#seatbox button').forEach(b=>{ b.classList.toggle('me',b.dataset.k===m.seat); b.classList.toggle('taken',(m.taken||[]).includes(b.dataset.k)); });
+  if(m.t==='layout'&&m.l) $('bl').classList.toggle('brake',m.l[1]==='BRAKE');
+  if(m.t==='stat'&&m.msg){ const em=(m.msg.match(/^\p{Extended_Pictographic}/u)||[])[0]; if(em) $('chip').textContent=em; }
   if(m.t==='layout'){ for(const [id,k] of [['bl','l'],['fart','f'],['br','r']]) if(m[k]) $(id).innerHTML=`<span>${m[k][0]}</span>${m[k][1]}`; if(m.title) document.title=m.title; }
   if(m.t==='welcome'){ slot=m.slot; $('chip').style.background=m.color; $('who').textContent=m.name; }
   if(m.t==='full'){ setStatus('Game is full (3 players)'); }
-  if(m.t==='stat'){ $('gas').style.width=Math.round(m.gas*100)+'%'; if(m.msg) setStatus(m.msg); $('startBtn').style.display=m.canStart?'block':'none'; }
+  if(m.t==='stat'){ $('gas').style.width=Math.round(m.gas*100)+'%'; if(m.msg) setStatus(m.msg); $('startBtn').style.display=m.canStart?'block':'none'; btnMode=m.lobby?'ready':'start'; $('startBtn').textContent=m.lobby?(m.ready?'✅ READY! (tap to undo)':'👍 I\'M READY'):'▶ START RACE'; $('startBtn').style.background=m.lobby&&m.ready?'#ffd84a':''; }
   if(m.t==='big'){ show(m.text,m.ms||1200); }
   if(m.t==='buzz'){ if(navigator.vibrate) navigator.vibrate(m.ms||100); if((m.ms||0)>=150) flash(m.ms>=400?'#3b9bff':'#ff3b3b',m.ms+200); }
 }
@@ -119,7 +148,8 @@ function hold(el,key){
   el.addEventListener('pointerdown',on); el.addEventListener('pointerup',off); el.addEventListener('pointercancel',off); el.addEventListener('lostpointercapture',off);
 }
 hold($('bl'),'l'); hold($('br'),'r'); hold($('fart'),'f');
-$('startBtn').onclick=()=>conn&&conn.send({t:'start'});
+let btnMode='start'; $('startBtn').onclick=()=>{ if(conn) conn.send({t:btnMode}); haptic(20); };
+document.querySelectorAll('#seatbox button').forEach(b=>b.addEventListener('pointerdown',e=>{ e.preventDefault(); haptic(15); conn&&conn.send({t:'seat',k:b.dataset.k}); }));
 $('cal').onclick=()=>{ zero=rawAngle; };
 $('flipT').onclick=()=>{ inv=-inv; localStorage.setItem('toot-inv',inv); };
 $('tiltT').onclick=()=>{ tiltOn=!tiltOn; localStorage.setItem('toot-tilt',tiltOn?'1':'0'); $('tiltT').textContent='📱 Tilt: '+(tiltOn?'ON':'OFF'); send(true); };
