@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Great Toot Marathon</title>
+<style>
+ html,body{margin:0;height:100%;background:#120c2c;overflow:hidden}
+ body{display:flex;align-items:center;justify-content:center}
+ canvas{display:block}
+</style></head><body>
+<canvas id="c" width="1280" height="720"></canvas>
+<script src="vendor/peerjs.min.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="sound.js"></script>
+<script src="input.js"></script>
+<script src="netlink.js"></script>
+<script>
+// =====================================================================
+//  THE GREAT TOOT MARATHON: wobbly physics race for 1-3 players
+//  Controls: phone (enter code) · gamepad (L1/R1 feet, stick lean, ✕ fart) · keyboard (Z/X feet, ←/→ lean, Space fart)
+// =====================================================================
+const cv=document.getElementById('c'), g=cv.getContext('2d'), CW=1280, CH=720, TOPBAR=44;
+function fit(){ const ar=CW/CH; let w=innerWidth,h=w/ar; if(h>innerHeight){ h=innerHeight; w=h*ar; } cv.style.width=w+'px'; cv.style.height=h+'px'; }
+addEventListener('resize',fit); fit();
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t, DT=1/60, GRAV=9.8;
+const rr=(x,y,w,h,r,fill,stroke,lw=3)=>{ g.beginPath(); g.roundRect(x,y,w,h,r); if(fill){ g.fillStyle=fill; g.fill(); } if(stroke){ g.strokeStyle=stroke; g.lineWidth=lw; g.stroke(); } };
+const circ=(x,y,r,fill)=>{ g.beginPath(); g.arc(x,y,r,0,7); g.fillStyle=fill; g.fill(); };
+function text(t,x,y,size,col='#fff',align='center',weight='bold'){ g.font=`${weight} ${size}px system-ui,sans-serif`; g.textAlign=align; g.textBaseline='middle'; g.fillStyle=col; g.fillText(t,x,y); }
+function otext(t,x,y,size,col='#fff',align='center'){ g.font=`bold ${size}px system-ui,sans-serif`; g.textAlign=align; g.textBaseline='middle'; g.lineJoin='round'; g.lineWidth=Math.max(3,size/5); g.strokeStyle='#000b'; g.strokeText(t,x,y); g.fillStyle=col; g.fillText(t,x,y); }
+const emojiCache={};
+function emoji(e,x,y,size){ let c=emojiCache[e]; if(!c){ c=document.createElement('canvas'); c.width=c.height=64; const x2=c.getContext('2d'); x2.font='50px serif'; x2.textAlign='center'; x2.textBaseline='middle'; x2.fillText(e,32,36); emojiCache[e]=c; } g.drawImage(c,x-size/2,y-size/2,size,size); }
+function rumble(gp,ms,s){ try{ gp?.vibrationActuator?.playEffect?.('dual-rumble',{duration:ms,strongMagnitude:s,weakMagnitude:s}).catch(()=>{}); }catch(e){} }
+
+// ---------------- the course (metres, y up) ----------------
+const COURSE={
+  length:330,
+  puddles:[[34,42]], mud:[[158,178]],
+  hurdles:[196,211,226], banana:[292],
+  stations:[58,186],
+  pond:[256,267], water:-0.55,
+};
+function terrainH(x){
+  let h=0;
+  if(x>68&&x<=110) h=6*(1-Math.cos((x-68)/42*Math.PI))/2;          // hill up
+  else if(x>110&&x<=124) h=6;
+  else if(x>124&&x<=148) h=6*(1+Math.cos((x-124)/24*Math.PI))/2;   // steep downhill
+  h+=Math.sin(x*.21)*.08+Math.sin(x*.07)*.12;                        // small bumps
+  if(x>COURSE.pond[0]&&x<COURSE.pond[1]) h=-3;
+  return h;
+}
+const GSTEP=.1, GN=Math.ceil((COURSE.length+60)/GSTEP); const GARR=new Float32Array(GN);
+for(let i=0;i<GN;i++) GARR[i]=terrainH(i*GSTEP-20);
+function ground(x){ const f=(x+20)/GSTEP, i=Math.floor(f); if(i<0) return GARR[0]; if(i>=GN-1) return GARR[GN-1]; return lerp(GARR[i],GARR[i+1],f-i); }
+const inR=(x,list)=>list.some(([a,b])=>x>=a&&x<=b);
+const surfaceAt=x=>inR(x,COURSE.mud)?'mud':inR(x,COURSE.puddles)?'puddle':'road';
+const inPond=x=>x>COURSE.pond[0]&&x<COURSE.pond[1];
+
+// ---------------- characters ----------------
+const CHARS=[
+  {name:'Tooty Tom',  kind:'kid',   color:'#ff4d4d',shirt:'#ff4d4d',pants:'#2b3a78',skin:'#f2c29b',pitch:95},
+  {name:'Granny Gale',kind:'granny',color:'#ff7ad9',shirt:'#ff7ad9',pants:'#c94fa8',skin:'#f6d0b0',pitch:150},
+  {name:'Robo-Puff',  kind:'robot', color:'#7dc4ff',shirt:'#7dc4ff',pants:'#5a6a80',skin:'#c9d3de',pitch:62},
+];
+const LEG=.9, TORSO=.62, THRUST=13, POP=4.5;
+const DIFF=[{name:'Easy',assist:12,automash:true},{name:'Normal',assist:6.5,automash:false},{name:'Hard',assist:0,automash:false}];
+let difficulty=0;
+
+// =====================================================================
+//  RUNNER PHYSICS
+// =====================================================================
+class Runner{
+  constructor(p){ this.p=p; this.reset(); }
+  reset(){
+    Object.assign(this,{x:1.5,y:ground(1.5)+LEG,vx:0,vy:0,th:0,om:0,state:'run',aL:0,aR:0,kL:.1,kR:.1,lastStep:null,lastStepT:-9,gas:1,stamina:1,
+      falls:0,splashes:0,air:0,maxAir:0,toot:0,maxToot:0,finishT:0,place:0,rag:null,fallT:0,taps:0,prevIn:{},knocked:new Set(),bananaDone:new Set(),stations:new Set(),msg:'',msgT:0,popCd:0,tooting:false,prevVx:0,splashT:0});
+  }
+  say(m,t=1.6){ this.msg=m; this.msgT=t; }
+  get up(){ return [Math.sin(this.th),Math.cos(this.th)]; }
+  update(inp,t){
+    const P=this.p, pin=this.prevIn, lP=inp.l&&!pin.l, rP=inp.r&&!pin.r, fP=inp.f&&!pin.f; this.prevIn={...inp};
+    if(this.msgT>0) this.msgT-=DT; if(this.popCd>0) this.popCd-=DT;
+    if(this.state==='finished'){ this.vx*=.97; this.x+=this.vx*DT; this.y=ground(this.x)+LEG; this.th=lerp(this.th,0,.1); this.aL=lerp(this.aL,Math.sin(t*8)*.3,.2); this.aR=-this.aL; this.stopToot(); return; }
+    if(this.state==='fallen'){ this.stopToot(); this.updateRag();
+      this.fallT+=DT; if(this.fallT>.9&&(lP||rP||fP)){ this.taps++; Sfx.step(); }
+      const need=DIFF[difficulty].automash?3:7;
+      if(this.fallT>.9&&(this.taps>=need||this.fallT>(DIFF[difficulty].automash?2.2:5))) this.standUp();
+      return; }
+    if(this.state==='splash'){ this.stopToot(); this.splashT+=DT; this.y=COURSE.water+.2+Math.sin(t*6)*.08; this.th=Math.sin(t*3)*.3;
+      if(this.splashT>1.8){ this.x=COURSE.pond[0]-6; this.state='run'; this.y=ground(this.x)+LEG; this.vx=0; this.vy=0; this.th=0; this.om=0; this.say('Back on dry land 🧺'); } return; }
+
+    // ---- feet ----
+    if(this.state==='run'){ if(lP) this.step('L',t); if(rP) this.step('R',t); }
+    // ---- fart ----
+    let fx=0, fy=0, ftq=0;
+    if(inp.f&&this.gas>0){
+      const c=Math.cos(this.th), s=Math.sin(this.th);
+      // exhaust leaves the bottom going back+down in body frame (-.7,-.7); thrust is opposite, rotated by tilt (y up, +th = forward lean)
+      const tx=.7*c+.7*s, ty=.7*c-.7*s;            // unit-ish thrust direction
+      const n=Math.hypot(tx,ty); fx=tx/n*THRUST; fy=ty/n*THRUST;
+      // thrust acts at the hips, below the body's centre: tips the body backwards
+      ftq=-(.28*THRUST)*Math.cos(this.th)*1.1;
+      if(fP&&this.popCd<=0&&this.gas>.06){ this.vx+=tx/n*POP*.6; this.vy=Math.max(this.vy,0)+ty/n*POP; this.om-=.9; this.gas-=.06; this.popCd=.25; Sfx.fart(.22,P.char.pitch*1.15,.8); P.buzz(40);
+        if(this.state==='run'&&ty/n*POP>1.2){ this.state='air'; this.y+=.02; } }
+      this.gas=Math.max(0,this.gas-.3*DT); this.toot+=DT; this.maxToot=Math.max(this.maxToot,this.toot);
+      if(!this.tooting){ this.tooting=true; Sfx.fartStart(P.slot,P.char.pitch,.7); }
+      if(Math.random()<.6) puffs.push({x:this.x-Math.sin(this.th)*.05-Math.cos(this.th)*.18,y:this.y-.05,vx:-tx/n*3+this.vx*.3+(Math.random()-.5),vy:-ty/n*3+(Math.random()-.5),r:.12,life:1,c:Math.random()<.5?'#9ee35a':'#d6e86a'});
+      if(this.gas<=0){ this.say('Out of gas! 🫘'); }
+    } else this.stopToot();
+    if(!inp.f) this.toot=0;
+    this.gas=Math.min(1,this.gas+.025*DT);
+
+    const assist=P.bot?0:(P.assist!=null?P.assist:DIFF[difficulty].assist);
+    if(this.state==='run'){
+      const surf=surfaceAt(this.x), slope=(ground(this.x+.3)-ground(this.x-.3))/.6;
+      const ax=(this.vx-this.prevVx)/DT; this.prevVx=this.vx;
+      let al=5*Math.sin(this.th)+inp.lean*6-2.2*this.om-clamp(ax,-20,20)*.3+ftq;
+      if(assist) al+=-(this.th-.2)*assist-this.om*assist*.35;
+      this.om+=al*DT; this.th+=this.om*DT;
+      const drag=.06*this.vx*Math.abs(this.vx)+(surf==='mud'?1.3:.3)*this.vx;
+      this.vx+=(-drag-GRAV*slope/Math.hypot(1,slope)*.55+fx*.85)*DT;
+      if(Math.abs(this.vx)<.05&&!inp.f) this.vx=0;
+      this.vx=Math.max(-3,this.vx);
+      const px=this.x; this.x+=this.vx*DT;
+      this.vy=Math.max(0,this.vy+(fy-GRAV)*DT);
+      const gy=ground(this.x)+LEG;
+      if(this.vy>.8){ this.state='air'; }
+      else if(gy<this.y-.3){ this.state='air'; this.vy=0; }          // ran off an edge
+      else this.y=gy-Math.abs(Math.sin(this.aL*2.2))*.05;
+      this.hazards(px,t);
+      this.stamina=Math.min(1,this.stamina+.07*DT);
+      // legs relax toward standing
+      const tgt=this.lastStep==='L'?.45:-.45; if(t-this.lastStepT<.3){ this.aL=lerp(this.aL,this.lastStep==='L'?.55:-.4,.25); this.aR=lerp(this.aR,this.lastStep==='R'?.55:-.4,.25); } else { this.aL=lerp(this.aL,.05,.08); this.aR=lerp(this.aR,-.05,.08); }
+      this.kL=lerp(this.kL,this.aL>this.aR?.7:.15,.2); this.kR=lerp(this.kR,this.aR>this.aL?.7:.15,.2);
+      if(Math.abs(this.th)>1.05) this.fall(this.th>0?'Face plant! 🤕':'Fell on your bum! 🍑');
+    } else if(this.state==='air'){
+      this.air+=DT; this.maxAir=Math.max(this.maxAir,this.air);
+      let al=inp.lean*4.5-.6*this.om+ftq*.8; if(assist) al+=-(this.th-.15)*assist*.6;
+      this.om+=al*DT; this.th+=this.om*DT;
+      this.vy+=(fy-GRAV)*DT; this.vx+=(fx*.9-.02*this.vx*Math.abs(this.vx))*DT;
+      const px=this.x; this.x+=this.vx*DT; this.y+=this.vy*DT;
+      this.aL=lerp(this.aL,.6,.1); this.aR=lerp(this.aR,-.1,.1); this.kL=lerp(this.kL,1.2,.1); this.kR=lerp(this.kR,.9,.1);
+      this.hazards(px,t);
+      const gy=ground(this.x)+LEG;
+      if(inPond(this.x)&&this.y-LEG<COURSE.water){ this.splash(); return; }
+      if(this.y<=gy){
+        this.y=gy; const hard=this.vy<-10, bad=Math.abs(this.th)>.85; this.vy=0; this.air=0;
+        if(hard||bad) this.fall(hard?'CRASH landing! 💥':'Wobbly landing! 🙃');
+        else { this.state='run'; this.vx*=.92; Sfx.step(); }
+      }
+    }
+    if(this.x>=COURSE.length&&this.state!=='fallen'&&this.state!=='splash') this.finish(t);
+  }
+  step(foot,t){
+    const P=this.p, dt=t-this.lastStepT, surf=surfaceAt(this.x);
+    if(this.lastStep===foot&&dt<.8){ this.om+=1.3+this.vx*.07; this.vx*=.85; this.say('Same foot! Left, right, left…'); P.buzz(60); }
+    else{
+      const ideal=clamp(.42-this.vx*.03,.17,.42);
+      if(dt<.085){ this.om+=1.0; this.say('Legs tangled! 🦵🦵'); }
+      const q=clamp(1-Math.abs(dt-ideal)/ideal,0,1);
+      const leanMul=clamp(.5+this.th*1.6,.25,1.3), surfMul=surf==='road'?1:.6, stamMul=.45+.55*this.stamina;
+      this.vx+=(.55+1.1*q)*leanMul*surfMul*stamMul;
+      this.om+=.22+.03*this.vx;
+      this.stamina=Math.max(0,this.stamina-(.01+.02*this.vx/9));
+      if(surf==='puddle'){ this.om+=(Math.random()-.4)*1.6; if(Math.random()<.3) this.say('Slippery! 💦'); splashes(this.x,ground(this.x)); }
+      if(surf==='mud'&&Math.random()<.25) this.say('Squelch! Muddy! 🟤');
+    }
+    this.lastStep=foot; this.lastStepT=t;
+    if(!P.bot) Sfx.step();
+  }
+  hazards(px,t){
+    const P=this.p, feet=this.y-LEG;
+    COURSE.hurdles.forEach((hx,i)=>{ if(!this.knocked.has(i)&&px<hx&&this.x>=hx){ if(feet-ground(hx)<.7){ this.knocked.add(i); this.om+=3.2; this.vx*=.5; this.say('Tripped on the hurdle! 🚧'); Sfx.clunk(); P.buzz(150); commentary(`${P.name} clipped a hurdle!`); } else { this.say('Over the hurdle! 🙌'); } } });
+    COURSE.banana.forEach((bx,i)=>{ if(!this.bananaDone.has(i)&&px<bx&&this.x>=bx&&this.state==='run'){ this.bananaDone.add(i); this.om-=4.5; this.vx*=.8; this.say('BANANA! 🍌'); Sfx.boing(); commentary(`${P.name} stepped on a banana! 🍌`); } });
+    COURSE.stations.forEach((sx,i)=>{ if(!this.stations.has(i)&&px<sx&&this.x>=sx){ this.stations.add(i); this.gas=1; this.stamina=1; this.say('Bean station! Gas FULL ⛽🫘'); Sfx.heart(); } });
+  }
+  fall(why){
+    const P=this.p; this.state='fallen'; this.falls++; this.fallT=0; this.taps=0; this.stopToot();
+    const pts=pose(this), v={x:this.vx,y:this.vy};
+    this.rag={pts:Object.fromEntries(Object.entries(pts).map(([k,p])=>{ const rx=p.x-this.x, ry=p.y-this.y; return [k,{x:p.x,y:p.y,px:p.x-(v.x-this.om*ry)*DT,py:p.y-(v.y+this.om*rx)*DT}]; }))};
+    this.say(why+'  Tap your feet to get up!',3); Sfx.boing(); P.buzz(300); P.big('OOPS!');
+    commentary(`${P.name}: ${why}`);
+  }
+  updateRag(){
+    const R=this.rag.pts;
+    for(const k in R){ const p=R[k]; const vx=(p.x-p.px)*.995, vy=(p.y-p.py)*.995; p.px=p.x; p.py=p.y; p.x+=vx; p.y+=vy-GRAV*DT*DT; }
+    for(let it=0;it<6;it++){
+      for(const [a,b,len] of BONES){ const A=R[a],B=R[b],dx=B.x-A.x,dy=B.y-A.y,d=Math.hypot(dx,dy)||1e-6,diff=(d-len)/d*.5; A.x+=dx*diff; A.y+=dy*diff; B.x-=dx*diff; B.y-=dy*diff; }
+      for(const k in R){ const p=R[k], gy=ground(p.x)+(k==='head'?.15:.05); if(p.y<gy){ p.y=gy; p.px=p.x-(p.x-p.px)*.55; } }
+    }
+    this.x=R.hip.x; this.y=R.hip.y;
+  }
+  standUp(){ const x=this.rag.pts.hip.x; Object.assign(this,{state:'run',x,y:ground(x)+LEG,vx:0,vy:0,th:0,om:0,rag:null,aL:0,aR:0}); this.say('Up again! Go go go! 💪'); }
+  splash(){ const P=this.p; this.state='splash'; this.splashT=0; this.splashes++; this.vx=0; this.stopToot(); Sfx.splash(); P.buzz(400); P.big('SPLASH!'); splashes(this.x,COURSE.water,30); commentary(`${P.name} fell in the pond! 💦`); this.say('SPLASH! Fart harder next time! 💨',2.5); }
+  finish(t){ const P=this.p; this.state='finished'; this.stopToot(); this.finishT=t; this.place=++game.finishedCount;
+    const medal=['🥇','🥈','🥉'][this.place-1]||'🏁'; this.say(`${medal} FINISHED! ${fmt(t)}`,99); Sfx.win(); Sfx.cheer(2); P.big(medal+' '+ordinal(this.place)+'!',3000); P.buzz(500);
+    commentary(`${P.name} crosses the line in ${ordinal(this.place)} place! ${medal}`); confetti(this.x); }
+  stopToot(){ if(this.tooting){ this.tooting=false; Sfx.fartStop(this.p.slot); } }
+}
+const BONES=[['head','neck',.2],['neck','hip',TORSO],['head','hip',TORSO+.2],['hip','kneeL',.45],['kneeL','footL',.45],['hip','kneeR',.45],['kneeR','footR',.45],['neck','handL',.55],['neck','handR',.55],['handL','hip',.75],['handR','hip',.75]];
+function pose(r){
+  if(r.rag) return r.rag.pts;
+  const ux=Math.sin(r.th), uy=Math.cos(r.th), H={x:r.x,y:r.y}, N={x:H.x+ux*TORSO,y:H.y+uy*TORSO}, head={x:N.x+ux*.2,y:N.y+uy*.2};
+  const leg=(a,k)=>{ const kn={x:H.x+Math.sin(a)*.45,y:H.y-Math.cos(a)*.45}; return [kn,{x:kn.x+Math.sin(a-k)*.45,y:kn.y-Math.cos(a-k)*.45}]; };
+  const [kL,fL]=leg(r.aL,r.kL), [kR,fR]=leg(r.aR,r.kR);
+  const arm=a=>({x:N.x+Math.sin(a+r.th)*.55,y:N.y-Math.cos(a+r.th)*.55});
+  const flail=r.state==='air'?Math.sin(performance.now()/60)*.8:0;
+  return {head,neck:N,hip:H,kneeL:kL,footL:fL,kneeR:kR,footR:fR,handL:arm(-r.aL*.9+flail+(r.state==='air'?2.2:0)),handR:arm(-r.aR*.9-flail+(r.state==='air'?2.4:0))};
+}
+
+// =====================================================================
+//  PLAYERS & INPUT SOURCES
+// =====================================================================
+const players=[];       // {slot,src,name,char,input,runner,conn,padIndex,bot,assist}
+const keys={}, tapped={}; addEventListener('keydown',e=>{ keys[e.code]=true; tapped[e.code]=true; if(['Space','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.code)) e.preventDefault(); }); addEventListener('keyup',e=>keys[e.code]=false);
+const pads=()=>[...(navigator.getGamepads?navigator.getGamepads():[])].filter(p=>p&&p.connected);
+function freeSlot(){ for(let i=0;i<3;i++) if(!players.some(p=>p.slot===i)) return i; return -1; }
+function addPlayer(src,extra={}){
+  const slot=freeSlot(); if(slot<0) return null;
+  const char=CHARS[slot];
+  const P={slot,src,char,name:extra.name||(src==='bot'?['Bot Bob','Bot Betty','Bot Bleep'][slot]:char.name),input:{l:0,r:0,f:0,lean:0},bot:src==='bot',...extra,
+    buzz(ms){ if(this.conn) this.conn.send({t:'buzz',ms}); if(this.src==='pad') rumble(pads().find(p=>p.index===this.padIndex),ms,.8); },
+    big(text,ms){ if(this.conn) this.conn.send({t:'big',text,ms}); }};
+  P.runner=new Runner(P); players.push(P); players.sort((a,b)=>a.slot-b.slot);
+  if(P.conn) P.conn.send({t:'welcome',slot,color:char.color,name:P.name});
+  Sfx.select(); commentary(`${P.name} joined as ${char.name}!`);
+  return P;
+}
+function removePlayer(P){ const i=players.indexOf(P); if(i>=0) players.splice(i,1); P.runner.stopToot(); }
+function readInputs(){
+  for(const P of players){
+    if(P.src==='kb'){ P.input={l:keys.KeyZ?1:0,r:keys.KeyX?1:0,f:keys.Space?1:0,lean:(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0)}; }
+    else if(P.src==='pad'){ const gp=pads().find(p=>p.index===P.padIndex); if(!gp) continue; const n=Input.named(gp);
+      P.input={l:(n.l1||n.l2)?1:0,r:(n.r1||n.r2)?1:0,f:n.cross?1:0,lean:clamp((Math.abs(n.lx)>.15?n.lx:0)+(n.dright?1:0)-(n.dleft?1:0),-1,1)}; }
+    else if(P.src==='bot') P.input=botThink(P);
+    // phone input arrives by messages
+  }
+}
+function botThink(P){
+  const r=P.runner, t=game.t, b=P.botMem||(P.botMem={next:0,foot:'L',fartUntil:0,lean:0});
+  const inp={l:0,r:0,f:0,lean:0};
+  if(r.state==='fallen'){ if(t>b.next){ b.next=t+.13; inp[b.foot==='L'?'l':'r']=1; b.foot=b.foot==='L'?'R':'L'; } return inp; }
+  const ahead=x=>x-r.x;
+  let targetTh=.22;
+  const h=COURSE.hurdles.find((hx,i)=>!r.knocked.has(i)&&ahead(hx)>0&&ahead(hx)<6);
+  if(h!=null){ const d=ahead(h); if(d<3&&r.state==='run') b.fartUntil=t+.36; targetTh=d<3.5?.05:.2; }
+  const pd=ahead(COURSE.pond[0]); if(pd>0&&pd<2.2&&r.state==='run') b.fartUntil=t+1.3;
+  if(inPond(r.x+1)&&r.state==='air') { b.fartUntil=Math.max(b.fartUntil,t+.1); targetTh=.35; }
+  inp.lean=clamp((targetTh-r.th)*2.6-r.om*.55+(Math.random()-.5)*.25,-1,1);
+  inp.f=t<b.fartUntil&&r.gas>0?1:0;
+  if(r.state==='run'&&!inp.f){ const ideal=clamp(.42-r.vx*.03,.17,.42)*(1.05+Math.random()*.25);
+    if(t-r.lastStepT>=ideal&&t>b.next){ b.next=t+.09; inp[b.foot==='L'?'l':'r']=1; b.foot=b.foot==='L'?'R':'L'; } }
+  return inp;
+}
+
+// ---------------- phones ----------------
+let joinCode=null, netError=null, qrImg=null;
+const padURL=()=>new URL('pad.html',location.href).href.split('?')[0]+'?code='+joinCode+(NetLink.LOCAL?'&local':'');
+NetLink.host({
+  onCode:code=>{ joinCode=code; try{ const q=qrcode(0,'M'); q.addData(padURL()); q.make(); qrImg=new Image(); qrImg.src=q.createDataURL(6,2); }catch(e){} },
+  onError:e=>{ netError=String(e); },
+  onConn:conn=>{
+    let P=null;
+    conn.on('data',m=>{
+      if(m.t==='hello'){ if(game.screen==='lobby'||game.screen==='results'){ P=addPlayer('phone',{conn,name:(m.name||'Phone').slice(0,12)}); if(!P) conn.send({t:'full'}); } else conn.send({t:'big',text:'Race in progress! Wait…',ms:2500}); }
+      if(m.t==='in'&&P){ P.input={l:m.l?1:0,r:m.r?1:0,f:m.f?1:0,lean:clamp(+m.lean||0,-1,1)}; P.assist=m.tilt?null:DIFF[0].assist; }
+      if(m.t==='start') requestStart();
+    });
+    conn.on('close',()=>{ if(!P) return; if(game.screen==='race'||game.screen==='countdown'){ P.src='bot'; P.bot=true; P.conn=null; P.name+=' (bot)'; commentary(`${P.name} disconnected, a bot takes over`); } else removePlayer(P); });
+  }
+});
+
+// =====================================================================
+//  GAME FLOW
+// =====================================================================
+const game={screen:'lobby',t:0,count:0,finishedCount:0,endT:0,msgs:[],prevKeys:{}};
+let puffs=[], drops=[];
+function commentary(m){ game.msgs.push({m,age:0}); if(game.msgs.length>3) game.msgs.shift(); }
+const fmt=t=>`${Math.floor(t/60)}:${(t%60).toFixed(1).padStart(4,'0')}`;
+const ordinal=n=>n+(['th','st','nd','rd'][n%10>3||Math.floor(n%100/10)===1?0:n%10]||'th');
+function splashes(x,y,n=8){ for(let i=0;i<n;i++) drops.push({x,y,vx:(Math.random()-.5)*4,vy:2+Math.random()*4,life:1,c:'#7cc8ff'}); }
+function confetti(x){ for(let i=0;i<60;i++) drops.push({x:x+(Math.random()-.5)*4,y:ground(x)+4+Math.random()*2,vx:(Math.random()-.5)*5,vy:Math.random()*4,life:2.5,c:['#ffd84a','#ff4d4d','#4be38a','#7dc4ff','#ff7ad9'][i%5],conf:true}); }
+function requestStart(){ if((game.screen==='lobby'||game.screen==='results')&&players.length){ startCountdown(); } }
+function startCountdown(){
+  for(const P of players){ P.runner.reset(); P.botMem=null; }
+  puffs=[]; drops=[]; game.finishedCount=0; game.screen='countdown'; game.count=3.99; game.t=0; Sfx.fartStopAll();
+  commentary('Runners, take your marks…');
+}
+const kEdge=k=>!!tapped[k];
+function update(){
+  readInputs();
+  const ps=pads();
+  if(game.screen==='lobby'||game.screen==='results'){
+    if(kEdge('Space')&&!players.some(p=>p.src==='kb')&&game.screen==='lobby') addPlayer('kb',{name:'Keyboard'});
+    for(const gp of ps){ const n=Input.named(gp), was=game['pad'+gp.index]||{};
+      if(n.cross&&!was.cross&&!players.some(p=>p.src==='pad'&&p.padIndex===gp.index)&&game.screen==='lobby') addPlayer('pad',{padIndex:gp.index,name:'Controller '+(gp.index+1)});
+      if(n.triangle&&!was.triangle&&game.screen==='lobby') addPlayer('bot');
+      if(n.options&&!was.options) requestStart();
+      if((n.dleft&&!was.dleft)||(n.dright&&!was.dright)){ if(game.screen==='lobby'){ difficulty=(difficulty+(n.dright?1:2))%3; Sfx.move(); } }
+      if(n.circle&&!was.circle&&game.screen==='results') game.screen='lobby';
+      game['pad'+gp.index]={...n}; }
+    if(kEdge('KeyB')&&game.screen==='lobby') addPlayer('bot');
+    if(kEdge('Enter')) requestStart();
+    if(kEdge('KeyD')&&game.screen==='lobby'){ difficulty=(difficulty+1)%3; Sfx.move(); }
+    if(kEdge('KeyR')&&game.screen==='lobby'){ while(players.length) removePlayer(players[0]); }
+    if(kEdge('Escape')&&game.screen==='results') game.screen='lobby';
+  }
+  else if(game.screen==='countdown'){
+    const before=Math.ceil(game.count); game.count-=DT; const now=Math.ceil(game.count);
+    if(now!==before){ if(now>0){ Sfx.tick(); players.forEach(P=>P.big(String(now),900)); } }
+    if(game.count<=0){ game.screen='race'; game.t=0; Sfx.select(); Sfx.cheer(1.5); players.forEach(P=>P.big('GO! 💨',900)); commentary('AND THEY\'RE OFF! 💨'); }
+  }
+  else if(game.screen==='race'){
+    game.t+=DT;
+    for(const P of players) P.runner.update(P.input,game.t);
+    const humans=players.filter(p=>!p.bot), allHumansDone=humans.length?humans.every(p=>p.runner.state==='finished'):players.every(p=>p.runner.state==='finished');
+    if(game.finishedCount&&!game.endT) game.endT=game.t+45;
+    if(allHumansDone||players.every(p=>p.runner.state==='finished')||(game.endT&&game.t>game.endT)){ game.screen='results'; game.endT=0; Sfx.fartStopAll(); commentary('What a race! 🏆'); }
+  }
+  for(const p of puffs){ p.x+=p.vx*DT; p.y+=p.vy*DT; p.vx*=.96; p.vy=p.vy*.96+.4*DT; p.r+=.6*DT; p.life-=DT*.9; } puffs=puffs.filter(p=>p.life>0).slice(-400);
+  for(const d of drops){ d.x+=d.vx*DT; d.y+=d.vy*DT; d.vy-=(d.conf?3:GRAV)*DT; d.life-=DT; } drops=drops.filter(d=>d.life>0);
+  for(const m of game.msgs) m.age+=DT; game.msgs=game.msgs.filter(m=>m.age<5);
+  // tell phones how they're doing
+  if(Math.floor(game.t*4)!==Math.floor((game.t-DT)*4)||game.screen!=='race') statTick();
+  game.prevKeys={...keys}; for(const k in tapped) delete tapped[k];
+}
+let statClock=0;
+function statTick(){
+  if(++statClock%15&&game.screen!=='race') return;
+  const order=placeOrder();
+  for(const P of players){ if(!P.conn) continue; const r=P.runner;
+    let msg=game.screen==='lobby'?`You're Player ${P.slot+1}: ${P.char.name}`:game.screen==='countdown'?'Get ready…':game.screen==='results'?'Race over! Press START for another':
+      r.state==='finished'?`${['🥇','🥈','🥉'][r.place-1]||'🏁'} ${ordinal(r.place)} · ${fmt(r.finishT)}`:r.state==='fallen'?'TAP YOUR FEET TO GET UP!':r.state==='splash'?'SPLASH! 💦':`${ordinal(order.indexOf(P)+1)} · ${Math.max(0,Math.floor(r.x))} / ${COURSE.length} m`;
+    P.conn.send({t:'stat',gas:r.gas,msg,canStart:game.screen==='lobby'||game.screen==='results'}); }
+}
+function placeOrder(){ return [...players].sort((a,b)=>{ const A=a.runner,B=b.runner; if(A.place&&B.place) return A.place-B.place; if(A.place) return -1; if(B.place) return 1; return B.x-A.x; }); }
+
+// =====================================================================
+//  DRAWING
+// =====================================================================
+const M=30;   // pixels per metre (before row zoom)
+function drawRow(P,ry,rh){
+  const r=P.runner, zoom=Math.min(2,rh/250), vw=CW/zoom, vh=rh/zoom;
+  P.cam=P.cam||{x:0,y:0}; const tx=r.x*M-vw*.32, ty=-(Math.max(r.y,ground(r.x)+LEG)+.6)*M-vh*.55;
+  P.cam.x=lerp(P.cam.x,tx,.15); P.cam.y=lerp(P.cam.y,ty,.1);
+  g.save(); g.beginPath(); g.rect(0,ry,CW,rh); g.clip(); g.translate(0,ry); g.scale(zoom,zoom); g.translate(-P.cam.x,-P.cam.y);
+  const cx=P.cam.x, cy=P.cam.y, W2=(x)=>x*M, H2=(y)=>-y*M;
+  // sky
+  const sk=g.createLinearGradient(0,cy,0,cy+vh); sk.addColorStop(0,'#5ec8ff'); sk.addColorStop(1,'#d8f2ff'); g.fillStyle=sk; g.fillRect(cx,cy,vw,vh);
+  // parallax hills + city (anchored to a horizon that follows the camera)
+  const hor=cy+vh*.72, off=cx*.45;
+  g.fillStyle='#a9dca0'; g.beginPath(); g.moveTo(cx,cy+vh); for(let sx=0;sx<=vw+20;sx+=20){ const px=(cx+sx)*.3; g.lineTo(cx+sx,hor-Math.sin(px/120)*26-Math.sin(px/47)*9); } g.lineTo(cx+vw,cy+vh); g.fill();
+  for(let i=Math.floor(off/120)-1;i<Math.floor((off+vw)/120)+2;i++){ const sxp=cx+i*120-off, h=40+((i*37%5+5)%5)*22, w=64+((i*13%3+3)%3)*12;
+    g.fillStyle=['#b8c6da','#c9b8da','#b8dad2'][((i%3)+3)%3]; g.fillRect(sxp,hor-h-20,w,h+20);
+    g.fillStyle='#ffffff88'; for(let yy=hor-h-12;yy<hor-28;yy+=16) for(let xx=sxp+8;xx<sxp+w-10;xx+=14) g.fillRect(xx,yy,7,9); }
+  // clouds
+  const tt=performance.now()/1000; g.fillStyle='#fff'; for(let i=0;i<6;i++){ const x0=((i*311+tt*12-cx*.2)%(vw+300)+vw+300)%(vw+300)-150+cx, y0=cy+30+(i*53)%90; for(const [a,b,rad] of [[0,0,22],[24,-9,27],[50,0,20]]){ g.beginPath(); g.arc(x0+a,y0+b,rad,0,7); g.fill(); } }
+  // ground
+  const x0=cx/M-1, x1=(cx+vw)/M+1;
+  g.beginPath(); g.moveTo(W2(x0),cy+vh+50); for(let x=x0;x<=x1;x+=.25) g.lineTo(W2(x),H2(ground(x))); g.lineTo(W2(x1),cy+vh+50); g.closePath();
+  const dg=g.createLinearGradient(0,H2(6),0,H2(-4)); dg.addColorStop(0,'#8a6a45'); dg.addColorStop(1,'#5a3d22'); g.fillStyle=dg; g.fill();
+  g.strokeStyle='#5fbf4a'; g.lineWidth=6; g.beginPath(); for(let x=x0;x<=x1;x+=.25){ if(inPond(x)) { g.moveTo(W2(x+.25),H2(ground(x+.25))); continue; } x===x0?g.moveTo(W2(x),H2(ground(x))):g.lineTo(W2(x),H2(ground(x))); } g.stroke();
+  // road surface strip
+  g.strokeStyle='#777d86'; g.lineWidth=4; g.beginPath(); for(let x=Math.max(x0,0);x<=Math.min(x1,COURSE.length+15);x+=.25){ if(inPond(x)) continue; g.moveTo(W2(x),H2(ground(x))+3); g.lineTo(W2(x+.26),H2(ground(x+.25))+3); } g.stroke();
+  for(const [a,b] of COURSE.mud) if(b>x0&&a<x1){ g.fillStyle='#4a2e14'; g.beginPath(); g.moveTo(W2(a),H2(ground(a))); for(let x=a;x<=b;x+=.25) g.lineTo(W2(x),H2(ground(x))-4-Math.sin(x*3)*2); g.lineTo(W2(b),H2(ground(b))+8); g.lineTo(W2(a),H2(ground(a))+8); g.fill(); }
+  for(const [a,b] of COURSE.puddles) if(b>x0&&a<x1){ g.fillStyle='#6cc8ffcc'; g.beginPath(); g.ellipse(W2((a+b)/2),H2(ground((a+b)/2))+2,(b-a)*M/2,6,0,0,7); g.fill(); }
+  // pond
+  if(COURSE.pond[1]>x0&&COURSE.pond[0]<x1){ g.fillStyle='#3d9be0cc'; g.fillRect(W2(COURSE.pond[0]),H2(COURSE.water),(COURSE.pond[1]-COURSE.pond[0])*M,(COURSE.water+3)*M); g.fillStyle='#ffffff66'; for(let i=0;i<5;i++) g.fillRect(W2(COURSE.pond[0])+20+i*60+Math.sin(tt*2+i)*8,H2(COURSE.water)+4,30,3); emoji('🦆',W2(COURSE.pond[0]+6)+Math.sin(tt)*20,H2(COURSE.water)-8,28); otext('POND! 💨 fart over it',W2(COURSE.pond[0]-3),H2(ground(COURSE.pond[0]-3))-110,16,'#9fe'); }
+  // distance boards, start, finish
+  for(let d=Math.ceil(x0/25)*25;d<x1;d+=25){ if(d<=0||d>=COURSE.length||inPond(d)) continue; const gx=W2(d),gy=H2(ground(d)); g.fillStyle='#fff'; g.fillRect(gx-2,gy-60,4,60); rr(gx-26,gy-84,52,26,5,'#2b3a78','#fff',2); text(d+' m',gx,gy-71,13,'#fff'); }
+  { const sx=W2(0),sy=H2(ground(0)); g.fillStyle='#fff'; g.fillRect(sx-3,sy-4,6,8); otext('START',sx,sy-120,22,'#fff'); g.fillStyle='#ddd'; g.fillRect(sx-40,sy-100,4,100); g.fillRect(sx+36,sy-100,4,100); rr(sx-44,sy-110,88,16,4,'#4be38a'); }
+  { const fx=W2(COURSE.length), fy=H2(ground(COURSE.length)); g.fillStyle='#ccc'; g.fillRect(fx-70,fy-150,8,150); g.fillRect(fx+62,fy-150,8,150); rr(fx-76,fy-180,152,40,8,'#ff4d4d','#fff',3); otext('FINISH',fx,fy-160,24,'#fff');
+    for(let i=0;i<10;i++) for(let j=0;j<2;j++){ g.fillStyle=(i+j)%2?'#000':'#fff'; g.fillRect(fx-6+j*6,fy-i*6-6,6,6); }
+    for(let i=-8;i<12;i++){ const hx=fx-240+i*30, hy=H2(ground((hx)/M))-12-Math.abs(Math.sin(tt*6+i))*6; circ(hx,hy-26,9,['#f2c29b','#c68642','#8d5524','#f6d0b0'][((i%4)+4)%4]); rr(hx-9,hy-18,18,22,5,['#ffd84a','#4be38a','#7dc4ff','#ff7ad9'][((i%4)+4)%4]); } }
+  // stations
+  COURSE.stations.forEach(sx=>{ if(sx<x0-3||sx>x1+3) return; const gx=W2(sx), gy=H2(ground(sx)); rr(gx-40,gy-44,80,10,3,'#c98a4b'); g.fillStyle='#8a5a2b'; g.fillRect(gx-34,gy-34,5,34); g.fillRect(gx+29,gy-34,5,34); emoji('🫘',gx-18,gy-56,22); emoji('🥤',gx+16,gy-56,22); rr(gx-50,gy-104,100,28,6,'#ffd84a','#222',2); text('⛽ BEANS',gx,gy-90,15,'#222'); });
+  // hurdles & banana
+  COURSE.hurdles.forEach((hx,i)=>{ if(hx<x0-2||hx>x1+2) return; const gx=W2(hx), gy=H2(ground(hx)), down=r.knocked.has(i);
+    g.save(); g.translate(gx,gy); if(down) g.rotate(1.3); g.fillStyle='#eee'; g.fillRect(-3,-.7*M,5,.7*M); g.fillRect(12,-.7*M,5,.7*M); for(let k=0;k<4;k++){ g.fillStyle=k%2?'#ff4d4d':'#fff'; g.fillRect(-6+k*7,-.7*M-4,7,8); } g.restore(); });
+  COURSE.banana.forEach((bx,i)=>{ if(bx<x0||bx>x1) return; emoji(r.bananaDone.has(i)?'💩':'🍌',W2(bx),H2(ground(bx))-8,r.bananaDone.has(i)?0:24); if(r.bananaDone.has(i)) emoji('🍌',W2(bx),H2(ground(bx))-3,18); });
+  // puffs (only this row's own world: everyone's puffs are fine)
+  for(const p of puffs){ g.globalAlpha=Math.max(0,p.life*.6); circ(W2(p.x),H2(p.y),p.r*M,p.c); } g.globalAlpha=1;
+  // ghosts, then me
+  for(const Q of players) if(Q!==P){ g.globalAlpha=.32; drawRunner(Q,W2,H2); g.globalAlpha=1; }
+  drawRunner(P,W2,H2);
+  for(const d of drops){ g.fillStyle=d.c; g.fillRect(W2(d.x)-3,H2(d.y)-3,d.conf?7:5,d.conf?4:5); }
+  g.restore();
+  // ---- row HUD ----
+  const order=placeOrder(), pl=order.indexOf(P)+1;
+  rr(10,ry+8,330,58,14,'#000a'); circ(36,ry+37,15,P.char.color); text(P.slot+1+'',36,ry+37,16,'#fff');
+  text(P.name,60,ry+24,18,'#fff','left'); text(`${P.char.name} · ${P.src==='phone'?'📱':P.src==='pad'?'🎮':P.src==='kb'?'⌨️':'🤖'}`,60,ry+48,13,'#ccd','left','normal');
+  text(r.place?(['🥇','🥈','🥉'][r.place-1]||'🏁'):ordinal(pl),318,ry+37,r.place?30:24,'#ffd84a','right');
+  rr(CW-250,ry+8,240,58,14,'#000a'); text(`${Math.max(0,Math.min(COURSE.length,Math.floor(r.x)))} / ${COURSE.length} m`,CW-130,ry+22,15,'#fff');
+  text('GAS',CW-238,ry+42,11,'#9ee35a','left'); rr(CW-205,ry+36,180,10,5,'#fff2'); rr(CW-205,ry+36,180*r.gas,10,5,r.gas<.2?'#ff6b6b':'#9ee35a');
+  text('LEGS',CW-238,ry+56,11,'#ffd84a','left'); rr(CW-205,ry+51,180,8,4,'#fff2'); rr(CW-205,ry+51,180*r.stamina,8,4,'#ffd84a');
+  // balance meter
+  const bx=CW/2, by=ry+rh-22; rr(bx-90,by-7,180,14,7,'#0007'); g.fillStyle='#4be38a55'; g.fillRect(bx-10,by-7,30,14); circ(bx+clamp(r.th/1.05,-1,1)*85,by,8,Math.abs(r.th)>.7?'#ff4d4d':'#ffd84a'); text('BALANCE',bx-130,by,11,'#fff','center');
+  if(r.msgT>0) otext(r.msg,CW/2,ry+Math.min(90,rh*.3),Math.min(26,rh/9),'#fff');
+  if(r.state==='fallen'&&r.fallT>.9) otext(`👟 Tap feet to get up! ${'●'.repeat(Math.min(r.taps,7))}`,CW/2,ry+rh*.55,Math.min(30,rh/7),'#ffd84a');
+}
+function drawRunner(P,W2,H2){
+  const r=P.runner, c=P.char, p=pose(r), X=q=>W2(q.x), Y=q=>H2(q.y);
+  const lim=(a,b,col,w)=>{ g.strokeStyle=col; g.lineWidth=w; g.lineCap='round'; g.beginPath(); g.moveTo(X(a),Y(a)); g.lineTo(X(b),Y(b)); g.stroke(); };
+  // back arm/leg first
+  lim(p.neck,p.handR,c.skin,6); lim(p.hip,p.kneeR,c.pants,9); lim(p.kneeR,p.footR,c.pants,8); circ(X(p.footR),Y(p.footR),6,'#fff');
+  lim(p.hip,p.neck,c.shirt,16);
+  // bib number
+  const mx=(X(p.hip)+X(p.neck))/2, my=(Y(p.hip)+Y(p.neck))/2; g.fillStyle='#fff'; g.fillRect(mx-6,my-6,12,11); text(String(P.slot+1),mx,my,9,'#222');
+  lim(p.hip,p.kneeL,c.pants,9); lim(p.kneeL,p.footL,c.pants,8); circ(X(p.footL),Y(p.footL),6,'#fff'); circ(X(p.footL)+2,Y(p.footL),4,c.color);
+  lim(p.neck,p.handL,c.skin,6);
+  // head
+  const hx=X(p.head), hy=Y(p.head), ang=Math.atan2(p.head.x-p.neck.x,p.head.y-p.neck.y);
+  g.save(); g.translate(hx,hy); g.rotate(ang);
+  if(c.kind==='robot'){ rr(-11,-11,22,22,4,c.skin,'#5a6a80',2); g.fillStyle='#222'; g.fillRect(-5,-4,14,5); g.fillStyle='#ff4d4d'; g.fillRect(2,-3,4,3); g.strokeStyle='#5a6a80'; g.lineWidth=2; g.beginPath(); g.moveTo(0,-11); g.lineTo(0,-18); g.stroke(); circ(0,-19,3,'#ffd84a'); }
+  else { circ(0,0,11,c.skin); circ(5,-2,1.8,'#222');
+    if(c.kind==='kid'){ g.fillStyle='#ff4d4d'; g.beginPath(); g.arc(0,-3,11,Math.PI,0); g.fill(); g.fillRect(2,-5,13,4); }
+    if(c.kind==='granny'){ circ(-6,-9,7,'#ddd'); g.fillStyle='#ddd'; g.beginPath(); g.arc(0,-2,11,Math.PI,0); g.fill(); g.strokeStyle='#555'; g.lineWidth=1.5; g.beginPath(); g.arc(5,-2,3.5,0,7); g.stroke(); }
+    g.strokeStyle='#a0522d'; g.lineWidth=1.5; g.beginPath(); r.state==='fallen'||r.state==='splash'?g.arc(5,6,3,Math.PI,0):g.arc(4,3,4,.2,2.4); g.stroke(); }
+  g.restore();
+}
+function drawTopBar(){
+  g.fillStyle='#1b1440'; g.fillRect(0,0,CW,TOPBAR);
+  const x0=200, x1=CW-200; g.strokeStyle='#fff4'; g.lineWidth=6; g.lineCap='round'; g.beginPath(); g.moveTo(x0,22); g.lineTo(x1,22); g.stroke();
+  for(const s of COURSE.stations){ emoji('🫘',x0+(x1-x0)*s/COURSE.length,22,14); } emoji('🏁',x1+14,22,22);
+  for(const P of players){ const px=x0+(x1-x0)*clamp(P.runner.x/COURSE.length,0,1); circ(px,22,10,P.char.color); text(String(P.slot+1),px,22,11,'#fff'); }
+  text(game.screen==='race'?'⏱ '+fmt(game.t):'',20,22,18,'#fff','left');
+  const m=game.msgs[game.msgs.length-1]; if(m) text('🎙️ '+m.m,CW-14,22,14,'#ffe98a','right','normal');
+}
+function drawRace(){
+  const n=Math.max(1,players.length), rh=(CH-TOPBAR)/n;
+  players.forEach((P,i)=>drawRow(P,TOPBAR+i*rh,rh));
+  for(let i=1;i<n;i++){ g.fillStyle='#000'; g.fillRect(0,TOPBAR+i*rh-2,CW,4); }
+  drawTopBar();
+  if(game.screen==='countdown'){ const c=Math.ceil(game.count); otext(c>0?String(c):'GO!',CW/2,CH/2,160,'#ffd84a'); }
+  if(game.screen==='race'&&game.t<1) otext('GO! 💨',CW/2,CH/2,160-game.t*60,'#7dffa8');
+}
+function drawLobby(){
+  const sk=g.createLinearGradient(0,0,0,CH); sk.addColorStop(0,'#5ec8ff'); sk.addColorStop(1,'#d8f2ff'); g.fillStyle=sk; g.fillRect(0,0,CW,CH);
+  g.fillStyle='#5fbf4a'; g.fillRect(0,600,CW,120);
+  otext('💨 THE GREAT TOOT MARATHON 💨',CW/2,56,52,'#ffd84a');
+  text('A wobbly physics race · run with left-right steps · lean to balance · fart to fly!',CW/2,102,20,'#1b1440','center','normal');
+  // join panel
+  rr(40,140,560,440,24,'#1b1440ee','#ffd84a',4);
+  text('📱 Join with your phone',320,178,28,'#fff');
+  if(joinCode){ if(qrImg&&qrImg.complete) { g.fillStyle='#fff'; g.fillRect(70,210,230,230); g.drawImage(qrImg,75,215,220,220); }
+    text('Scan the QR code, or open',450,232,16,'#ccd','center','normal');
+    const u=new URL('pad.html',location.href).href.split('?')[0].replace(/^https?:\/\//,''); text(u.length>34?'…'+u.slice(-33):u,450,256,14,'#7dc4ff','center','normal');
+    text('and type this code:',450,282,16,'#ccd','center','normal');
+    rr(340,300,220,90,18,'#ffd84a'); text(joinCode,450,347,64,'#1b1440');
+    text(NetLink.LOCAL?'(local test mode)':'Works best on the same Wi-Fi',450,410,14,'#aab','center','normal'); }
+  else text(netError?'⚠️ Phone join unavailable: '+netError:'Getting a join code…',320,320,18,netError?'#ff9a9a':'#fff');
+  text('🎮 Controller: press ✕ to join   ·   ⌨️ Keyboard: press SPACE',320,478,15,'#fff','center','normal');
+  text('🤖 Add a bot: △ or B   ·   Difficulty: ◀ ▶ or D',320,505,15,'#fff','center','normal');
+  rr(150,525,340,40,20,'#ffffff22'); text(`Physics: ${DIFF[difficulty].name} ${difficulty===0?'(auto-balance)':difficulty===2?'(no help!)':''}`,320,545,18,'#ffd84a');
+  // slots
+  for(let i=0;i<3;i++){ const x=640+i*205, y=160, P=players.find(p=>p.slot===i), c=CHARS[i];
+    rr(x,y,190,330,20,P?'#fff':'#ffffff55',P?c.color:'#fff8',4);
+    const fake={char:c,slot:i,runner:{th:Math.sin(performance.now()/400+i)*.15,x:0,y:0,aL:Math.sin(performance.now()/200+i)*.4,aR:-Math.sin(performance.now()/200+i)*.4,kL:.3,kR:.3,state:'run'}};
+    g.save(); g.translate(x+95,y+230); drawRunner(fake,v=>v*55,v=>-v*55); g.restore();
+    text('PLAYER '+(i+1),x+95,y+28,20,P?c.color:'#555'); text(c.name,x+95,y+290,16,P?'#222':'#666');
+    text(P?(P.src==='phone'?'📱 ':P.src==='pad'?'🎮 ':P.src==='kb'?'⌨️ ':'🤖 ')+P.name:'waiting…',x+95,y+314,15,P?'#222':'#666','center',P?'bold':'normal'); }
+  rr(640,510,600,64,18,players.length?'#4be38a':'#ffffff55'); text(players.length?'▶ START: Enter · OPTIONS · or START on a phone':'Waiting for players…',940,542,20,players.length?'#063':'#555');
+  text('How to run: tap LEFT, RIGHT, LEFT, RIGHT in a steady rhythm · lean to keep your balance · hold FART to boost and jump',CW/2,640,16,'#1b1440','center','normal');
+  text('Phone: tilt the phone like a steering wheel to lean · Controller: L1/R1 feet, stick leans, ✕ farts · Keyboard: Z/X feet, ←/→ lean, Space fart',CW/2,668,14,'#1b1440','center','normal');
+  text('L1/L2 on a controller do NOT exit here: they are your feet! Use the browser back button to leave.',CW/2,700,12,'#1b1440aa','center','normal');
+  for(const m of game.msgs) {} const m=game.msgs[game.msgs.length-1]; if(m) otext('🎙️ '+m.m,CW/2,128,16,'#ffe98a');
+}
+function drawResults(){
+  drawRace(); g.fillStyle='#120c2cee'; g.fillRect(0,0,CW,CH);
+  otext('🏆 RESULTS 🏆',CW/2,70,56,'#ffd84a');
+  const order=placeOrder(); const pod=[[0,0,180],[1,-230,130],[2,230,90]];
+  for(const [idx,dx,h] of pod){ const P=order[idx]; const x=CW/2+dx, base=470; rr(x-100,base-h,200,h,8,['#ffd84a','#c0c8d0','#d9925a'][idx]); text(String(idx+1),x,base-h/2,60,'#0006');
+    if(!P) continue; g.save(); g.translate(x,base-h-75); drawRunner({char:P.char,slot:P.slot,runner:{th:0,x:0,y:0,aL:Math.sin(performance.now()/150)*.3,aR:-Math.sin(performance.now()/150)*.3,kL:.2,kR:.2,state:'run'}},v=>v*45,v=>-v*45); g.restore();
+    text(P.name,x,base-h-172,20,P.char.color); text(P.runner.place?fmt(P.runner.finishT):`${Math.floor(P.runner.x)} m (DNF)`,x,base-h-150,16,'#fff'); }
+  // awards
+  const aw=[['🤕 Most falls',p=>p.runner.falls],['💨 Longest toot',p=>p.runner.maxToot,v=>v.toFixed(1)+'s'],['🦅 Longest air time',p=>p.runner.maxAir,v=>v.toFixed(1)+'s'],['💦 Most splashes',p=>p.runner.splashes]];
+  aw.forEach(([name,f,fm],i)=>{ const best=[...players].sort((a,b)=>f(b)-f(a))[0]; if(!best) return; const v=f(best); text(`${name}: ${v>0?best.name+' ('+(fm?fm(v):v)+')':'nobody!'}`,CW/2,520+i*30,19,'#fff','center','normal'); });
+  text('START / Enter = race again   ·   ○ / Esc = back to lobby (add or change players)',CW/2,680,18,'#ffd84a');
+}
+function draw(){ if(game.screen==='lobby') drawLobby(); else if(game.screen==='results') drawResults(); else drawRace(); }
+let last=performance.now(), acc=0;
+(function loop(now=performance.now()){ acc+=Math.min(250,now-last); last=now; while(acc>=1000/60){ update(); acc-=1000/60; } draw(); requestAnimationFrame(loop); })();
+</script></body></html>

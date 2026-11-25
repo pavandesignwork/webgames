@@ -60,6 +60,8 @@ const Sfx = (() => {
     splash()  { noise(1.2, .7, 0, 'highpass', 1500); tone(200, .5, { type: 'sine', vol: .3, slide: 300 }); },
     treasure(){ notes([[784,.1,0],[988,.1,.1],[1175,.1,.2],[1568,.35,.3]], 'triangle', .55); },
     crash()   { noise(.6, .9, 0, 'lowpass', 700); tone(150, .5, { type: 'sawtooth', vol: .3, slide: -100 }); },
+    step()    { noise(.05, .25, 0, 'lowpass', 600); },
+    boing()   { tone(180, .45, { type: 'sine', vol: .5, slide: 420 }); noise(.2, .6, 0, 'lowpass', 500); },
     tick()    { tone(1200, .03, { type: 'square', vol: .15 }); },
     move()    { tone(660, .05, { type: 'square', vol: .2 }); },
     select()  { notes([[660,.08,0],[990,.15,.08]], 'square', .3); },
@@ -83,6 +85,42 @@ const Sfx = (() => {
     e.gn.gain.setTargetAtTime(.06 + throttle * .08, t, .12);
   }
   function engineStop() { for (const k in engines) engines[k].gn.gain.setTargetAtTime(0, ctx.currentTime, .05); }
+
+
+  // --- farts! a low buzzing oscillator with a fast wobble = "brrrrt" ---
+  const farts = {};
+  function fartVoice(pitch) {
+    const o = ctx.createOscillator(), lfo = ctx.createOscillator(), lfoG = ctx.createGain(), f = ctx.createBiquadFilter(), gn = ctx.createGain();
+    const trem = ctx.createOscillator(), tremG = ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.value = pitch;
+    lfo.type = 'square'; lfo.frequency.value = 18 + Math.random() * 14; lfoG.gain.value = pitch * .35;
+    lfo.connect(lfoG); lfoG.connect(o.frequency);
+    trem.type = 'sine'; trem.frequency.value = 9 + Math.random() * 8; tremG.gain.value = .35;
+    f.type = 'lowpass'; f.frequency.value = 520; f.Q.value = 6;
+    gn.gain.value = 0;
+    const amp = ctx.createGain(); amp.gain.value = .65; trem.connect(tremG); tremG.connect(amp.gain);
+    o.connect(f); f.connect(amp); amp.connect(gn); gn.connect(sfxGain);
+    o.start(); lfo.start(); trem.start();
+    return { o, lfo, trem, gn, f, pitch };
+  }
+  function fartStart(slot, pitch = 90, vol = .9) {
+    if (!ctx || ctx.state !== 'running') return;
+    let v = farts[slot]; if (!v) v = farts[slot] = fartVoice(pitch);
+    const t = ctx.currentTime;
+    v.o.frequency.cancelScheduledValues(t); v.o.frequency.setValueAtTime(pitch * 1.25, t); v.o.frequency.exponentialRampToValueAtTime(pitch * .8, t + 1.2);
+    v.lfo.frequency.setValueAtTime(16 + Math.random() * 18, t);
+    v.gn.gain.cancelScheduledValues(t); v.gn.gain.setTargetAtTime(vol, t, .015);
+  }
+  function fartStop(slot) { const v = farts[slot]; if (v) { v.gn.gain.cancelScheduledValues(ctx.currentTime); v.gn.gain.setTargetAtTime(0, ctx.currentTime, .04); } }
+  function fartStopAll() { for (const k in farts) fartStop(k); }
+  function fart(dur = .35, pitch = 95, vol = .9) {   // one-shot toot
+    if (!ctx || ctx.state !== 'running') return;
+    const v = fartVoice(pitch), t = ctx.currentTime;
+    v.gn.gain.setValueAtTime(0, t); v.gn.gain.linearRampToValueAtTime(vol, t + .02); v.gn.gain.setValueAtTime(vol, t + dur * .7); v.gn.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    v.o.frequency.setValueAtTime(pitch * 1.3, t); v.o.frequency.exponentialRampToValueAtTime(pitch * .7, t + dur);
+    [v.o, v.lfo, v.trem].forEach(n => n.stop(t + dur + .05));
+  }
+  function cheer(dur = 2) { if (!ctx || ctx.state !== 'running') return; noise(dur, .5, 0, 'bandpass', 1800); noise(dur * .8, .35, .2, 'bandpass', 900); }
 
   // --- simple looping background tune (original) ---
   let musicTimer = null, step = 0, song = null;
@@ -119,5 +157,5 @@ const Sfx = (() => {
     el.textContent = t; el.style.opacity = 1; clearTimeout(el._t); el._t = setTimeout(() => el.style.opacity = 0, 1200);
   }
   addEventListener('keydown', e => { if (e.code === 'KeyM') toggleMute(); });
-  return { ...fx, engine, engineStop, startMusic, stopMusic, setMusicVolume, toggleMute, get muted() { return muted; } };
+  return { ...fx, fart, fartStart, fartStop, fartStopAll, cheer, engine, engineStop, startMusic, stopMusic, setMusicVolume, toggleMute, get muted() { return muted; } };
 })();

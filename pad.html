@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1b1440"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>Toot Marathon: phone controller</title>
+<style>
+ *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+ html,body{margin:0;height:100%;background:#1b1440;color:#fff;font-family:system-ui,sans-serif;overflow:hidden;touch-action:none;overscroll-behavior:none}
+ #join{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;padding:20px;text-align:center}
+ h1{margin:0;font-size:30px;color:#ffd84a} .sub{opacity:.8;margin:0}
+ input{font-size:34px;text-align:center;width:220px;padding:10px;border-radius:14px;border:3px solid #ffd84a;background:#0006;color:#fff;user-select:text;-webkit-user-select:text}
+ #name{font-size:22px;width:240px;border-color:#7dc4ff}
+ button{font:inherit;cursor:pointer}
+ .big{font-size:26px;font-weight:bold;padding:14px 40px;border-radius:999px;border:0;background:#4be38a;color:#063}
+ #err{color:#ff8a8a;min-height:1.2em;margin:0}
+ #pad{display:none;height:100%;position:relative}
+ #top{position:absolute;left:0;right:0;top:0;height:64px;display:flex;align-items:center;gap:12px;padding:6px 12px;background:#0005}
+ #chip{width:34px;height:34px;border-radius:50%;border:3px solid #fff;flex:none}
+ #who{font-weight:bold;font-size:18px;white-space:nowrap}
+ #status{flex:1;text-align:center;font-weight:bold;font-size:22px;color:#ffd84a;white-space:nowrap;overflow:hidden}
+ .bar{width:120px;height:14px;background:#fff3;border-radius:7px;overflow:hidden;flex:none} .bar i{display:block;height:100%;width:0;background:#7dffa8}
+ #foot{position:absolute;left:0;right:0;top:64px;bottom:0;display:flex}
+ .btn{flex:1;margin:8px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:26px;font-weight:bold;border:4px solid #ffffff55;background:#2b3a78;touch-action:none}
+ .btn span{font-size:56px;line-height:1.1}
+ .btn.on{background:#ffd84a;color:#222;border-color:#fff;transform:scale(.97)}
+ #fart{flex:.8;background:#2f7a3a} #fart.on{background:#7dffa8}
+ #tools{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:3}
+ #tools button{font-size:13px;padding:7px 12px;border-radius:999px;border:0;background:#000a;color:#fff}
+ #lean{position:absolute;top:70px;left:50%;transform:translateX(-50%);width:180px;height:10px;background:#fff2;border-radius:5px;z-index:3;pointer-events:none}
+ #lean i{position:absolute;top:-5px;width:20px;height:20px;border-radius:50%;background:#ffd84a;left:80px}
+ #startBtn{position:absolute;top:92px;left:50%;transform:translateX(-50%);z-index:4;display:none;font-size:22px;padding:12px 30px}
+ #rotate{display:none;position:fixed;inset:0;background:#1b1440ee;z-index:9;align-items:center;justify-content:center;flex-direction:column;font-size:24px;text-align:center;padding:30px}
+ @media (orientation:portrait){ body.playing #rotate{display:flex} }
+ #big{position:absolute;inset:64px 0 0 0;display:flex;align-items:center;justify-content:center;font-size:90px;font-weight:900;color:#fff;text-shadow:0 4px 0 #000a;pointer-events:none;z-index:5}
+</style></head><body>
+<div id="join">
+  <h1>💨 Toot Marathon</h1>
+  <p class="sub">Phone controller</p>
+  <input id="code" inputmode="numeric" maxlength="4" placeholder="CODE" autocomplete="off">
+  <input id="name" maxlength="12" placeholder="Your name" autocomplete="off">
+  <button class="big" id="go">JOIN</button>
+  <p id="err"></p>
+  <p class="sub" style="font-size:14px">Tip: turn your phone sideways after joining.</p>
+</div>
+<div id="pad">
+  <div id="top"><div id="chip"></div><div id="who"></div><div id="status">Connecting…</div>
+    <div style="font-size:12px">GAS</div><div class="bar"><i id="gas"></i></div></div>
+  <div id="lean"><i id="leanDot"></i></div>
+  <button class="big" id="startBtn">▶ START RACE</button>
+  <div id="foot">
+    <div class="btn" id="bl"><span>🦶</span>LEFT</div>
+    <div class="btn" id="fart"><span>💨</span>FART</div>
+    <div class="btn" id="br"><span>🦶</span>RIGHT</div>
+  </div>
+  <div id="tools"><button id="cal">⚖️ Set straight</button><button id="flipT">🔄 Flip tilt</button><button id="tiltT">📱 Tilt: ON</button></div>
+  <div id="big"></div>
+</div>
+<div id="rotate"><div style="font-size:70px">📱↻</div>Turn your phone sideways<br>to play!</div>
+<script src="vendor/peerjs.min.js"></script>
+<script src="sound.js"></script>
+<script src="netlink.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const qs=new URLSearchParams(location.search);
+if(qs.get('code')) $('code').value=qs.get('code');
+$('name').value=localStorage.getItem('toot-name')||'';
+let conn=null, st={l:0,r:0,f:0,lean:0,tilt:1}, lastSent='', tiltOn=localStorage.getItem('toot-tilt')!=='0', inv=+(localStorage.getItem('toot-inv')||1), zero=null, rawAngle=0, slot=0;
+$('tiltT').textContent='📱 Tilt: '+(tiltOn?'ON':'OFF');
+
+// ---------- join ----------
+$('go').onclick=async()=>{
+  const code=$('code').value.replace(/\D/g,''); if(code.length!==4){ $('err').textContent='Type the 4-digit code from the game screen.'; return; }
+  const name=($('name').value.trim()||'Player').slice(0,12); localStorage.setItem('toot-name',name);
+  $('err').textContent='Connecting…'; $('go').disabled=true;
+  // ask for motion permission (iPhone) + keep screen on + fullscreen, all need this tap
+  try{ if(typeof DeviceMotionEvent!=='undefined'&&DeviceMotionEvent.requestPermission) await DeviceMotionEvent.requestPermission(); }catch(e){}
+  try{ document.documentElement.requestFullscreen&&await document.documentElement.requestFullscreen(); screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{}); }catch(e){}
+  try{ navigator.wakeLock&&navigator.wakeLock.request('screen'); }catch(e){}
+  NetLink.join(code,{
+    onOpen:c=>{ conn=c; conn.send({t:'hello',name}); conn.on('data',onMsg); conn.on('close',()=>{ setStatus('Disconnected 😢'); show('Disconnected',0); });
+      $('join').style.display='none'; $('pad').style.display='block'; document.body.classList.add('playing'); $('who').textContent=name; setStatus('Joined! Waiting…'); },
+    onError:m=>{ $('err').textContent=m; $('go').disabled=false; }
+  });
+};
+function setStatus(t){ $('status').textContent=t; }
+let bigT=0; function show(t,ms=1200){ $('big').textContent=t; clearTimeout(bigT); if(ms) bigT=setTimeout(()=>$('big').textContent='',ms); }
+function onMsg(m){
+  if(m.t==='welcome'){ slot=m.slot; $('chip').style.background=m.color; $('who').textContent=m.name; }
+  if(m.t==='full'){ setStatus('Game is full (3 players)'); }
+  if(m.t==='stat'){ $('gas').style.width=Math.round(m.gas*100)+'%'; if(m.msg) setStatus(m.msg); $('startBtn').style.display=m.canStart?'block':'none'; }
+  if(m.t==='big'){ show(m.text,m.ms||1200); }
+  if(m.t==='buzz'&&navigator.vibrate){ navigator.vibrate(m.ms||100); }
+}
+
+// ---------- buttons (multi-touch) ----------
+function hold(el,key){
+  const on=e=>{ e.preventDefault(); el.setPointerCapture&&el.setPointerCapture(e.pointerId); el.classList.add('on'); st[key]=1; send(true);
+    if(key==='f'){ Sfx.fartStart(0,80+slot*25,.5); navigator.vibrate&&navigator.vibrate(30); } else navigator.vibrate&&navigator.vibrate(12); };
+  const off=e=>{ el.classList.remove('on'); st[key]=0; send(true); if(key==='f') Sfx.fartStop(0); };
+  el.addEventListener('pointerdown',on); el.addEventListener('pointerup',off); el.addEventListener('pointercancel',off); el.addEventListener('lostpointercapture',off);
+}
+hold($('bl'),'l'); hold($('br'),'r'); hold($('fart'),'f');
+$('startBtn').onclick=()=>conn&&conn.send({t:'start'});
+$('cal').onclick=()=>{ zero=rawAngle; };
+$('flipT').onclick=()=>{ inv=-inv; localStorage.setItem('toot-inv',inv); };
+$('tiltT').onclick=()=>{ tiltOn=!tiltOn; localStorage.setItem('toot-tilt',tiltOn?'1':'0'); $('tiltT').textContent='📱 Tilt: '+(tiltOn?'ON':'OFF'); send(true); };
+
+// ---------- tilt = lean (like a steering wheel, phone held sideways) ----------
+addEventListener('devicemotion',e=>{
+  const a=e.accelerationIncludingGravity; if(!a||a.x==null) return;
+  const ang=(screen.orientation?screen.orientation.angle:(window.orientation||0))*Math.PI/180;
+  const sx=a.x*Math.cos(ang)+a.y*Math.sin(ang), sy=-a.x*Math.sin(ang)+a.y*Math.cos(ang);   // gravity in screen coordinates
+  rawAngle=Math.atan2(sx,sy)*180/Math.PI;
+  if(zero===null) zero=rawAngle;
+});
+function leanNow(){ if(!tiltOn||zero===null) return 0; const d=((rawAngle-zero+540)%360)-180; return Math.max(-1,Math.min(1,d/25))*inv; }
+function send(force){
+  if(!conn) return;
+  st.lean=Math.round(leanNow()*100)/100; st.tilt=tiltOn&&zero!==null?1:0;
+  $('leanDot').style.left=(80+st.lean*80)+'px';
+  const k=JSON.stringify(st); if(force||k!==lastSent){ lastSent=k; conn.send(Object.assign({t:'in'},st)); }
+}
+setInterval(()=>send(false),50);
+setInterval(()=>send(true),500);
+</script></body></html>

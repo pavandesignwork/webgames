@@ -4,6 +4,7 @@ Two small browser games built to work with a Bluetooth gamepad (made for a Kreo 
 
 - **Blob Maze** (`maze.html`): eat every berry and stay away from the grumpy bugs. Grab a 🌈 and the bugs get scared, so you can catch them.
 - **Dig & Load** (`dig.html`): a construction game with a digger, loader, bulldozer and crane. 8 jobs with stars, free play, a garage for upgrades, and a 2-player split-screen battle.
+- **The Great Toot Marathon** (`race.html`): a wobbly physics race for 1–3 players in stacked split screen. Players can use their phones as controllers (`pad.html`, join with the 4-digit code or QR).
 - **Star Catcher** (`stars.html`): catch falling stars, collect hearts, dodge rocks.
 
 ## Playing with the controller
@@ -15,3 +16,6 @@ Two small browser games built to work with a Bluetooth gamepad (made for a Kreo 
 **Sound:** sound effects and music are built in. Click the page once to turn sound on (browsers require this). **R1** (or **M** on the keyboard) turns sound on or off.
 
 Keyboard works too: arrow keys or WASD, Space, Enter.
+
+## Phone controllers
+`race.html` shows a 4-digit code and QR code. Players open `pad.html` on their phone and enter the code. The connection uses WebRTC via [PeerJS](https://peerjs.com) (bundled in `vendor/`, MIT licence), whose free public server only introduces the devices. Add `?local` to both URLs to test with two tabs in one browser.
