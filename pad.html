@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#1b1440"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1b1440"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Toot Pad"><link rel="manifest" href="pad.webmanifest"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
 <title>Toot Marathon: phone controller</title>
 <style>
  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
@@ -13,24 +13,29 @@
  button{font:inherit;cursor:pointer}
  .big{font-size:26px;font-weight:bold;padding:14px 40px;border-radius:999px;border:0;background:#4be38a;color:#063}
  #err{color:#ff8a8a;min-height:1.2em;margin:0}
- #pad{display:none;height:100%;position:relative}
+ #pad{display:none;height:100%;position:relative;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
  #top{position:absolute;left:0;right:0;top:0;height:64px;display:flex;align-items:center;gap:12px;padding:6px 12px;background:#0005}
  #chip{width:34px;height:34px;border-radius:50%;border:3px solid #fff;flex:none}
  #who{font-weight:bold;font-size:18px;white-space:nowrap}
  #status{flex:1;text-align:center;font-weight:bold;font-size:22px;color:#ffd84a;white-space:nowrap;overflow:hidden}
  .bar{width:120px;height:14px;background:#fff3;border-radius:7px;overflow:hidden;flex:none} .bar i{display:block;height:100%;width:0;background:#7dffa8}
- #foot{position:absolute;left:0;right:0;top:64px;bottom:0;display:flex}
+ #foot{position:absolute;left:env(safe-area-inset-left);right:env(safe-area-inset-right);top:calc(64px + env(safe-area-inset-top));bottom:calc(44px + env(safe-area-inset-bottom));display:flex}
  .btn{flex:1;margin:8px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:26px;font-weight:bold;border:4px solid #ffffff55;background:#2b3a78;touch-action:none}
  .btn span{font-size:56px;line-height:1.1}
  .btn.on{background:#ffd84a;color:#222;border-color:#fff;transform:scale(.97)}
  #fart{flex:.8;background:#2f7a3a} #fart.on{background:#7dffa8}
- #tools{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:3}
+ #tools{position:absolute;bottom:calc(6px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:3}
  #tools button{font-size:13px;padding:7px 12px;border-radius:999px;border:0;background:#000a;color:#fff}
  #lean{position:absolute;top:70px;left:50%;transform:translateX(-50%);width:180px;height:10px;background:#fff2;border-radius:5px;z-index:3;pointer-events:none}
  #lean i{position:absolute;top:-5px;width:20px;height:20px;border-radius:50%;background:#ffd84a;left:80px}
  #startBtn{position:absolute;top:92px;left:50%;transform:translateX(-50%);z-index:4;display:none;font-size:22px;padding:12px 30px}
- #rotate{display:none;position:fixed;inset:0;background:#1b1440ee;z-index:9;align-items:center;justify-content:center;flex-direction:column;font-size:24px;text-align:center;padding:30px}
- @media (orientation:portrait){ body.playing #rotate{display:flex} }
+ @media (orientation:portrait){
+   #foot{flex-wrap:wrap;align-content:stretch} #fart{order:-1;flex:0 0 calc(100% - 16px);height:calc(38% - 16px)} #bl,#br{flex:1 1 40%;height:calc(62% - 16px)}
+   #status{font-size:16px} .bar{width:70px} #who{display:none} #tools button{font-size:12px;padding:6px 9px} }
+ #tools button{white-space:nowrap}
+ #flash{position:fixed;inset:0;pointer-events:none;z-index:8;background:#ff3b3b;opacity:0;transition:opacity .35s}
+ #ios{display:none;font-size:14px;background:#ffffff18;border-radius:12px;padding:10px 14px;max-width:340px}
+ .hap{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;left:-10px}
  #big{position:absolute;inset:64px 0 0 0;display:flex;align-items:center;justify-content:center;font-size:90px;font-weight:900;color:#fff;text-shadow:0 4px 0 #000a;pointer-events:none;z-index:5}
 </style></head><body>
 <div id="join">
@@ -40,7 +45,8 @@
   <input id="name" maxlength="12" placeholder="Your name" autocomplete="off">
   <button class="big" id="go">JOIN</button>
   <p id="err"></p>
-  <p class="sub" style="font-size:14px">Tip: turn your phone sideways after joining.</p>
+  <p class="sub" style="font-size:14px">Works sideways or upright.</p>
+  <p id="ios">🍎 <b>iPhone tip:</b> tap <b>Share ⬆️ → Add to Home Screen</b>, then open it from there for full screen with no address bar. When asked, tap <b>Allow</b> for motion so tilting can steer.</p>
 </div>
 <div id="pad">
   <div id="top"><div id="chip"></div><div id="who"></div><div id="status">Connecting…</div>
@@ -55,12 +61,22 @@
   <div id="tools"><button id="cal">⚖️ Set straight</button><button id="flipT">🔄 Flip tilt</button><button id="tiltT">📱 Tilt: ON</button></div>
   <div id="big"></div>
 </div>
-<div id="rotate"><div style="font-size:70px">📱↻</div>Turn your phone sideways<br>to play!</div>
+<div id="flash"></div>
+<label class="hap" id="hapL"><input type="checkbox" switch id="hapI"></label>
 <script src="vendor/peerjs.min.js"></script>
+<script>window.SFX_NO_HINT=true;</script>
 <script src="sound.js"></script>
 <script src="netlink.js"></script>
 <script>
 const $=id=>document.getElementById(id);
+const IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const STANDALONE=navigator.standalone||matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches;
+if(IOS&&!STANDALONE) $('ios').style.display='block';
+['gesturestart','gesturechange','dblclick'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
+document.addEventListener('touchmove',e=>{ if(e.target.tagName!=='INPUT') e.preventDefault(); },{passive:false});
+// Haptic tap: Android uses vibrate(); iPhone (iOS 18+) gives a tiny tick when a "switch" checkbox is toggled by a tap.
+function haptic(ms){ if(navigator.vibrate) navigator.vibrate(ms); else if(IOS){ try{ $('hapL').click(); }catch(e){} } }
+function flash(col,ms){ const f=$('flash'); f.style.background=col; f.style.transition='none'; f.style.opacity=.45; requestAnimationFrame(()=>{ f.style.transition=`opacity ${ms||350}ms`; f.style.opacity=0; }); }
 const qs=new URLSearchParams(location.search);
 if(qs.get('code')) $('code').value=qs.get('code');
 $('name').value=localStorage.getItem('toot-name')||'';
@@ -73,11 +89,13 @@ $('go').onclick=async()=>{
   const name=($('name').value.trim()||'Player').slice(0,12); localStorage.setItem('toot-name',name);
   $('err').textContent='Connecting…'; $('go').disabled=true;
   // ask for motion permission (iPhone) + keep screen on + fullscreen, all need this tap
-  try{ if(typeof DeviceMotionEvent!=='undefined'&&DeviceMotionEvent.requestPermission) await DeviceMotionEvent.requestPermission(); }catch(e){}
+  let motionOK=true;
+  try{ if(typeof DeviceMotionEvent!=='undefined'&&DeviceMotionEvent.requestPermission) motionOK=(await DeviceMotionEvent.requestPermission())==='granted'; }catch(e){ motionOK=false; }
+  if(!motionOK){ tiltOn=false; $('tiltT').textContent='📱 Tilt: OFF'; }
   try{ document.documentElement.requestFullscreen&&await document.documentElement.requestFullscreen(); screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{}); }catch(e){}
   try{ navigator.wakeLock&&navigator.wakeLock.request('screen'); }catch(e){}
   NetLink.join(code,{
-    onOpen:c=>{ conn=c; conn.send({t:'hello',name}); conn.on('data',onMsg); conn.on('close',()=>{ setStatus('Disconnected 😢'); show('Disconnected',0); });
+    onOpen:c=>{ conn=c; conn.send({t:'hello',name}); if(!tiltOn) setTimeout(()=>show('Tilt is off: balance is automatic',2200),400); conn.on('data',onMsg); conn.on('close',()=>{ setStatus('Disconnected 😢'); show('Disconnected',0); });
       $('join').style.display='none'; $('pad').style.display='block'; document.body.classList.add('playing'); $('who').textContent=name; setStatus('Joined! Waiting…'); },
     onError:m=>{ $('err').textContent=m; $('go').disabled=false; }
   });
@@ -89,13 +107,13 @@ function onMsg(m){
   if(m.t==='full'){ setStatus('Game is full (3 players)'); }
   if(m.t==='stat'){ $('gas').style.width=Math.round(m.gas*100)+'%'; if(m.msg) setStatus(m.msg); $('startBtn').style.display=m.canStart?'block':'none'; }
   if(m.t==='big'){ show(m.text,m.ms||1200); }
-  if(m.t==='buzz'&&navigator.vibrate){ navigator.vibrate(m.ms||100); }
+  if(m.t==='buzz'){ if(navigator.vibrate) navigator.vibrate(m.ms||100); if((m.ms||0)>=150) flash(m.ms>=400?'#3b9bff':'#ff3b3b',m.ms+200); }
 }
 
 // ---------- buttons (multi-touch) ----------
 function hold(el,key){
   const on=e=>{ e.preventDefault(); el.setPointerCapture&&el.setPointerCapture(e.pointerId); el.classList.add('on'); st[key]=1; send(true);
-    if(key==='f'){ Sfx.fartStart(0,80+slot*25,.5); navigator.vibrate&&navigator.vibrate(30); } else navigator.vibrate&&navigator.vibrate(12); };
+    if(key==='f'){ Sfx.fartStart(0,80+slot*25,.5); haptic(30); } else haptic(12); };
   const off=e=>{ el.classList.remove('on'); st[key]=0; send(true); if(key==='f') Sfx.fartStop(0); };
   el.addEventListener('pointerdown',on); el.addEventListener('pointerup',off); el.addEventListener('pointercancel',off); el.addEventListener('lostpointercapture',off);
 }

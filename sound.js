@@ -13,7 +13,7 @@ const Sfx = (() => {
   const hint = document.createElement('div');
   hint.textContent = '🔊 Click anywhere to turn on sound';
   hint.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#ffd84a;color:#000;padding:8px 18px;border-radius:99px;font:bold 16px system-ui;z-index:9;cursor:pointer;display:none';
-  addEventListener('DOMContentLoaded', () => document.body.appendChild(hint));
+  addEventListener('DOMContentLoaded', () => { if (!window.SFX_NO_HINT) document.body.appendChild(hint); });
   const unlock = () => { if (ctx && ctx.state !== 'running') ctx.resume(); };
   ['pointerdown', 'keydown', 'touchstart'].forEach(e => addEventListener(e, unlock));
   setInterval(() => { hint.style.display = ctx && ctx.state !== 'running' && !muted ? 'block' : 'none'; }, 300);

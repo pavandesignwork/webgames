@@ -1,0 +1,9 @@
+{
+  "name": "Toot Marathon controller",
+  "short_name": "Toot Pad",
+  "start_url": "pad.html",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#1b1440",
+  "theme_color": "#1b1440"
+}
