@@ -67,7 +67,8 @@
   <div class="lcard" id="seatCard"><div class="head2">💺 Raft Seats</div><div id="seatGrid"></div><div class="front">▲ front · switch with D-pad · keys 1-4 · phone seat buttons</div></div>
   <div id="startBtn" class="bigbtn">▶ START GAME</div>
   <a id="leave" href="index.html">← Back to games</a>
-  <div id="info">ℹ️ Join with a phone, controller (✕) or keyboard (Space). Toot together to go straight, toot alone to turn!</div>
+  <div id="info">🎮 <b>SOLO:</b> press ✕ to join, then ✕ again (or click <b>PLAY SOLO</b>) · 👥 Friends: join with phones (QR) or more controllers</div>
+  <div id="soloBtn" class="bigbtn" style="left:1250px;top:520px;width:320px;height:110px;font-size:36px;background:linear-gradient(#7ad0ff,#3a8fe0);border-color:#d0f0ff;box-shadow:0 8px 0 #1d4f8a">🎮 PLAY SOLO</div>
 </div></div>
 <div id="hud"><div id="tl"><div class="t" id="time">0:00</div><div class="s" id="sect">Calm Creek</div></div><div id="prog"></div><div id="cards"></div></div>
 <div id="msg"></div><div id="small"></div>
@@ -475,9 +476,13 @@ function addPlayer(src,extra={}){
 function removePlayer(P){ const i=players.indexOf(P); if(i>=0) players.splice(i,1); buildJets(); lobbyUI(); }
 function readInputs(){
   for(const P of players){
-    if(P.src==='kb') P.input={l:(keys.KeyA||keys.ArrowLeft)?1:0,r:(keys.KeyD||keys.ArrowRight)?1:0,f:(keys.KeyW||keys.ArrowUp||keys.Space)?1:0,b:(keys.ShiftLeft||keys.ShiftRight||keys.KeyS||keys.ArrowDown)?1:0,lean:(keys.KeyE?1:0)-(keys.KeyQ?1:0),emote:keys.KeyF?1:0};
+    if(P.src==='kb') P.input={l:(keys.KeyD||keys.ArrowRight)?1:0,r:(keys.KeyA||keys.ArrowLeft)?1:0,f:(keys.KeyW||keys.ArrowUp||keys.Space)?1:0,b:(keys.ShiftLeft||keys.ShiftRight||keys.KeyS||keys.ArrowDown)?1:0,lean:(keys.KeyE?1:0)-(keys.KeyQ?1:0),emote:keys.KeyF?1:0};
     else if(P.src==='pad'){ const gp=pads().find(p=>p.index===P.padIndex); if(!gp) continue; const n=Input.named(gp);
-      P.input={l:(n.l1||(players.length===1&&n.l2))?1:0,r:(n.r1||n.r2)?1:0,f:n.cross?1:0,b:(n.square||(players.length>1&&n.l2))?1:0,emote:n.triangle?1:0,lean:clamp((Math.abs(n.lx)>.15?n.lx:0)+(players.length===1?(n.dright?1:0)-(n.dleft?1:0):0),-1,1)}; }
+      if(players.length===1){ const sx=clamp(n.lx+(n.dright?1:0)-(n.dleft?1:0),-1,1), go=!!(n.cross||n.r2);
+        // stick right = fire the LEFT jet (turns the raft right), stick left = fire the RIGHT jet
+        P.input={l:(n.l1||sx>.35)?1:0,r:(n.r1||sx<-.35)?1:0,f:(go&&Math.abs(sx)<.35)?1:0,b:(n.square||n.l2)?1:0,emote:n.triangle?1:0,lean:0};
+        if(go&&Math.abs(sx)>=.35){ if(sx>0) P.input.l=1; else P.input.r=1; } }
+      else P.input={l:n.l1?1:0,r:(n.r1||n.r2)?1:0,f:n.cross?1:0,b:(n.square||n.l2)?1:0,emote:n.triangle?1:0,lean:clamp(Math.abs(n.lx)>.15?n.lx:0,-1,1)}; }
   }
 }
 // ---- jets: who controls which toot nozzle ----
@@ -503,6 +508,9 @@ function changeSeat(P,to){ if(players.length<2) return; const cur=P.seat; if(SEA
   if(game.screen==='play'||game.screen==='countdown'){ const j=jets.find(j=>j.P===P); if(j){ const st=SEATS[to]; j.seat=to; j.px=st.jx; j.pz=st.jz; j.hop=.45; tootStop(j); const b=j.buddy; b.from=b.g.position.clone(); b.home=new THREE.Vector3(st.bx,.14,st.bz); b.seat=to; b.hopT=.45; } paintPads(); }
   else buildJets();
   lobbyUI(); }
+// one-click solo: use the controller that was pressed last (or the keyboard) and start
+function playSolo(){ if(game.screen!=='lobby') return; const gp=pads()[0]; while(players.length) players.pop();
+  addPlayer(gp?'pad':'kb',gp?{padIndex:gp.index,name:'Player 1'}:{name:'Player 1'}); requestStart(); }
 function toggleReady(P){ P.ready=!P.ready; Sfx[P.ready?'select':'move'](); if(P.ready) msg('',`${P.name} is ready! ✅`,900); lobbyUI(); }
 function cycleChar(P,d){ P.char=(P.char+d+CHARS.length)%CHARS.length; Sfx.move(); buildJets(); lobbyUI(); }
 
@@ -626,7 +634,7 @@ function lobbyUI(){
   $('seatGrid').innerHTML=['FL','FR','BL','BR'].map(k=>{ const P=players.length>1&&players.find(p=>p.seat===k); return `<div style="${P?`background:${P.color}55;border-color:${P.color}`:''}">${P?CHARS[P.char].emoji:''}<small>${P?'P'+(P.slot+1):k}</small></div>`; }).join('');
   const all=players.length&&players.every(p=>p.ready);
   $('waitTxt').textContent=!players.length?'⏳ Waiting for players…':all?'🎉 Everyone is ready!':`⏳ ${players.filter(p=>p.ready).length} of ${players.length} ready`;
-  $('startBtn').classList.toggle('off',!players.length);
+  $('startBtn').classList.toggle('off',!players.length); $('soloBtn').style.display=players.length>1?'none':'flex'; $('seatCard').style.display=players.length>1?'block':'none';
 }
 function requestStart(){ if((game.screen==='lobby'||game.screen==='results')&&players.length){ players.forEach(p=>p.ready=p.src==='bot'); buildJets(); resetTub(); parts=[]; clouds=[]; game.screen='countdown'; sendLayouts(); game.count=3.99; $('lobby').style.display='none'; $('results').style.display='none'; $('hud').style.display='block'; } }
 function finish(){
@@ -669,7 +677,7 @@ function update(){
   }
   if(game.screen==='lobby'||game.screen==='results'){
     if(tapped.Space&&game.screen==='lobby'){ const kb=players.find(p=>p.src==='kb'); if(!kb) addPlayer('kb',{name:'Keyboard'}); else toggleReady(kb); }
-    if(game.screen==='lobby'&&players.length&&players.every(p=>p.ready)){ game.allReadyT=(game.allReadyT||0)+DT; if(game.allReadyT>2){ game.allReadyT=0; requestStart(); } } else game.allReadyT=0;
+    if(game.screen==='lobby'&&players.length&&players.every(p=>p.ready)){ game.allReadyT=(game.allReadyT||0)+DT; if(game.allReadyT>(players.length===1?.6:2)){ game.allReadyT=0; requestStart(); } } else game.allReadyT=0;
     for(const gp of ps){ const n=Input.named(gp), was=game['pad'+gp.index]||{};
       const mine=players.find(p=>p.src==='pad'&&p.padIndex===gp.index);
       if(n.cross&&!was.cross&&game.screen==='lobby'){ if(!mine) addPlayer('pad',{padIndex:gp.index,name:'Controller '+(gp.index+1)}); else toggleReady(mine); }
@@ -682,7 +690,7 @@ function update(){
   } else if(game.screen==='countdown'){
     const b=Math.ceil(game.count); game.count-=DT; const a=Math.ceil(game.count);
     if(a!==b){ if(a>0){ msg(String(a),'Get ready to toot!',900); Sfx.tick(); players.forEach(P=>P.conn&&P.conn.send({t:'big',text:String(a),ms:800})); }
-      else { game.screen='play'; sendLayouts(); game.raceT=0; msg('GO! 💨','',900); Sfx.select(); Sfx.startMusic('stars'); Sfx.setMusicVolume(.07); players.forEach(P=>P.conn&&P.conn.send({t:'big',text:'GO! 💨',ms:800})); } }
+      else { game.screen='play'; sendLayouts(); game.raceT=0; msg('GO! 💨',players.length===1&&players[0].src!=='phone'?(players[0].src==='pad'?'✕ / R2 toot · left stick steer · □ / L2 brake':'W / Space toot · A / D steer · Shift brake'):'',players.length===1?3500:900); Sfx.select(); Sfx.startMusic('stars'); Sfx.setMusicVolume(.07); players.forEach(P=>P.conn&&P.conn.send({t:'big',text:'GO! 💨',ms:800})); } }
   }
   // jets
   const live=game.screen==='play';
@@ -795,7 +803,7 @@ async function makeThumbs(){ const tr=new THREE.WebGLRenderer({antialias:true,al
 // boot
 window.__proceduralGarden();   // round cartoon trees, giant flowers and mushrooms
 loadNature().then(placeAssets).catch(e=>console.warn('rock assets failed, keeping simple rocks',e));
-buildJets(); resetTub(); lobbyUI(); $('lobby').style.display='block'; fitStage(); makeThumbs(); $('startBtn').onclick=()=>requestStart();
+buildJets(); resetTub(); lobbyUI(); $('lobby').style.display='block'; fitStage(); makeThumbs(); $('startBtn').onclick=()=>requestStart(); $('soloBtn').onclick=()=>playSolo();
 let last=performance.now(), acc=0;
 (function loop(now=performance.now()){ acc+=Math.min(250,now-last); last=now; while(acc>=1000/60){ update(); acc-=1000/60; } render(); requestAnimationFrame(loop); })();
 window.__THREE=THREE; window.CHL=CHARS; window.MK=makeCritter; window.MKG=makeGoofy; window.__dbg={scene,camera,renderer,B,players,jets:()=>jets,game,addPlayer,requestStart,S,FINISH,CFG,respawn,togglePause,dbg,CHECKS,ROTG,CRATES};
