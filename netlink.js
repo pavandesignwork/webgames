@@ -3,7 +3,7 @@
 // two devices; after that, button presses go straight from the phone to the game.
 // Test mode (?local in the URL): BroadcastChannel, so two tabs in the same browser can talk.
 const NetLink = (() => {
-  const PREFIX = 'pdw-webgames-toot-';
+  let PREFIX = 'pdw-webgames-toot-';
   const LOCAL = new URLSearchParams(location.search).has('local');
   const newCode = () => String(1000 + Math.floor(Math.random() * 9000));
 
@@ -20,7 +20,7 @@ const NetLink = (() => {
   // ---------- game (host) side ----------
   function host({ onCode, onConn, onError }) {
     if (LOCAL) {
-      const code = newCode(), ch = new BroadcastChannel('toot-' + code), conns = {};
+      const code = newCode(), ch = new BroadcastChannel(PREFIX + code), conns = {};
       ch.onmessage = ev => {
         const { from, t, d } = ev.data; if (!from) return;
         if (t === 'join') {
@@ -46,7 +46,7 @@ const NetLink = (() => {
   function join(code, { onOpen, onError }) {
     code = String(code).trim();
     if (LOCAL) {
-      const me = Math.random().toString(36).slice(2), ch = new BroadcastChannel('toot-' + code), e = emitter();
+      const me = Math.random().toString(36).slice(2), ch = new BroadcastChannel(PREFIX + code), e = emitter();
       let ok = false;
       ch.onmessage = ev => { const { to, t, d } = ev.data; if (to !== me) return;
         if (t === 'ok') { ok = true; onOpen({ send: d => ch.postMessage({ from: me, t: 'data', d }), on: e.on, close: () => ch.postMessage({ from: me, t: 'close' }) }); }
@@ -64,5 +64,5 @@ const NetLink = (() => {
     });
     peer.on('error', e => fail(e.type === 'peer-unavailable' ? 'No game found with code ' + code : 'Connection problem: ' + (e.type || e)));
   }
-  return { host, join, LOCAL };
+  return { host, join, LOCAL, setPrefix: p => { PREFIX = p; } };
 })();

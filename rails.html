@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rattlejaw Rails (co-op)</title>
+<style>
+ html,body{margin:0;height:100%;overflow:hidden;background:#07090f;color:#e8e2d0;font-family:Georgia,'Times New Roman',serif}
+ canvas{display:block}
+ .screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,#1b2233cc,#05070bf2 75%)}
+ .box{width:min(560px,92vw);background:#11151ee8;border:2px solid #4a3a26;border-radius:6px;padding:26px 30px;box-shadow:0 20px 60px #000c}
+ h1{margin:0 0 4px;font-size:46px;letter-spacing:3px;color:#d9c08a;text-shadow:0 0 18px #ff5a2a55;text-align:center}
+ .tag{text-align:center;color:#8a8070;margin-bottom:22px;font-style:italic}
+ label{display:block;font-size:13px;letter-spacing:2px;color:#9a8a70;margin:14px 0 6px}
+ input{width:100%;box-sizing:border-box;font:22px Georgia;color:#f0e8d8;background:#0a0c12;border:2px solid #3a3226;border-radius:4px;padding:10px 12px;outline:none}
+ input:focus{border-color:#c9a24a}
+ button{font:bold 20px Georgia;letter-spacing:2px;cursor:pointer;border-radius:4px;padding:13px 16px;border:2px solid #c9a24a;background:#2a1f12;color:#f0d9a0;width:100%;margin-top:14px}
+ button:hover{background:#3a2a16} button.alt{border-color:#5a6a7a;background:#141a24;color:#c8d4e0} button:disabled{opacity:.4;cursor:default}
+ .row{display:flex;gap:12px} .row>*{flex:1}
+ #code{font:bold 64px Georgia;letter-spacing:12px;text-align:center;color:#ffcf6a;margin:6px 0 2px;text-shadow:0 0 20px #ff8a2a66}
+ .plist{margin-top:16px} .pl{display:flex;align-items:center;gap:12px;padding:9px 12px;margin-bottom:6px;background:#0a0c12;border-left:6px solid;border-radius:3px;font-size:19px}
+ .pl .r{margin-left:auto;font-size:15px} .empty{opacity:.35}
+ .err{color:#ff8a7a;min-height:1.2em;margin-top:10px;text-align:center}
+ .small{font-size:13px;color:#8a8070;text-align:center;margin-top:12px;line-height:1.5}
+ #hud{position:fixed;inset:0;pointer-events:none;display:none}
+ #cross{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#fff9}
+ #prompt{position:absolute;left:50%;top:58%;transform:translateX(-50%);background:#000a;padding:6px 14px;border-radius:4px;font-size:18px;display:none}
+ #tl{position:absolute;left:16px;top:14px;font-size:15px;line-height:1.6;background:#0009;padding:8px 12px;border-radius:4px}
+ #speed{position:absolute;right:20px;bottom:20px;background:#000a;padding:10px 14px;border-radius:4px;font-size:16px;min-width:200px}
+ .bar{height:12px;background:#222;border-radius:2px;margin-top:6px;overflow:hidden} .bar i{display:block;height:100%;background:linear-gradient(90deg,#c9a24a,#ff6a2a)}
+ #help{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);font-size:13px;color:#cfc6b0;background:#0008;padding:5px 12px;border-radius:4px;white-space:nowrap}
+ #clickToPlay{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-size:24px;background:#000c;padding:14px 26px;border:2px solid #c9a24a;border-radius:4px;display:none;pointer-events:auto;cursor:pointer}
+ #feed{position:absolute;right:16px;top:14px;text-align:right;font-size:15px;line-height:1.7}
+ #feed div{background:#0009;padding:2px 10px;border-radius:3px;margin-bottom:3px}
+</style></head><body>
+<div id="menu" class="screen" style="display:flex"><div class="box">
+  <h1>RATTLEJAW RAILS</h1><div class="tag">co-op · 1 to 4 players · each on their own computer</div>
+  <label>YOUR NAME</label><input id="name" maxlength="14" placeholder="Engineer">
+  <button id="hostBtn">🚂 HOST A GAME</button>
+  <label>OR JOIN A FRIEND'S GAME</label>
+  <div class="row"><input id="joinCode" inputmode="numeric" maxlength="4" placeholder="ROOM CODE"><button id="joinBtn" class="alt" style="margin-top:0">JOIN</button></div>
+  <div class="err" id="menuErr"></div>
+  <div class="small">Best with keyboard + mouse or a controller · use Chrome or Edge</div>
+</div></div>
+<div id="lobby" class="screen"><div class="box">
+  <div style="text-align:center;color:#9a8a70;letter-spacing:3px">ROOM CODE</div><div id="code">····</div>
+  <div class="small" id="lobbyHint" style="margin-top:0">Friends open this page, type the code and press JOIN</div>
+  <div class="plist" id="plist"></div>
+  <button id="readyBtn">I'M READY</button>
+  <button id="startBtn" class="alt" style="display:none">▶ START GAME</button>
+  <div class="err" id="lobbyErr"></div>
+</div></div>
+<div id="hud"><div id="cross"></div><div id="prompt"></div><div id="tl"></div><div id="feed"></div>
+  <div id="speed">THROTTLE<div class="bar"><i id="thrBar"></i></div><div style="margin-top:8px" id="spd">0 km/h</div></div>
+  <div id="help">WASD move · mouse look · E use / leave · driver: W/S throttle, Space brake · gun: click fire · Esc unlock mouse</div>
+  <div id="clickToPlay">CLICK TO PLAY</div></div>
+<script src="vendor/peerjs.min.js"></script>
+<script>window.SFX_NO_HINT=true;</script>
+<script src="sound.js"></script>
+<script src="input.js"></script>
+<script src="netlink.js"></script>
+<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {buildTrain,DECK} from './train_model.js';
+const $=id=>document.getElementById(id);
+NetLink.setPrefix('pdw-webgames-rails-');
+const COLORS=['#e8b24a','#4ab0e8','#e85a4a','#7ae84a'];
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t;
+Input.autoBack=false;
+
+// =====================================================================
+//  WORLD: foggy island, looping track, the train
+// =====================================================================
+const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(1.5,devicePixelRatio)); renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.1;
+document.body.prepend(renderer.domElement);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x1a1f2e); scene.fog=new THREE.FogExp2(0x232a3a,.022);
+const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.05,400);
+addEventListener('resize',()=>{ renderer.setSize(innerWidth,innerHeight); camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); });
+const std=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.9,...o});
+scene.add(new THREE.HemisphereLight(0x7a88b8,0x2a2018,.9));
+const moon=new THREE.DirectionalLight(0xb0c4ff,1.4); moon.castShadow=true; moon.shadow.mapSize.set(2048,2048); Object.assign(moon.shadow.camera,{left:-40,right:40,top:40,bottom:-40,far:150}); scene.add(moon,moon.target);
+// track: a closed loop around the island
+const ctrl=[[0,-150],[110,-120],[160,-20],[130,90],[40,150],[-70,140],[-150,70],[-160,-40],[-100,-130]];
+const curve=new THREE.CatmullRomCurve3(ctrl.map(([x,z])=>new THREE.Vector3(x,0,z)),true,'catmullrom',.5);
+const TL=curve.getLength();
+const R=(()=>{ let s=99; return ()=>{ s=(s*16807)%2147483647; return s/2147483647; }; })();
+// ground with gentle hills away from the track
+{ const g=new THREE.PlaneGeometry(700,700,140,140); g.rotateX(-Math.PI/2); const p=g.attributes.position, pts=curve.getSpacedPoints(300);
+  for(let i=0;i<p.count;i++){ const x=p.getX(i), z=p.getZ(i); let d=1e9; for(let k=0;k<pts.length;k+=3){ const q=pts[k]; d=Math.min(d,(q.x-x)**2+(q.z-z)**2); } d=Math.sqrt(d);
+    p.setY(i,(Math.sin(x*.03)*3+Math.cos(z*.025)*4+Math.sin((x+z)*.07))*clamp((d-8)/30,0,1)); }
+  g.computeVertexNormals(); const m=new THREE.Mesh(g,std(0x2a3222)); m.receiveShadow=true; scene.add(m); }
+// sleepers + rails
+{ const n=Math.floor(TL/1.1), sl=new THREE.InstancedMesh(new THREE.BoxGeometry(3.4,.2,.5),std(0x3a2a1c),n), m4=new THREE.Matrix4(), q=new THREE.Quaternion(), f=new THREE.Vector3(0,0,1), one=new THREE.Vector3(1,1,1);
+  for(let i=0;i<n;i++){ const u=i/n, p=curve.getPointAt(u), t=curve.getTangentAt(u); q.setFromUnitVectors(f,t); p.y=.1; sl.setMatrixAt(i,m4.compose(p,q,one)); }
+  sl.receiveShadow=true; scene.add(sl);
+  for(const off of [-.75,.75]){ const pts=[]; for(let i=0;i<=600;i++){ const u=i/600, p=curve.getPointAt(u%1), t=curve.getTangentAt(u%1); pts.push(new THREE.Vector3(p.x+t.z*off,.28,p.z-t.x*off)); }
+    scene.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,true),1200,.08,5,true),std(0x8a8f98,{metalness:.8,roughness:.35}))); } }
+// dead trees + rocks (kept off the track)
+{ const trunk=std(0x241f1b), pts=curve.getSpacedPoints(200), far=(x,z)=>pts.every(q=>(q.x-x)**2+(q.z-z)**2>64);
+  const tg=new THREE.CylinderGeometry(.15,.45,1,6), bg=new THREE.CylinderGeometry(.04,.12,1,5), trees=new THREE.InstancedMesh(tg,trunk,500), br=new THREE.InstancedMesh(bg,trunk,2000), m4=new THREE.Matrix4(), q=new THREE.Quaternion(), e=new THREE.Euler(); let nt=0,nb=0;
+  for(let k=0;k<1200&&nt<500;k++){ const x=(R()-.5)*600, z=(R()-.5)*600; if(!far(x,z)) continue; const h=5+R()*9;
+    e.set((R()-.5)*.2,0,(R()-.5)*.2); q.setFromEuler(e); trees.setMatrixAt(nt++,m4.compose(new THREE.Vector3(x,h/2,z),q,new THREE.Vector3(1,h,1)));
+    for(let b=0;b<4&&nb<2000;b++){ e.set(R()*1.2+.4,R()*6.3,0); q.setFromEuler(e); const y=h*(.5+R()*.45); br.setMatrixAt(nb++,m4.compose(new THREE.Vector3(x,y,z),q,new THREE.Vector3(1,2+R()*2,1))); } }
+  trees.count=nt; br.count=nb; trees.castShadow=br.castShadow=true; scene.add(trees,br);
+  const rk=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1,0),std(0x4a4a52,{flatShading:true}),150); let nr=0;
+  for(let k=0;k<400&&nr<150;k++){ const x=(R()-.5)*500, z=(R()-.5)*500; if(!far(x,z)) continue; const s=.5+R()*2; e.set(R()*3,R()*3,R()*3); q.setFromEuler(e); rk.setMatrixAt(nr++,m4.compose(new THREE.Vector3(x,s*.3,z),q,new THREE.Vector3(s,s*.7,s))); }
+  rk.count=nr; rk.castShadow=true; scene.add(rk); }
+// the train
+const train=buildTrain(); scene.add(train);
+const GUN=train.userData.gun;
+// smoke from the stack
+const smoke=[]; for(let i=0;i<30;i++){ const m=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshStandardMaterial({color:0x50525a,transparent:true,opacity:.4,depthWrite:false})); m.visible=false; scene.add(m); smoke.push({m,life:0}); }
+// tracers
+const tracers=[]; for(let i=0;i<40;i++){ const m=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,1.2,5),new THREE.MeshBasicMaterial({color:0xffd27a})); m.visible=false; scene.add(m); tracers.push({m,life:0,v:new THREE.Vector3()}); }
+
+// =====================================================================
+//  WALKING INSIDE THE TRAIN (train-local coordinates)
+// =====================================================================
+const WALK=[[-1.35,1.35,4.15,6.9],[-.5,.5,3.4,4.3],[-1.35,1.35,-2.05,3.5],[-.5,.5,-2.95,-2.0],[-1.45,1.45,-7.85,-2.85]];
+const inside=(x,z)=>WALK.some(([a,b,c,d])=>x>=a&&x<=b&&z>=c&&z<=d);
+const SEATS={drive:{x:0,z:5.55,eye:1.72,label:'drive the train'},gun:{x:0,z:-4.75,eye:2.05,label:'use the gun'}};
+const EYE=1.62;
+
+// =====================================================================
+//  NETWORK STATE
+// =====================================================================
+const net={role:null,conn:null,myId:0,code:null};
+const S={started:false,trainS:0,v:0,throttle:0,brake:0,players:{},gunYaw:Math.PI,gunPitch:0,fires:[]};   // shared state
+let me={x:0,z:5.3,yaw:0,pitch:0,seat:null};
+const hostConns={};          // host: id -> {conn,name}
+let nextId=1;
+function lobbyList(){ return Object.values(S.players).map(p=>({id:p.id,name:p.name,color:p.color,ready:p.ready})); }
+function broadcast(m){ for(const id in hostConns) hostConns[id].conn.send(m); }
+function feed(t){ const d=document.createElement('div'); d.textContent=t; $('feed').appendChild(d); setTimeout(()=>d.remove(),5000); }
+
+// ---------- menu ----------
+$('name').value=localStorage.getItem('rails-name')||'';
+const myName=()=>{ const n=($('name').value.trim()||'Engineer').slice(0,14); localStorage.setItem('rails-name',n); return n; };
+$('hostBtn').onclick=()=>{ net.role='host'; $('hostBtn').disabled=true; $('menuErr').textContent='Opening a room…';
+  S.players[0]={id:0,name:myName(),color:COLORS[0],ready:false,x:0,z:5.3,yaw:0,pitch:0,seat:null};
+  NetLink.host({ onCode:c=>{ net.code=c; $('code').textContent=c; showLobby(); },
+    onError:e=>{ $('menuErr').textContent='Could not open a room: '+e; $('hostBtn').disabled=false; },
+    onConn:conn=>{ let id=null;
+      conn.on('data',m=>{
+        if(m.t==='hello'){ if(S.started||Object.keys(S.players).length>=4){ conn.send({t:'full',why:S.started?'Game already started':'Room is full (4 players)'}); return; }
+          id=nextId++; const slot=[0,1,2,3].find(i=>!Object.values(S.players).some(p=>p.color===COLORS[i]));
+          S.players[id]={id,name:String(m.name||'Engineer').slice(0,14),color:COLORS[slot],ready:false,x:(id%2?-.6:.6),z:2,yaw:0,pitch:0,seat:null};
+          hostConns[id]={conn}; conn.send({t:'welcome',id}); broadcast({t:'lobby',players:lobbyList()}); renderLobby(); Sfx.select(); }
+        if(id==null) return; const p=S.players[id]; if(!p) return;
+        if(m.t==='ready'){ p.ready=!!m.v; broadcast({t:'lobby',players:lobbyList()}); renderLobby(); }
+        if(m.t==='pose'){ [p.x,p.z,p.yaw,p.pitch]=m.p; }
+        if(m.t==='seat') hostSeat(id,m.k);
+        if(m.t==='ctl'){ if(p.seat==='drive'){ S.throttle=clamp(+m.throttle||0,0,1); S.brake=m.brake?1:0; } if(p.seat==='gun'){ S.gunYaw=+m.gy; S.gunPitch=+m.gp; if(m.fire) hostFire(id); } }
+      });
+      conn.on('close',()=>{ if(id==null) return; const p=S.players[id]; delete S.players[id]; delete hostConns[id]; broadcast({t:'lobby',players:lobbyList()}); renderLobby(); if(p) feed(p.name+' left'); }); } }); };
+$('joinBtn').onclick=()=>{ const code=$('joinCode').value.replace(/\D/g,''); if(code.length!==4){ $('menuErr').textContent='Type the 4-digit room code.'; return; }
+  net.role='client'; $('joinBtn').disabled=true; $('menuErr').textContent='Connecting…';
+  NetLink.join(code,{ onOpen:c=>{ net.conn=c; net.code=code; c.send({t:'hello',name:myName()});
+      c.on('data',onHostMsg); c.on('close',()=>{ alert('Lost connection to the host.'); location.reload(); }); },
+    onError:e=>{ $('menuErr').textContent=e; $('joinBtn').disabled=false; } }); };
+function onHostMsg(m){
+  if(m.t==='full'){ $('menuErr').textContent=m.why; $('joinBtn').disabled=false; return; }
+  if(m.t==='welcome'){ net.myId=m.id; $('code').textContent=net.code; showLobby(); }
+  if(m.t==='lobby'){ const old=S.players; S.players={}; for(const p of m.players) S.players[p.id]={...(old[p.id]||{x:0,z:2,yaw:0,pitch:0,seat:null}),...p}; renderLobby(); }
+  if(m.t==='start') beginGame();
+  if(m.t==='state'){ S.trainSnap=m.s; S.v=m.v; S.throttle=m.th; S.brake=m.br; S.gunYaw=m.gy; S.gunPitch=m.gp;
+    for(const [id,x,z,yaw,pitch,seat] of m.p){ const p=S.players[id]; if(!p) continue; if(id!==net.myId){ p.tx=x; p.tz=z; p.yaw=yaw; p.pitch=pitch; } p.seat=seat; if(id===net.myId) me.seat=seat; }
+    for(const f of m.f||[]) spawnTracer(f); }
+  if(m.t==='msg') feed(m.text);
+}
+// ---------- lobby ----------
+function showLobby(){ $('menu').style.display='none'; $('lobby').style.display='flex'; $('lobbyHint').textContent=net.role==='host'?'Friends open this page, type the code and press JOIN':'Waiting for the host to start…'; renderLobby(); }
+function renderLobby(){
+  const ps=Object.values(S.players);
+  $('plist').innerHTML=[0,1,2,3].map(i=>{ const p=ps[i]; if(!p) return '<div class="pl empty" style="border-color:#333">waiting for a player…</div>';
+    return `<div class="pl" style="border-color:${p.color}">${p.id===0?'👑 ':''}${p.name}${p.id===(net.role==='host'?0:net.myId)?' (you)':''}<span class="r">${p.ready?'✅ READY':'⏳ not ready'}</span></div>`; }).join('');
+  const mine=S.players[net.role==='host'?0:net.myId]; $('readyBtn').textContent=mine&&mine.ready?'✅ READY (click to undo)':"I'M READY";
+  const all=ps.length&&ps.every(p=>p.ready); $('startBtn').style.display=net.role==='host'?'block':'none'; $('startBtn').disabled=!all;
+  $('lobbyErr').textContent=net.role==='host'&&!all?'Everyone must be ready to start':'';
+}
+$('readyBtn').onclick=()=>{ if(net.role==='host'){ S.players[0].ready=!S.players[0].ready; broadcast({t:'lobby',players:lobbyList()}); renderLobby(); } else { const p=S.players[net.myId]; net.conn.send({t:'ready',v:!(p&&p.ready)}); } };
+$('startBtn').onclick=()=>{ if(net.role!=='host') return; broadcast({t:'start'}); beginGame(); };
+
+// =====================================================================
+//  GAME
+// =====================================================================
+function beginGame(){ S.started=true; $('lobby').style.display='none'; $('hud').style.display='block'; $('clickToPlay').style.display='block';
+  const id=net.role==='host'?0:net.myId, p=S.players[id]; me.x=p?p.x:0; me.z=p?p.z:2; feed('All aboard! Find the cab to drive, the gun deck at the back to shoot.'); Sfx.truckHorn(); }
+$('clickToPlay').onclick=()=>renderer.domElement.requestPointerLock();
+renderer.domElement.addEventListener('click',()=>{ if(S.started&&!document.pointerLockElement) renderer.domElement.requestPointerLock(); });
+document.addEventListener('pointerlockchange',()=>{ $('clickToPlay').style.display=document.pointerLockElement||!S.started?'none':'block'; });
+addEventListener('mousemove',e=>{ if(document.pointerLockElement){ me.yaw-=e.movementX*.0022; me.pitch=clamp(me.pitch-e.movementY*.0022,-1.3,1.3); } });
+const keys={}, tapped={}; addEventListener('keydown',e=>{ keys[e.code]=true; tapped[e.code]=true; if(e.code==='Space') e.preventDefault(); }); addEventListener('keyup',e=>keys[e.code]=false);
+let mouseDown=false; addEventListener('mousedown',e=>{ if(document.pointerLockElement&&e.button===0) mouseDown=true; }); addEventListener('mouseup',()=>mouseDown=false);
+
+// host-side rules
+function hostSeat(id,k){ const p=S.players[id]; if(!p) return;
+  if(k===null){ p.seat=null; return; }
+  if(!SEATS[k]||Object.values(S.players).some(q=>q!==p&&q.seat===k)){ if(hostConns[id]) hostConns[id].conn.send({t:'msg',text:'Someone is already there'}); else feed('Someone is already there'); return; }
+  p.seat=k; }
+let fireCd={}; function hostFire(id){ const now=performance.now(); if((fireCd[id]||0)>now) return; fireCd[id]=now+110; S.fires.push([S.gunYaw,S.gunPitch]); spawnTracer([S.gunYaw,S.gunPitch]); }
+function spawnTracer([gy,gp]){ const t=tracers.find(t=>t.life<=0); if(!t) return; train.updateMatrixWorld(); const muzzle=new THREE.Vector3(0,DECK+1.3,-5.1+0).applyMatrix4(train.matrixWorld);
+  const dirL=new THREE.Vector3(Math.sin(gy)*Math.cos(gp),Math.sin(gp),Math.cos(gy)*Math.cos(gp)), dir=dirL.transformDirection(train.matrixWorld);
+  t.m.position.copy(muzzle).addScaledVector(dir,1.8); t.v.copy(dir).multiplyScalar(90); t.m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir); t.m.visible=true; t.life=.6; Sfx.clunk(); }
+
+const DT=1/60; let netT=0, last=performance.now(), acc=0;
+function step(){
+  const gp=[...(navigator.getGamepads?navigator.getGamepads():[])].find(g=>g&&g.connected), n=gp?Input.named(gp):{};
+  const dz=v=>Math.abs(v||0)<.18?0:v;
+  // look with right stick
+  me.yaw-=dz(n.rx)*.045; me.pitch=clamp(me.pitch-dz(n.ry)*.035,-1.3,1.3);
+  const useP=tapped.KeyE||(n.cross&&!step.pc);  step.pc=n.cross;
+  const id=net.role==='host'?0:net.myId;
+  if(S.started){
+    if(me.seat){ // seated: driver or gunner
+      if(useP){ requestSeat(null); }
+      if(me.seat==='drive'){ let th=S.throttle; th=clamp(th+((keys.KeyW||n.r2||dz(-n.ly)>.3)?.6:0)*DT-((keys.KeyS||dz(n.ly)>.3)?.6:0)*DT,0,1); sendCtl({throttle:th,brake:keys.Space||n.l2||n.square}); if(net.role==='host'){ S.throttle=th; S.brake=(keys.Space||n.l2||n.square)?1:0; } }
+      if(me.seat==='gun'){ const gy=me.yaw, gpch=clamp(me.pitch,-.25,.6); const fire=mouseDown||n.r2; sendCtl({gy,gp:gpch,fire}); if(net.role==='host'){ S.gunYaw=gy; S.gunPitch=gpch; if(fire) hostFire(0); } }
+    } else { // walking
+      const sp=(keys.ShiftLeft||n.l3?4:2.4)*DT, f=(keys.KeyW?1:0)-(keys.KeyS?1:0)-dz(n.ly), r=(keys.KeyD?1:0)-(keys.KeyA?1:0)+dz(n.lx);
+      const forward=new THREE.Vector3(Math.sin(me.yaw),0,Math.cos(me.yaw)), right=new THREE.Vector3(-Math.cos(me.yaw),0,Math.sin(me.yaw));
+      const mv=forward.multiplyScalar(f).add(right.multiplyScalar(r)); if(mv.lengthSq()>1) mv.normalize();
+      const tx=me.x+mv.x*sp, tz=me.z+mv.z*sp; if(inside(tx,tz)){ me.x=tx; me.z=tz; } else if(inside(tx,me.z)) me.x=tx; else if(inside(me.x,tz)) me.z=tz;
+      let near=null; for(const k in SEATS){ const st=SEATS[k]; if(Math.hypot(me.x-st.x,me.z-st.z)<1.3) near=k; }
+      $('prompt').style.display=near?'block':'none'; if(near) $('prompt').textContent=`[E] / [✕]  ${SEATS[near].label}`;
+      if(near&&useP) requestSeat(near);
+    }
+    if(me.seat) $('prompt').style.display='block', $('prompt').textContent=me.seat==='drive'?'Driving · W/S throttle · Space brake · [E] leave':'On the gun · click / R2 to fire · [E] leave';
+    if(!me.seat&&!$('prompt').textContent) $('prompt').style.display='none';
+    if(me.seat){ const st=SEATS[me.seat]; me.x=st.x; me.z=st.z; }
+    // host simulates the train
+    if(net.role==='host'){ const acc2=S.throttle*2.2-S.brake*6-.05*S.v-.012*S.v*S.v; S.v=Math.max(0,S.v+acc2*DT); S.trainS=(S.trainS+S.v*DT)%TL;
+      const p0=S.players[0]; if(p0){ p0.x=me.x; p0.z=me.z; p0.yaw=me.yaw; p0.pitch=me.pitch; }
+      netT+=DT; if(netT>1/15){ netT=0; broadcast({t:'state',s:S.trainS,v:S.v,th:S.throttle,br:S.brake,gy:S.gunYaw,gp:S.gunPitch,p:Object.values(S.players).map(p=>[p.id,+p.x.toFixed(2),+p.z.toFixed(2),+p.yaw.toFixed(2),+p.pitch.toFixed(2),p.seat]),f:S.fires}); S.fires=[]; } }
+    else { // client: predict the train from the last snapshot
+      if(S.trainSnap!=null){ S.trainS=(S.trainS+S.v*DT)%TL; let d=S.trainSnap-S.trainS; if(d>TL/2) d-=TL; if(d<-TL/2) d+=TL; S.trainS=(S.trainS+d*.1+TL)%TL; S.trainSnap+=S.v*DT; }
+      netT+=DT; if(netT>1/15){ netT=0; net.conn.send({t:'pose',p:[+me.x.toFixed(2),+me.z.toFixed(2),+me.yaw.toFixed(2),+me.pitch.toFixed(2)]}); } }
+    for(const p of Object.values(S.players)) if(p.tx!=null){ p.x=lerp(p.x,p.tx,.25); p.z=lerp(p.z,p.tz,.25); }
+  }
+  for(const k in tapped) delete tapped[k];
+}
+let lastCtl=0; function sendCtl(c){ if(net.role!=='client') return; const now=performance.now(); if(now-lastCtl<50&&!c.fire) return; lastCtl=now; net.conn.send({t:'ctl',...c}); }
+function requestSeat(k){ if(k==='drive'){ me.yaw=0; me.pitch=-.05; } if(k==='gun'){ me.yaw=Math.PI; me.pitch=-.08; } if(net.role==='host'){ hostSeat(0,k); me.seat=S.players[0].seat; } else { net.conn.send({t:'seat',k}); if(k===null) me.seat=null; } Sfx.tick(); }
+
+// ---------- avatars for the other players ----------
+const avatars={};
+function avatar(p){ if(avatars[p.id]) return avatars[p.id]; const g=new THREE.Group(), c=new THREE.Color(p.color);
+  const body=new THREE.Mesh(new THREE.CapsuleGeometry(.28,.8,6,12),std(0x3a4a6a)); body.position.y=.85; g.add(body);
+  const vest=new THREE.Mesh(new THREE.CylinderGeometry(.31,.31,.45,14),std(c)); vest.position.y=1.0; g.add(vest);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.2,16,12),std(0xe0b090)); head.position.y=1.55; g.add(head);
+  const capm=new THREE.Mesh(new THREE.CylinderGeometry(.21,.22,.1,14),std(c)); capm.position.y=1.7; g.add(capm);
+  const lamp=new THREE.PointLight(0xffc070,3,5,2); lamp.position.set(.3,1.1,.3); g.add(lamp);
+  const cv=document.createElement('canvas'); cv.width=256; cv.height=64; const x=cv.getContext('2d'); x.font='bold 34px Georgia'; x.textAlign='center'; x.fillStyle='#000a'; x.fillRect(0,8,256,48); x.fillStyle=p.color; x.fillText(p.name,128,44);
+  const tag=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false})); tag.scale.set(1.2,.3,1); tag.position.y=2.05; g.add(tag);
+  g.traverse(o=>{ if(o.isMesh) o.castShadow=true; }); train.add(g); avatars[p.id]=g; return g; }
+
+// ---------- render ----------
+const up=new THREE.Vector3(0,1,0);
+function render(){
+  const u=((S.trainS/TL)%1+1)%1, uc=(u+3/TL)%1, p=curve.getPointAt(uc), t=curve.getTangentAt(uc);
+  train.position.set(p.x,.25,p.z); train.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),t);
+  train.position.addScaledVector(t,-3);  // the curve point sits under the middle of the train
+  train.updateMatrixWorld();
+  moon.position.copy(train.position).add(new THREE.Vector3(-30,45,15)); moon.target.position.copy(train.position);
+  // gun follows the gunner's aim
+  if(GUN){ GUN.rotation.y=S.gunYaw; GUN.rotation.x=-S.gunPitch; }
+  // avatars
+  const myIdNow=net.role==='host'?0:net.myId;
+  for(const id in avatars) if(!S.players[id]){ train.remove(avatars[id]); delete avatars[id]; }
+  for(const pl of Object.values(S.players)){ if(+pl.id===myIdNow) continue; const a=avatar(pl); a.position.set(pl.x,DECK,pl.z); a.rotation.y=pl.yaw; }
+  // first-person camera in train space
+  const eye=new THREE.Vector3(me.x,DECK+(me.seat?SEATS[me.seat].eye:EYE),me.z).applyMatrix4(train.matrixWorld);
+  camera.position.copy(eye); const look=new THREE.Vector3(Math.sin(me.yaw)*Math.cos(me.pitch),Math.sin(me.pitch),Math.cos(me.yaw)*Math.cos(me.pitch)).transformDirection(train.matrixWorld);
+  camera.up.copy(up); camera.lookAt(eye.clone().add(look));
+  // smoke
+  if(S.started&&Math.random()<.25+S.throttle*.5){ const s=smoke.find(s=>s.life<=0); if(s){ const sp=new THREE.Vector3(0,5.2,12.3).applyMatrix4(train.matrixWorld); s.m.position.copy(sp); s.m.scale.setScalar(.5); s.m.visible=true; s.life=3; } }
+  for(const s of smoke) if(s.life>0){ s.life-=1/60; s.m.position.y+=.05; s.m.scale.multiplyScalar(1.012); s.m.material.opacity=Math.max(0,s.life/3*.45); if(s.life<=0) s.m.visible=false; }
+  for(const tr of tracers) if(tr.life>0){ tr.life-=1/60; tr.m.position.addScaledVector(tr.v,1/60); if(tr.life<=0) tr.m.visible=false; }
+  // HUD
+  if(S.started){ $('thrBar').style.width=(S.throttle*100)+'%'; $('spd').textContent=Math.round(S.v*3.6)+' km/h'+(S.brake?'  · BRAKE':'');
+    $('tl').innerHTML='Room '+net.code+'<br>'+Object.values(S.players).map(p=>`<span style="color:${p.color}">●</span> ${p.name}${p.seat==='drive'?' 🚂':p.seat==='gun'?' 🔫':''}`).join('<br>'); }
+  renderer.render(scene,camera);
+}
+(function loop(now=performance.now()){ acc+=Math.min(250,now-last); last=now; while(acc>=1000/60){ step(); acc-=1000/60; } render(); requestAnimationFrame(loop); })();
+window.__rails={S,me,net,requestSeat};
+</script></body></html>
