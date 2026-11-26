@@ -3,6 +3,9 @@
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from './vendor/jsm/geometries/RoundedBoxGeometry.js';
 export const DECK=1.2;
+// gun deck sits behind two extra cars: material car (rails) and cargo car
+export const GUN_SHIFT=-12;
+export const GUN_Z=-5.1+GUN_SHIFT;
 export function buildTrain(){
 const T=new THREE.Group();
 const std=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.8,metalness:0,...o});
@@ -88,7 +91,7 @@ function carShell(z0,len,{door=true,winFront=false,winBack=false}={}){ const g=n
   const cord=new THREE.Mesh(new THREE.CylinderGeometry(.01,.01,.4,4),blk); cord.position.set(0,DECK+2.55,z0+3); T.add(cord);
 }
 // ================= CAR 3: CAGED GUN DECK (open-top flatcar with mesh cage) =================
-{ const z0=-8, len=5.2; box(3.3,.3,len,tread,0,DECK-.15,z0+len/2); box(3.4,.5,len,blk,0,DECK-.55,z0+len/2);
+{ const z0=-8+GUN_SHIFT, len=5.2; box(3.3,.3,len,tread,0,DECK-.15,z0+len/2); box(3.4,.5,len,blk,0,DECK-.55,z0+len/2);
   for(const zz of [z0+.9,z0+len-.9]) for(const k of [-1,1]){ const w=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,.18,16),blk); w.rotation.z=Math.PI/2; w.position.set(1.02*k,.55,zz); T.add(w); }
   const meshTex=canvasTex(128,128,(x,w,h)=>{ x.clearRect(0,0,w,h); x.strokeStyle='#2a2d33'; x.lineWidth=5; for(let i=-128;i<256;i+=22){ x.beginPath(); x.moveTo(i,0); x.lineTo(i+128,128); x.stroke(); x.beginPath(); x.moveTo(i+128,0); x.lineTo(i,128); x.stroke(); } }); meshTex.repeat.set(4,1.2);
   const meshM=new THREE.MeshStandardMaterial({map:meshTex,transparent:true,alphaTest:.3,side:THREE.DoubleSide,metalness:.7,roughness:.4});
@@ -194,7 +197,7 @@ for(const [z0,len] of [[4,4],[-2.2,5.8]]){
   const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.75,14),std(0x7a3e22,{metalness:.4})); barrel.position.set(-1.15,DECK+.38,z0+5.1); T.add(barrel); for(const y of [.12,.62]){ const h=new THREE.Mesh(new THREE.TorusGeometry(.305,.02,4,16),dark); h.rotation.x=Math.PI/2; h.position.set(-1.15,DECK+y,z0+5.1); T.add(h); }
 }
 // --- gun deck detail: armored shield plates, spent shells, sandbags ---
-{ const z0=-8;
+{ const z0=-8+GUN_SHIFT;
   for(const k of [-1,1]){ const p=new THREE.Mesh(new RoundedBoxGeometry(.12,.7,1.0,2,.04),std(0x4a5040,{metalness:.6})); p.position.set(1.62*k,DECK+.35,z0+.6); T.add(p); for(let i=0;i<4;i++) rv(1.69*k,DECK+.1+i*.17,z0+.15); }
   for(let i=0;i<12;i++){ const sh=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,.1,6),brass); sh.position.set((Math.random()-.5)*1.4,DECK+.03,z0+1.8+(Math.random()-.5)*1.4); sh.rotation.set(Math.PI/2,Math.random()*6,0); T.add(sh); }
   for(let i=0;i<5;i++){ const sb=new THREE.Mesh(new THREE.CapsuleGeometry(.14,.35,4,8),std(0x8a7a5a)); sb.rotation.z=Math.PI/2; sb.position.set(-1.1+(i%3)*.5,DECK+.15+(i>2?.26:0),z0+.35); T.add(sb); }
@@ -202,7 +205,22 @@ for(const [z0,len] of [[4,4],[-2.2,5.8]]){
 rivets.instanceMatrix.needsUpdate=true;
 
 // couplers between cars
-for(const z of [3.8,-2.3]) box(.3,.25,.5,steel,0,DECK-.4,z);
+for(const z of [3.8,-2.3,-8.3,-14.3]) box(.3,.25,.5,steel,0,DECK-.4,z);
+// ================= MATERIAL CAR (rails + sleepers) and CARGO CAR (crates) =================
+function flatcar(z0,len,col){ box(3.3,.3,len,tread,0,DECK-.15,z0+len/2); box(3.4,.5,len,blk,0,DECK-.55,z0+len/2);
+  for(const zz of [z0+.9,z0+len-.9]) for(const k of [-1,1]){ const w=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,.18,16),blk); w.rotation.z=Math.PI/2; w.position.set(1.02*k,.55,zz); T.add(w); }
+  for(const k of [-1,1]){ for(let z=z0+.3;z<z0+len;z+=1.1) box(.08,.9,.08,steel,1.55*k,DECK+.45,z); box(.06,.06,len,brass,1.55*k,DECK+.9,z0+len/2); }
+  const sign=box(1.4,.35,.06,col,0,DECK+.55,z0+len-.05); return sign; }
+{ const z0=-8.2, len=5.8; flatcar(z0,len,std(0xc9a24a));
+  const railM=std(0xb8bec8,{metalness:.85,roughness:.3}), slM=std(0x5a3d26);
+  T.userData.railStack=[]; for(let i=0;i<6;i++){ const g=new THREE.Group(); for(const k of [-.25,.25]){ const r=new THREE.Mesh(new THREE.BoxGeometry(.12,.14,4.6),railM); r.position.set(k,0,0); g.add(r); } g.position.set(-.75+(i%2)*.0,DECK+.1+Math.floor(i/2)*.16,z0+len/2); g.position.x=-.8+(i%2)*.55; T.add(g); T.userData.railStack.push(g); }
+  for(let i=0;i<8;i++){ const sl=new THREE.Mesh(new THREE.BoxGeometry(1.1,.18,.32),slM); sl.position.set(.85,DECK+.1+Math.floor(i/2)*.2,z0+1.2+(i%2)*.5); sl.rotation.y=Math.PI/2; T.add(sl); } }
+{ const z0=-14.2, len=5.8; flatcar(z0,len,std(0x4ab0e8));
+  T.userData.cargo=[]; const cm=[std(0x6a4a2a),std(0x5a6a3a),std(0x7a3a2a)];
+  for(let i=0;i<4;i++){ const c=box(.9,.8,.9,cm[i%3],(i%2?.7:-.7),DECK+.4,z0+1.4+Math.floor(i/2)*2.6); c.visible=false; T.userData.cargo.push(c); }
+  const lamp=new THREE.Mesh(new THREE.SphereGeometry(.1,8,6),new THREE.MeshBasicMaterial({color:0xffc870})); lamp.position.set(1.55,DECK+1.1,z0+len/2); T.add(lamp); }
+// missile launcher on the cab roof (hidden until built)
+{ const g=new THREE.Group(); g.position.set(0,DECK+3.35,6.2); const base=box(.8,.25,.8,blk,0,0,0,g); for(const k of [-1,1]){ const tube=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,1.4,10),std(0x5a6a3a,{metalness:.5})); tube.rotation.x=Math.PI/2-.3; tube.position.set(.22*k,.35,0); g.add(tube); const tip=new THREE.Mesh(new THREE.ConeGeometry(.15,.3,10),std(0xc02020)); tip.rotation.x=-.3-Math.PI/2; tip.position.set(.22*k,.15,-.7); g.add(tip); } g.visible=false; T.add(g); T.userData.launcher=g; }
 rivets.instanceMatrix.needsUpdate=true;
 T.traverse(o=>{ if(o.isLight&&o.castShadow&&!o.isSpotLight) o.castShadow=false; });
 return T; }

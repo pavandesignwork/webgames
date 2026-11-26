@@ -37,6 +37,8 @@
  #stats{position:absolute;left:16px;bottom:20px;background:#000a;padding:10px 14px;border-radius:4px;font-size:16px;min-width:220px}
  #shop{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,92vw);background:#11151ef2;border:2px solid #c9a24a;border-radius:6px;padding:20px 24px;display:none;pointer-events:auto}
  .up{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid #2a2a2a} .up button{width:auto;margin:0;padding:8px 14px;font-size:16px;white-space:nowrap}
+ .sh{margin-top:14px;font-size:12px;letter-spacing:3px;color:#c9a24a}
+ #shopList{max-height:62vh;overflow:auto}
  .sw{display:inline-block;width:28px;height:28px;border-radius:50%;margin-left:6px;cursor:pointer;border:2px solid #000}
 </style></head><body>
 <div id="menu" class="screen" style="display:flex"><div class="box">
@@ -60,10 +62,10 @@
 <div id="hud"><div id="cross"></div><div id="prompt"></div><div id="tl"></div><div id="feed"></div>
   <div id="mission"><div class="mt">MISSION</div><div id="mMain"></div><div id="mSide"></div></div>
   <div id="warn"></div>
-  <div id="stats">🛤️ Stations <b id="stCount">1/6</b> &nbsp; 🔩 Scrap <b id="scrap">0</b><div style="margin-top:6px">TRAIN<div class="bar"><i id="hpBar" style="background:linear-gradient(90deg,#3ac05a,#9aef6a);width:100%"></i></div></div></div>
-  <div id="shop"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:22px;color:#d9c08a">THE YARD · WORKSHOP</b><span>🔩 <b id="shopScrap">0</b></span></div><div id="shopList"></div><button id="shopClose" class="alt">CLOSE (Tab)</button></div>
+  <div id="stats"><div id="region" style="color:#c9a24a;letter-spacing:2px;font-size:13px;margin-bottom:4px"></div>🛤️ Stations <b id="stCount">1/25</b> &nbsp; 🔩 Scrap <b id="scrap">0</b><div id="inv" style="margin-top:6px;font-size:15px"></div><div style="margin-top:6px">TRAIN<div class="bar"><i id="hpBar" style="background:linear-gradient(90deg,#3ac05a,#9aef6a);width:100%"></i></div></div></div>
+  <div id="shop"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:22px;color:#d9c08a">WORKBENCH</b><span>🔩 <b id="shopScrap">0</b></span></div><div id="shopList"></div><button id="shopClose" class="alt">CLOSE (Tab)</button></div>
   <div id="speed">THROTTLE<div class="bar"><i id="thrBar"></i></div><div style="margin-top:8px" id="spd">0 km/h</div></div>
-  <div id="help">WASD move · mouse look · E use · Tab yard workshop · Esc unlock mouse · controller: sticks, ✕ use, R2 fire/throttle, △ workshop</div>
+  <div id="help">WASD move · mouse look · E use · Tab workbench · click whack (on foot) · Esc unlock mouse · controller: sticks, ✕ use, R2 fire/throttle, △ workshop</div>
   <div id="clickToPlay">CLICK TO PLAY</div></div>
 <script src="vendor/peerjs.min.js"></script>
 <script>window.SFX_NO_HINT=true;</script>
@@ -73,7 +75,8 @@
 <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
 <script type="module">
 import * as THREE from 'three';
-import {buildTrain,DECK} from './train_model.js';
+import {buildTrain,DECK,GUN_Z,GUN_SHIFT} from './train_model.js';
+import {makeRattlejaw,makeGnawer} from './monsters.js';
 const $=id=>document.getElementById(id);
 NetLink.setPrefix('pdw-webgames-rails-');
 const COLORS=['#e8b24a','#4ab0e8','#e85a4a','#7ae84a'];
@@ -81,101 +84,117 @@ const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t;
 Input.autoBack=false;
 
 // =====================================================================
-//  WORLD: foggy island, looping track, the train
+//  WORLD: a big island in 5 regions, one long railway loop with 25 stations
 // =====================================================================
 const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(1.5,devicePixelRatio)); renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.1;
 document.body.prepend(renderer.domElement);
 const scene=new THREE.Scene(); scene.background=new THREE.Color(0x1a1f2e); scene.fog=new THREE.FogExp2(0x232a3a,.022);
-const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.05,400);
+const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.05,500);
 addEventListener('resize',()=>{ renderer.setSize(innerWidth,innerHeight); camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); });
 const std=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.9,...o});
-scene.add(new THREE.HemisphereLight(0x7a88b8,0x2a2018,.9));
-const moon=new THREE.DirectionalLight(0xb0c4ff,1.4); moon.castShadow=true; moon.shadow.mapSize.set(2048,2048); Object.assign(moon.shadow.camera,{left:-40,right:40,top:40,bottom:-40,far:150}); scene.add(moon,moon.target);
-// track: a closed loop around the island
-const ctrl=[[0,-150],[110,-120],[160,-20],[130,90],[40,150],[-70,140],[-150,70],[-160,-40],[-100,-130]];
+const hemi=new THREE.HemisphereLight(0x7a88b8,0x2a2018,.9); scene.add(hemi);
+const moon=new THREE.DirectionalLight(0xb0c4ff,1.4); moon.castShadow=true; moon.shadow.mapSize.set(2048,2048); Object.assign(moon.shadow.camera,{left:-45,right:45,top:45,bottom:-45,far:160}); scene.add(moon,moon.target);
+const R=(()=>{ let s=99; return ()=>{ s=(s*16807)%2147483647; return s/2147483647; }; })();
+// a long wiggly loop (~2.7 km)
+const ctrl=[]; for(let i=0;i<22;i++){ const a=i/22*Math.PI*2, r=420+Math.sin(i*1.7)*70+Math.cos(i*2.9)*45; ctrl.push([Math.cos(a)*r,Math.sin(a)*r*.85]); }
 const curve=new THREE.CatmullRomCurve3(ctrl.map(([x,z])=>new THREE.Vector3(x,0,z)),true,'catmullrom',.5);
 const TL=curve.getLength();
-const R=(()=>{ let s=99; return ()=>{ s=(s*16807)%2147483647; return s/2147483647; }; })();
-// ground with gentle hills away from the track
-{ const g=new THREE.PlaneGeometry(700,700,140,140); g.rotateX(-Math.PI/2); const p=g.attributes.position, pts=curve.getSpacedPoints(300);
-  for(let i=0;i<p.count;i++){ const x=p.getX(i), z=p.getZ(i); let d=1e9; for(let k=0;k<pts.length;k+=3){ const q=pts[k]; d=Math.min(d,(q.x-x)**2+(q.z-z)**2); } d=Math.sqrt(d);
-    p.setY(i,(Math.sin(x*.03)*3+Math.cos(z*.025)*4+Math.sin((x+z)*.07))*clamp((d-8)/30,0,1)); }
-  g.computeVertexNormals(); const m=new THREE.Mesh(g,std(0x2a3222)); m.receiveShadow=true; scene.add(m); }
+// 5 regions around the loop
+const REGIONS=[{name:'The Farmlands',fog:0x2a3040,ground:0x34402a,tree:0x2a2420,trees:.5},{name:'Blackwood Forest',fog:0x1a2422,ground:0x1e2a1c,tree:0x1a1714,trees:1.6},{name:'Iron Hills',fog:0x2a2a30,ground:0x3a3834,tree:0x2a2622,trees:.4},{name:'Drowned Coast',fog:0x1c2a36,ground:0x23302e,tree:0x22201c,trees:.6},{name:'The Scar',fog:0x2e1c1c,ground:0x3a2420,tree:0x2a1a14,trees:.3}];
+const regionAt=s=>Math.min(4,Math.floor((((s/TL)%1+1)%1)*5));
+const tpts=curve.getSpacedPoints(500), tptsU=tpts.map((_,i)=>i/500);
+function trackDist(x,z){ let d=1e9,u=0; for(let i=0;i<tpts.length;i+=2){ const q=tpts[i], dd=(q.x-x)**2+(q.z-z)**2; if(dd<d){ d=dd; u=tptsU[i]; } } return [Math.sqrt(d),u]; }
+function hgt(x,z){ const [d]=trackDist(x,z); return (Math.sin(x*.03)*3+Math.cos(z*.025)*4+Math.sin((x+z)*.07)+Math.max(0,Math.sin(x*.008)*Math.cos(z*.01))*10)*clamp((d-8)/30,0,1); }
+{ const g=new THREE.PlaneGeometry(1500,1350,190,170); g.rotateX(-Math.PI/2); const p=g.attributes.position, col=[], c=new THREE.Color();
+  for(let i=0;i<p.count;i++){ const x=p.getX(i), z=p.getZ(i); p.setY(i,hgt(x,z)); const [,u]=trackDist(x,z), ri=Math.min(4,Math.floor(u*5)), rn=(Math.min(4,ri+1)), f=(u*5)%1;
+    c.set(REGIONS[ri].ground).lerp(new THREE.Color(REGIONS[rn===5?4:rn].ground),Math.max(0,f-.8)*5); c.offsetHSL(0,0,(Math.random()-.5)*.03); col.push(c.r,c.g,c.b); }
+  g.setAttribute('color',new THREE.Float32BufferAttribute(col,3)); g.computeVertexNormals(); const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1})); m.receiveShadow=true; scene.add(m);
+  const sea=new THREE.Mesh(new THREE.PlaneGeometry(4000,4000),std(0x0d1828,{roughness:.3,metalness:.3})); sea.rotation.x=-Math.PI/2; sea.position.y=-3; scene.add(sea); }
 // sleepers + rails
 { const n=Math.floor(TL/1.1), sl=new THREE.InstancedMesh(new THREE.BoxGeometry(3.4,.2,.5),std(0x3a2a1c),n), m4=new THREE.Matrix4(), q=new THREE.Quaternion(), f=new THREE.Vector3(0,0,1), one=new THREE.Vector3(1,1,1);
   for(let i=0;i<n;i++){ const u=i/n, p=curve.getPointAt(u), t=curve.getTangentAt(u); q.setFromUnitVectors(f,t); p.y=.1; sl.setMatrixAt(i,m4.compose(p,q,one)); }
   sl.receiveShadow=true; scene.add(sl);
-  for(const off of [-.75,.75]){ const pts=[]; for(let i=0;i<=600;i++){ const u=i/600, p=curve.getPointAt(u%1), t=curve.getTangentAt(u%1); pts.push(new THREE.Vector3(p.x+t.z*off,.28,p.z-t.x*off)); }
-    scene.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,true),1200,.08,5,true),std(0x8a8f98,{metalness:.8,roughness:.35}))); } }
-// dead trees + rocks (kept off the track)
-{ const trunk=std(0x241f1b), pts=curve.getSpacedPoints(200), far=(x,z)=>pts.every(q=>(q.x-x)**2+(q.z-z)**2>64);
-  const tg=new THREE.CylinderGeometry(.15,.45,1,6), bg=new THREE.CylinderGeometry(.04,.12,1,5), trees=new THREE.InstancedMesh(tg,trunk,500), br=new THREE.InstancedMesh(bg,trunk,2000), m4=new THREE.Matrix4(), q=new THREE.Quaternion(), e=new THREE.Euler(); let nt=0,nb=0;
-  for(let k=0;k<1200&&nt<500;k++){ const x=(R()-.5)*600, z=(R()-.5)*600; if(!far(x,z)) continue; const h=5+R()*9;
-    e.set((R()-.5)*.2,0,(R()-.5)*.2); q.setFromEuler(e); trees.setMatrixAt(nt++,m4.compose(new THREE.Vector3(x,h/2,z),q,new THREE.Vector3(1,h,1)));
-    for(let b=0;b<4&&nb<2000;b++){ e.set(R()*1.2+.4,R()*6.3,0); q.setFromEuler(e); const y=h*(.5+R()*.45); br.setMatrixAt(nb++,m4.compose(new THREE.Vector3(x,y,z),q,new THREE.Vector3(1,2+R()*2,1))); } }
+  for(const off of [-.75,.75]){ const pts=[]; for(let i=0;i<=1600;i++){ const u=i/1600, p=curve.getPointAt(u%1), t=curve.getTangentAt(u%1); pts.push(new THREE.Vector3(p.x+t.z*off,.28,p.z-t.x*off)); }
+    scene.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,true),3200,.08,5,true),std(0x8a8f98,{metalness:.8,roughness:.35}))); } }
+// trees, rocks, region props
+{ const tg=new THREE.CylinderGeometry(.15,.45,1,6), bg=new THREE.CylinderGeometry(.04,.12,1,5), trees=new THREE.InstancedMesh(tg,std(0xffffff),1400), br=new THREE.InstancedMesh(bg,std(0xffffff),5000), m4=new THREE.Matrix4(), q=new THREE.Quaternion(), e=new THREE.Euler(), c=new THREE.Color(); let nt=0,nb=0;
+  for(let k=0;k<6000&&nt<1400;k++){ const x=(R()-.5)*1400, z=(R()-.5)*1250, [d,u]=trackDist(x,z); if(d<9) continue; const reg=REGIONS[Math.min(4,Math.floor(u*5))]; if(R()>reg.trees*.35) continue; const h=5+R()*10;
+    e.set((R()-.5)*.2,0,(R()-.5)*.2); q.setFromEuler(e); trees.setMatrixAt(nt,m4.compose(new THREE.Vector3(x,hgt(x,z)+h/2,z),q,new THREE.Vector3(1,h,1))); trees.setColorAt(nt++,c.set(reg.tree));
+    for(let b=0;b<4&&nb<5000;b++){ e.set(R()*1.2+.4,R()*6.3,0); q.setFromEuler(e); br.setMatrixAt(nb,m4.compose(new THREE.Vector3(x,hgt(x,z)+h*(.5+R()*.45),z),q,new THREE.Vector3(1,2+R()*2,1))); br.setColorAt(nb++,c.set(reg.tree)); } }
   trees.count=nt; br.count=nb; trees.castShadow=br.castShadow=true; scene.add(trees,br);
-  const rk=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1,0),std(0x4a4a52,{flatShading:true}),150); let nr=0;
-  for(let k=0;k<400&&nr<150;k++){ const x=(R()-.5)*500, z=(R()-.5)*500; if(!far(x,z)) continue; const s=.5+R()*2; e.set(R()*3,R()*3,R()*3); q.setFromEuler(e); rk.setMatrixAt(nr++,m4.compose(new THREE.Vector3(x,s*.3,z),q,new THREE.Vector3(s,s*.7,s))); }
+  const rk=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1,0),std(0xffffff,{flatShading:true}),500); let nr=0;
+  for(let k=0;k<3000&&nr<500;k++){ const x=(R()-.5)*1400, z=(R()-.5)*1250, [d,u]=trackDist(x,z); if(d<8) continue; const ri=Math.min(4,Math.floor(u*5)); if(R()>(ri===2||ri===4?.6:.12)) continue; const s=.6+R()*(ri===2?5:2.5);
+    e.set(R()*3,R()*3,R()*3); q.setFromEuler(e); rk.setMatrixAt(nr,m4.compose(new THREE.Vector3(x,hgt(x,z)+s*.2,z),q,new THREE.Vector3(s,s*.7,s))); rk.setColorAt(nr++,c.set(ri===4?0x5a2a20:0x4a4a52)); }
   rk.count=nr; rk.castShadow=true; scene.add(rk); }
 // the train
 const train=buildTrain(); scene.add(train);
 const GUN=train.userData.gun;
-// smoke from the stack
 const smoke=[]; for(let i=0;i<30;i++){ const m=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshStandardMaterial({color:0x50525a,transparent:true,opacity:.4,depthWrite:false})); m.visible=false; scene.add(m); smoke.push({m,life:0}); }
-// tracers
 const tracers=[]; for(let i=0;i<40;i++){ const m=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,1.2,5),new THREE.MeshBasicMaterial({color:0xffd27a})); m.visible=false; scene.add(m); tracers.push({m,life:0,v:new THREE.Vector3()}); }
 
 // =====================================================================
-//  WORLD CONTENT: stations, broken track, scrap crates, the Hollow Engine
+//  CONTENT: 25 stations, broken track, crates, hidden parts
 // =====================================================================
 const trackPos=s=>{ const u=((s/TL)%1+1)%1; return {p:curve.getPointAt(u),t:curve.getTangentAt(u)}; };
-const STATIONS=[{name:'The Yard',s:0},{name:'Mill Station',s:.17},{name:'Crow Farm',s:.34},{name:'Blackwood Halt',s:.5},{name:'Old Mine',s:.66},{name:'Lighthouse Point',s:.83}].map(x=>({...x,s:x.s*TL}));
-const BREAKS=[.09,.25,.42,.58,.61,.75,.91].map(u=>u*TL);       // broken track spots between stations
+const ahead=(from,to)=>((to-from)%TL+TL)%TL;                 // distance along the loop from 'from' forward to 'to'
+const near=(a,b)=>{ const d=((a-b)%TL+TL)%TL; return Math.min(d,TL-d); };
+const NAMES=['The Yard','Mill Station','Crow Farm','Haybale Halt','Windmill Junction',
+  'Blackwood Halt','Sawmill','Hollow Oak','Fogmoor','Owl Crossing',
+  'Iron Hills','Old Mine','Quarry Point','Copper Gulch','Rockfall',
+  'Drowned Pier','Saltmarsh','Lighthouse Point','Fisher Cove','Wreck Bay',
+  'Scar Gate','Ashfield','Cinder Rock','Bone Valley','Rattlejaw Pit'];
+const STATIONS=NAMES.map((name,i)=>({name,s:i/25*TL,region:Math.floor(i/5)}));
+const BREAKS=[]; for(let i=1;i<25;i++){ BREAKS.push((i-.5)/25*TL); if(i%3===0) BREAKS.push((i-.25)/25*TL); } BREAKS.push(24.5/25*TL);
 const CRATES=[]; { const RR=(()=>{ let s=7; return ()=>{ s=(s*16807)%2147483647; return s/2147483647; }; })();
-  for(let i=0;i<18;i++){ const s=(.04+i/18)*TL+RR()*20, {p,t}=trackPos(s), side=RR()<.5?-1:1, off=side*(4.5+RR()*4); CRATES.push({x:p.x+t.z*off,z:p.z-t.x*off}); } }
-const UPG={engine:{name:'Engine',desc:'faster train',cost:[40,80,140]},armor:{name:'Shield plates',desc:'train takes less damage',cost:[40,80,140]},gun:{name:'Gun',desc:'more damage per shot',cost:[50,100,160]},repair:{name:'Tool kit',desc:'fix track faster',cost:[30,60,100]}};
+  for(let i=0;i<50;i++){ const s=(i/50)*TL+20+RR()*25, {p,t}=trackPos(s), side=RR()<.5?-1:1, off=side*(4.5+RR()*5); CRATES.push({x:p.x+t.z*off,z:p.z-t.x*off}); } }
+// hidden parts (found on foot behind a station)
+const PARTS=[{k:'spring',name:'Gun spring',st:3},{k:'rocket',name:'Rocket parts',st:7},{k:'barrel',name:'Long gun barrel',st:11},{k:'chip',name:'Missile guidance chip',st:16},{k:'scope',name:'Brass gun scope',st:19}].map(p=>{ const {p:q,t}=trackPos(STATIONS[p.st].s); const n=new THREE.Vector3(-t.z,0,t.x); return {...p,x:q.x+n.x*13,z:q.z+n.z*13}; });
+const UPG={engine:{name:'Engine',desc:'faster train',cost:[40,80,140,200]},armor:{name:'Shield plates',desc:'train takes less damage',cost:[40,80,140,200]},
+  gun:{name:'Gun',desc:'more damage, faster fire',cost:[50,100,160],need:['spring','barrel','scope']},repair:{name:'Tool kit',desc:'fix track faster',cost:[30,60,100]},
+  rails:{name:'Material car',desc:'carry more rails',cost:[30,60,90]},launcher:{name:'Missile launcher',desc:'cab-roof launcher (missiles home in on monsters)',cost:[80],need:['rocket']}};
 const PAINTS=[['Forest green',0x3d4f3c],['Rust red',0x7a2a20],['Midnight blue',0x253a5a],['Coal black',0x22242a],['Mustard',0x9a7a22]];
-const W={stations:STATIONS.map((x,i)=>i===0),breaks:BREAKS.map(()=>({fixed:false,prog:0})),crates:CRATES.map(()=>false),scrap:0,hp:100,upg:{engine:0,armor:0,gun:0,repair:0},paint:0,
-  mon:{on:false,s:0,hp:0,cd:45},msg:''};
-const maxHp=()=>100+W.upg.armor*40;
-const saveKey='rails-save';
-function saveGame(){ if(net.role!=='host') return; localStorage.setItem(saveKey,JSON.stringify({stations:W.stations,breaks:W.breaks.map(b=>b.fixed),crates:W.crates,scrap:W.scrap,upg:W.upg,paint:W.paint})); }
-function loadGame(){ try{ const d=JSON.parse(localStorage.getItem(saveKey)); if(!d) return false; W.stations=d.stations; d.breaks.forEach((f,i)=>{ if(W.breaks[i]) W.breaks[i].fixed=f; }); W.crates=d.crates; W.scrap=d.scrap; W.upg=d.upg; W.paint=d.paint||0; return true; }catch(e){ return false; } }
-// ---- terrain height (same formula as the ground mesh) ----
-const tpts=curve.getSpacedPoints(160);
-function hgt(x,z){ let d=1e9; for(const q of tpts) d=Math.min(d,(q.x-x)**2+(q.z-z)**2); d=Math.sqrt(d); return (Math.sin(x*.03)*3+Math.cos(z*.025)*4+Math.sin((x+z)*.07))*clamp((d-8)/30,0,1); }
-// ---- station models: platform, lamp, sign ----
+const W={stations:STATIONS.map((x,i)=>i===0),breaks:BREAKS.map(()=>({fixed:false,prog:0})),crates:CRATES.map(()=>false),parts:{},scrap:0,hp:100,ammo:120,missiles:0,rails:3,
+  upg:{engine:0,armor:0,gun:0,repair:0,rails:0,launcher:0},paint:0,delivery:null,
+  mon:{on:false,s:0,hp:0,cd:60},rj:{on:false,ph:'',t:0,side:1,hp:0,cd:90,bite:0},gn:[]};
+const maxHp=()=>100+W.upg.armor*40, maxRails=()=>3+W.upg.rails*2, maxAmmo=()=>120+W.upg.gun*60;
+const saveKey='rails-save-v2';
+function saveGame(){ if(net.role!=='host') return; localStorage.setItem(saveKey,JSON.stringify({stations:W.stations,breaks:W.breaks.map(b=>b.fixed),crates:W.crates,parts:W.parts,scrap:W.scrap,ammo:W.ammo,missiles:W.missiles,rails:W.rails,upg:W.upg,paint:W.paint,trainS:S.trainS})); }
+function loadGame(){ try{ const d=JSON.parse(localStorage.getItem(saveKey)); if(!d) return false; W.stations=d.stations; d.breaks.forEach((f,i)=>{ if(W.breaks[i]) W.breaks[i].fixed=f; }); Object.assign(W,{crates:d.crates,parts:d.parts||{},scrap:d.scrap,ammo:d.ammo,missiles:d.missiles,rails:d.rails,paint:d.paint||0}); Object.assign(W.upg,d.upg); S.trainS=d.trainS||0; return true; }catch(e){ return false; } }
+// ---- station models ----
 const stationLamps=[];
-STATIONS.forEach((st,i)=>{ const {p,t}=trackPos(st.s), g=new THREE.Group(); const side=-1, n=new THREE.Vector3(t.z*side,0,-t.x*side);
+STATIONS.forEach((st,i)=>{ const {p,t}=trackPos(st.s), g=new THREE.Group(); const n=new THREE.Vector3(t.z,0,-t.x);
   g.position.set(p.x+n.x*4.2,0,p.z+n.z*4.2); g.rotation.y=Math.atan2(t.x,t.z); scene.add(g);
   const plat=new THREE.Mesh(new THREE.BoxGeometry(3.6,1,22),std(0x5a5650)); plat.position.y=.5; plat.receiveShadow=true; g.add(plat);
-  const edge=new THREE.Mesh(new THREE.BoxGeometry(.3,1.02,22),std(0xb8a040)); edge.position.set(1.7*(i===0?1:1),.5,0); g.add(edge);
-  if(i===0){ // the yard: a big engine shed
-    const shed=new THREE.Mesh(new THREE.BoxGeometry(9,7,26),std(0x4a3a2c)); shed.position.set(-6,3.5,0); g.add(shed); const roof=new THREE.Mesh(new THREE.CylinderGeometry(5.2,5.2,26.5,14,1,false,0,Math.PI),std(0x2c2420)); roof.rotation.set(0,0,Math.PI/2); roof.rotation.order='ZXY'; roof.rotation.set(Math.PI/2,0,Math.PI/2); roof.position.set(-6,7,0); g.add(roof); }
-  else { const hut=new THREE.Mesh(new THREE.BoxGeometry(3,3,5),std(0x5a4030)); hut.position.set(-1,2.5,-5); g.add(hut); const rf=new THREE.Mesh(new THREE.ConeGeometry(3.4,1.6,4),std(0x2c2420)); rf.position.set(-1,4.8,-5); rf.rotation.y=Math.PI/4; g.add(rf); }
-  for(const z of [-8,0,8]){ const post=new THREE.Mesh(new THREE.CylinderGeometry(.08,.1,3.4,6),std(0x222222)); post.position.set(1,2.7,z); g.add(post);
-    const bulb=new THREE.Mesh(new THREE.SphereGeometry(.22,10,8),new THREE.MeshBasicMaterial({color:i===0?0xffcf7a:0x333333})); bulb.position.set(1,4.45,z); g.add(bulb);
-    const pool=new THREE.Mesh(new THREE.CircleGeometry(3.2,20),new THREE.MeshBasicMaterial({color:0xffb860,transparent:true,opacity:i===0?.18:0,depthWrite:false})); pool.rotation.x=-Math.PI/2; pool.position.set(1,1.03,z); g.add(pool); stationLamps.push({i,bulb,L:pool}); }
-  const cv=document.createElement('canvas'); cv.width=512; cv.height=96; const x=cv.getContext('2d'); x.fillStyle='#1d1a14'; x.fillRect(0,0,512,96); x.strokeStyle='#c9a24a'; x.lineWidth=6; x.strokeRect(4,4,504,88); x.fillStyle='#e8dcc0'; x.font='bold 46px Georgia'; x.textAlign='center'; x.fillText(st.name.toUpperCase(),256,64);
-  const sign=new THREE.Mesh(new THREE.PlaneGeometry(4,.75),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv)})); sign.position.set(0,3.6,9.5); sign.rotation.y=Math.PI/2; const sign2=sign.clone(); sign2.rotation.y=-Math.PI/2; g.add(sign,sign2); });
-// ---- broken track spots: barrier + scattered broken sleepers; new rails appear when fixed ----
-const breakObjs=BREAKS.map((s,i)=>{ const {p,t}=trackPos(s), g=new THREE.Group(); g.position.set(p.x,0,p.z); g.rotation.y=Math.atan2(t.x,t.z); scene.add(g);
+  const edge=new THREE.Mesh(new THREE.BoxGeometry(.3,1.02,22),std(0xb8a040)); edge.position.set(-1.7,.5,0); g.add(edge);
+  if(i===0){ const shed=new THREE.Mesh(new THREE.BoxGeometry(9,7,28),std(0x4a3a2c)); shed.position.set(6,3.5,0); g.add(shed); const rf=new THREE.Mesh(new THREE.BoxGeometry(10,.4,29),std(0x2c2420)); rf.position.set(6,7.2,0); g.add(rf); }
+  else { const hut=new THREE.Mesh(new THREE.BoxGeometry(3,3,5),std([0x5a4030,0x3a3428,0x4a4a48,0x3a4a50,0x5a2a24][st.region])); hut.position.set(1,2.5,-5); g.add(hut); const rf=new THREE.Mesh(new THREE.ConeGeometry(3.4,1.6,4),std(0x2c2420)); rf.position.set(1,4.8,-5); rf.rotation.y=Math.PI/4; g.add(rf); }
+  for(const z of [-8,0,8]){ const post=new THREE.Mesh(new THREE.CylinderGeometry(.08,.1,3.4,6),std(0x222222)); post.position.set(-1,2.7,z); g.add(post);
+    const bulb=new THREE.Mesh(new THREE.SphereGeometry(.22,10,8),new THREE.MeshBasicMaterial({color:i===0?0xffcf7a:0x333333})); bulb.position.set(-1,4.45,z); g.add(bulb);
+    const pool=new THREE.Mesh(new THREE.CircleGeometry(3.2,20),new THREE.MeshBasicMaterial({color:0xffb860,transparent:true,opacity:i===0?.18:0,depthWrite:false})); pool.rotation.x=-Math.PI/2; pool.position.set(-1,1.03,z); g.add(pool); stationLamps.push({i,bulb,pool}); }
+  const cv=document.createElement('canvas'); cv.width=512; cv.height=96; const x=cv.getContext('2d'); x.fillStyle='#1d1a14'; x.fillRect(0,0,512,96); x.strokeStyle='#c9a24a'; x.lineWidth=6; x.strokeRect(4,4,504,88); x.fillStyle='#e8dcc0'; x.font='bold 44px Georgia'; x.textAlign='center'; x.fillText(st.name.toUpperCase(),256,64);
+  const tex=new THREE.CanvasTexture(cv); tex.colorSpace=THREE.SRGBColorSpace; const sign=new THREE.Mesh(new THREE.PlaneGeometry(4,.75),new THREE.MeshBasicMaterial({map:tex,side:THREE.DoubleSide})); sign.position.set(0,3.6,9.5); sign.rotation.y=Math.PI/2; g.add(sign); });
+function lightStation(i){ for(const l of stationLamps) if(l.i===i){ l.bulb.material.color.set(0xffcf7a); l.pool.material.opacity=.18; } }
+// ---- broken track ----
+const breakObjs=BREAKS.map(s=>{ const {p,t}=trackPos(s), g=new THREE.Group(); g.position.set(p.x,0,p.z); g.rotation.y=Math.atan2(t.x,t.z); scene.add(g);
   const bad=new THREE.Group(); g.add(bad);
   for(const k of [-1,1]){ const post=new THREE.Mesh(new THREE.BoxGeometry(.15,1.3,.15),std(0xdddddd)); post.position.set(1.8*k,.65,-1.5); bad.add(post); }
   for(let j=0;j<5;j++){ const bar=new THREE.Mesh(new THREE.BoxGeometry(.72,.22,.08),std(j%2?0xffffff:0xd02020)); bar.position.set(-1.44+j*.72,1.05,-1.5); bad.add(bar); }
-  const lamp=new THREE.Mesh(new THREE.SphereGeometry(.15,8,6),new THREE.MeshBasicMaterial({color:0xff3020})); lamp.position.set(1.8,1.4,-1.5); bad.add(lamp); 
+  const lamp=new THREE.Mesh(new THREE.SphereGeometry(.15,8,6),new THREE.MeshBasicMaterial({color:0xff3020})); lamp.position.set(1.8,1.4,-1.5); bad.add(lamp);
   for(let j=0;j<6;j++){ const sl=new THREE.Mesh(new THREE.BoxGeometry(3,.2,.45),std(0x2a1e14)); sl.position.set((Math.random()-.5)*1.5,.35,-.5+j*.6); sl.rotation.set((Math.random()-.5)*.6,(Math.random()-.5)*1.2,(Math.random()-.5)*.5); bad.add(sl); }
-  const hole=new THREE.Mesh(new THREE.BoxGeometry(2.2,.3,3.6),std(0x15120e)); hole.position.set(0,.18,1); bad.add(hole);
   const good=new THREE.Group(); g.add(good); good.visible=false;
   for(const k of [-.75,.75]){ const r=new THREE.Mesh(new THREE.BoxGeometry(.12,.16,4),std(0xd0d6de,{metalness:.9,roughness:.2})); r.position.set(k,.3,1); good.add(r); }
-  // repair spot marker (glowing ring on the ground beside the gap)
   const ring=new THREE.Mesh(new THREE.RingGeometry(1,1.25,24),new THREE.MeshBasicMaterial({color:0xffc84a,transparent:true,opacity:.8,side:THREE.DoubleSide})); ring.rotation.x=-Math.PI/2; ring.position.set(0,.4,1); bad.add(ring);
-  return {g,bad,good,ring,x:p.x+t.x*1,z:p.z+t.z*1}; });
-// ---- scrap crates ----
-const crateObjs=CRATES.map(c=>{ const g=new THREE.Group(); const b=new THREE.Mesh(new THREE.BoxGeometry(.8,.6,.8),std(0x6a4a2a)); b.position.y=.3; g.add(b); for(let k=0;k<4;k++){ const s=new THREE.Mesh(new THREE.BoxGeometry(.3,.05,.2),std(0x8a6a4a,{metalness:.6})); s.position.set((Math.random()-.5)*.4,.65,(Math.random()-.5)*.4); s.rotation.y=Math.random()*3; g.add(s); }
-  const glow=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),new THREE.MeshBasicMaterial({color:0x7ad0ff})); glow.position.y=1.0; g.add(glow); g.position.set(c.x,hgt(c.x,c.z),c.z); scene.add(g); return g; });
-// ---- the Hollow Engine: a driverless ghost locomotive that chases you on the rails ----
+  return {g,bad,good,ring,x:p.x+t.x,z:p.z+t.z}; });
+// ---- crates and parts ----
+const crateObjs=CRATES.map(c=>{ const g=new THREE.Group(); const b=new THREE.Mesh(new THREE.BoxGeometry(.8,.6,.8),std(0x6a4a2a)); b.position.y=.3; g.add(b);
+  const glow=new THREE.Mesh(new THREE.SphereGeometry(.16,8,6),new THREE.MeshBasicMaterial({color:0x7ad0ff})); glow.position.y=.95; g.add(glow); g.position.set(c.x,hgt(c.x,c.z),c.z); scene.add(g); return g; });
+const partObjs=PARTS.map(pt=>{ const g=new THREE.Group(); const box=new THREE.Mesh(new THREE.BoxGeometry(1.1,.6,.6),std(0x8a2a20,{metalness:.4})); box.position.y=.3; g.add(box);
+  const lid=new THREE.Mesh(new THREE.BoxGeometry(1.12,.1,.62),std(0x5a1a14)); lid.position.y=.62; g.add(lid);
+  const beam=new THREE.Mesh(new THREE.CylinderGeometry(.08,.3,14,8,1,true),new THREE.MeshBasicMaterial({color:0xffd27a,transparent:true,opacity:.18,depthWrite:false})); beam.position.y=7; g.add(beam);
+  const star=new THREE.Mesh(new THREE.OctahedronGeometry(.25),new THREE.MeshBasicMaterial({color:0xffd27a})); star.position.y=1.2; g.add(star); g.userData.star=star;
+  g.position.set(pt.x,hgt(pt.x,pt.z),pt.z); scene.add(g); return g; });
+// ---- monsters ----
 const hollow=(()=>{ const g=new THREE.Group(), body=std(0x16181c,{metalness:.7,roughness:.4}), rust=std(0x3a1a14,{metalness:.4,roughness:.8});
   const boiler=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.3,7,18),body); boiler.rotation.x=Math.PI/2; boiler.position.set(0,2.4,1); g.add(boiler);
   const face=new THREE.Mesh(new THREE.CylinderGeometry(1.32,1.32,.2,18),rust); face.rotation.x=Math.PI/2; face.position.set(0,2.4,4.55); g.add(face);
@@ -184,43 +203,45 @@ const hollow=(()=>{ const g=new THREE.Group(), body=std(0x16181c,{metalness:.7,r
   for(let i=0;i<7;i++){ const tooth=new THREE.Mesh(new THREE.ConeGeometry(.08,.3,4),std(0xd8d0b8)); tooth.position.set(-.6+i*.2,1.75,4.7); tooth.rotation.x=Math.PI; g.add(tooth); }
   const stack=new THREE.Mesh(new THREE.CylinderGeometry(.55,.35,1.6,12),body); stack.position.set(0,4.3,3.5); g.add(stack);
   const cab=new THREE.Mesh(new THREE.BoxGeometry(2.8,2.6,2.6),body); cab.position.set(0,2.5,-3.3); g.add(cab);
-  const win=new THREE.Mesh(new THREE.PlaneGeometry(1.8,.9),new THREE.MeshBasicMaterial({color:0x5a0a06})); win.position.set(0,3.1,-1.99); g.add(win);
   const frame=new THREE.Mesh(new THREE.BoxGeometry(2.8,.5,9),rust); frame.position.y=1.0; g.add(frame);
   const cow=new THREE.Mesh(new THREE.ConeGeometry(1.5,1.4,4,1,true),rust); cow.rotation.set(Math.PI/2,Math.PI/4,0); cow.scale.set(1,1,.55); cow.position.set(0,.9,5.2); g.add(cow);
   for(const z of [3,0,-3]) for(const k of [-1,1]){ const w=new THREE.Mesh(new THREE.CylinderGeometry(.85,.85,.2,16),rust); w.rotation.z=Math.PI/2; w.position.set(1.3*k,.85,z); g.add(w); }
   const glow=new THREE.PointLight(0xff3010,40,30,1.5); glow.position.set(0,2.6,6); g.add(glow);
   g.traverse(o=>{ if(o.isMesh) o.castShadow=true; }); g.visible=false; scene.add(g); return g; })();
+const rattle=makeRattlejaw(); rattle.visible=false; scene.add(rattle); const RJ=rattle.userData;
+const gnawerObjs=[]; for(let i=0;i<8;i++){ const g=makeGnawer(); g.visible=false; scene.add(g); gnawerObjs.push(g); }
 const blackSmoke=[]; for(let i=0;i<20;i++){ const m=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshStandardMaterial({color:0x0a0a0c,transparent:true,opacity:.5,depthWrite:false})); m.visible=false; scene.add(m); blackSmoke.push({m,life:0}); }
+const dirt=[]; for(let i=0;i<40;i++){ const d=new THREE.Mesh(new THREE.DodecahedronGeometry(.3+Math.random()*.4,0),std(0x2a2218)); d.visible=false; scene.add(d); dirt.push({m:d,v:new THREE.Vector3(),life:0}); }
+const missiles=[]; for(let i=0;i<4;i++){ const m=new THREE.Group(); const b=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,1,8),std(0x5a6a3a)); b.rotation.x=Math.PI/2; const tip=new THREE.Mesh(new THREE.ConeGeometry(.12,.3,8),std(0xc02020)); tip.rotation.x=Math.PI/2; tip.position.z=.65; const fl=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),new THREE.MeshBasicMaterial({color:0xffa030})); fl.position.z=-.6; m.add(b,tip,fl); m.visible=false; scene.add(m); missiles.push({m,on:false,v:new THREE.Vector3(),t:0}); }
 
 // =====================================================================
-//  WALKING (on the train in train space, or on the ground in world space)
+//  WALKING (train space on board, world space on foot)
 // =====================================================================
-const WALK=[[-1.35,1.35,4.15,6.9],[-.5,.5,3.4,4.3],[-1.35,1.35,-2.05,3.5],[-.5,.5,-2.95,-2.0],[-1.45,1.45,-7.85,-2.85]];
+const GS=GUN_SHIFT;
+const WALK=[[-1.35,1.35,4.15,6.9],[-.5,.5,3.4,4.3],[-1.35,1.35,-2.05,3.5],[-.5,.5,-2.95,-2.0],[-1.45,1.45,-8.1,-2.5],[-.5,.5,-8.7,-7.9],[-1.45,1.45,-14.1,-8.5],[-.5,.5,-14.7,-13.9],[-1.45,1.45,-7.85+GS,-2.85+GS]];
 const inside=(x,z)=>WALK.some(([a,b,c,d])=>x>=a&&x<=b&&z>=c&&z<=d);
-const SEATS={drive:{x:0,z:5.55,eye:1.72,label:'drive the train'},gun:{x:0,z:-4.75,eye:2.05,label:'use the gun'}};
-const DOORS=[{x:1.3,z:1.0},{x:-1.3,z:1.0},{x:1.3,z:-5.5},{x:-1.3,z:-5.5}];   // where you can step off
-const BENCH={x:-.6,z:0.8};                                                      // workshop bench = upgrades at the yard
-const EYE=1.62;
-
+const SEATS={drive:{x:0,z:5.55,eye:1.72,label:'drive the train'},gun:{x:0,z:-4.75+GS,eye:2.05,label:'use the gun'}};
+const DOORS=[{x:1.3,z:1.0},{x:-1.3,z:1.0},{x:1.35,z:-5.3},{x:-1.35,z:-5.3},{x:1.35,z:-11.3},{x:-1.35,z:-11.3},{x:1.35,z:-5.5+GS},{x:-1.35,z:-5.5+GS}];
+const BENCH={x:-.6,z:0.8}, REAR=-20.2, EYE=1.62;
 // =====================================================================
-//  NETWORK STATE
+//  NETWORK + LOBBY
 // =====================================================================
 const net={role:null,conn:null,myId:0,code:null};
-const S={started:false,trainS:0,v:0,throttle:0,brake:0,players:{},gunYaw:Math.PI,gunPitch:0,fires:[]};
+const S={started:false,trainS:0,v:0,throttle:0,brake:0,players:{},gunYaw:Math.PI,gunPitch:0,fires:[],mfire:[]};
 let me={mode:'train',x:0,z:5.3,gx:0,gz:0,yaw:0,pitch:0,seat:null};
 const hostConns={}; let nextId=1;
+const myId=()=>net.role==='host'?0:net.myId;
 function lobbyList(){ return Object.values(S.players).map(p=>({id:p.id,name:p.name,color:p.color,ready:p.ready})); }
 function broadcast(m){ for(const id in hostConns) hostConns[id].conn.send(m); }
-function feed(t,col){ const d=document.createElement('div'); d.textContent=t; if(col) d.style.color=col; $('feed').appendChild(d); setTimeout(()=>d.remove(),5500); }
+function feed(t,col){ const d=document.createElement('div'); d.textContent=t; if(col) d.style.color=col; $('feed').appendChild(d); setTimeout(()=>d.remove(),6000); while($('feed').children.length>5) $('feed').firstChild.remove(); }
 function announce(t,col){ feed(t,col); broadcast({t:'msg',text:t,col}); }
-const myId=()=>net.role==='host'?0:net.myId;
-
-// ---------- menu ----------
+function fx(k){ playFx(k); broadcast({t:'fx',k}); }
+function playFx(k){ if(k==='ram'){ shake=1; Sfx.thud(); Sfx.crash(); } if(k==='horn') Sfx.truckHorn(); if(k==='win') Sfx.win(); if(k==='boom'){ Sfx.thud(); shake=.6; } if(k==='fix') Sfx.clunk(); if(k==='quake'){ shake=.5; Sfx.thud(); } if(k==='roar'){ Sfx.crash(); Sfx.thud(); shake=1; } if(k==='bite'){ Sfx.crash(); shake=1.2; } if(k==='pick') Sfx.heart(); if(k==='hit') Sfx.boing(); }
 $('name').value=localStorage.getItem('rails-name')||'';
 if(localStorage.getItem(saveKey)) $('saveRow').style.display='block';
 const myName=()=>{ const n=($('name').value.trim()||'Engineer').slice(0,14); localStorage.setItem('rails-name',n); return n; };
 $('hostBtn').onclick=()=>{ net.role='host'; $('hostBtn').disabled=true; $('menuErr').textContent='Opening a room…';
-  if($('newSave').checked) localStorage.removeItem(saveKey); else if(loadGame()) feed('Save loaded: '+W.stations.filter(Boolean).length+' stations connected, '+W.scrap+' scrap');
+  if($('newSave').checked) localStorage.removeItem(saveKey); else if(loadGame()) feed('Save loaded: '+W.stations.filter(Boolean).length+'/25 stations, '+W.scrap+' scrap');
   S.players[0]={id:0,name:myName(),color:COLORS[0],ready:false,mode:'train',x:0,z:5.3,yaw:0,pitch:0,seat:null};
   NetLink.host({ onCode:c=>{ net.code=c; $('code').textContent=c; showLobby(); },
     onError:e=>{ $('menuErr').textContent='Could not open a room: '+e; $('hostBtn').disabled=false; },
@@ -234,15 +255,14 @@ $('hostBtn').onclick=()=>{ net.role='host'; $('hostBtn').disabled=true; $('menuE
         if(m.t==='ready'){ p.ready=!!m.v; broadcast({t:'lobby',players:lobbyList()}); renderLobby(); }
         if(m.t==='pose'){ p.mode=m.m; [p.x,p.z,p.yaw,p.pitch]=m.p; p.holdE=!!m.e; }
         if(m.t==='seat') hostSeat(id,m.k);
-        if(m.t==='ctl'){ if(p.seat==='drive'){ S.throttle=clamp(+m.throttle||0,0,1); S.brake=m.brake?1:0; if(m.horn) horn(); } if(p.seat==='gun'){ S.gunYaw=+m.gy; S.gunPitch=+m.gp; if(m.fire) hostFire(id); } }
-        if(m.t==='crate') takeCrate(m.i,id);
-        if(m.t==='buy') buy(m.k); if(m.t==='paint') setPaint(m.i);
+        if(m.t==='ctl'){ if(p.seat==='drive'){ S.throttle=clamp(+m.throttle||0,0,1); S.brake=m.brake?1:0; if(m.horn) fx('horn'); if(m.missile) fireMissile(id); } if(p.seat==='gun'){ S.gunYaw=+m.gy; S.gunPitch=+m.gp; if(m.fire) hostFire(id); } }
+        if(m.t==='crate') takeCrate(m.i,id); if(m.t==='part') takePart(m.i,id); if(m.t==='whack') whack(id);
+        if(m.t==='buy') buy(m.k); if(m.t==='paint') setPaint(m.i); if(m.t==='craft') craft(m.k);
       });
       conn.on('close',()=>{ if(id==null) return; const p=S.players[id]; delete S.players[id]; delete hostConns[id]; broadcast({t:'lobby',players:lobbyList()}); renderLobby(); if(p) announce(p.name+' left'); }); } }); };
 $('joinBtn').onclick=()=>{ const code=$('joinCode').value.replace(/\D/g,''); if(code.length!==4){ $('menuErr').textContent='Type the 4-digit room code.'; return; }
   net.role='client'; $('joinBtn').disabled=true; $('menuErr').textContent='Connecting…';
-  NetLink.join(code,{ onOpen:c=>{ net.conn=c; net.code=code; c.send({t:'hello',name:myName()});
-      c.on('data',onHostMsg); c.on('close',()=>{ alert('Lost connection to the host.'); location.reload(); }); },
+  NetLink.join(code,{ onOpen:c=>{ net.conn=c; net.code=code; c.send({t:'hello',name:myName()}); c.on('data',onHostMsg); c.on('close',()=>{ alert('Lost connection to the host.'); location.reload(); }); },
     onError:e=>{ $('menuErr').textContent=e; $('joinBtn').disabled=false; } }); };
 function onHostMsg(m){
   if(m.t==='full'){ $('menuErr').textContent=m.why; $('joinBtn').disabled=false; return; }
@@ -251,158 +271,213 @@ function onHostMsg(m){
   if(m.t==='start') beginGame();
   if(m.t==='state'){ S.trainSnap=m.s; S.v=m.v; S.throttle=m.th; S.brake=m.br; S.gunYaw=m.gy; S.gunPitch=m.gp;
     for(const [id,mode,x,z,yaw,pitch,seat] of m.p){ const p=S.players[id]; if(!p) continue; if(id!==net.myId){ if(p.mode!==mode){ p.x=x; p.z=z; } p.mode=mode; p.tx=x; p.tz=z; p.yaw=yaw; p.pitch=pitch; } p.seat=seat; if(id===net.myId) me.seat=seat; }
-    for(const f of m.f||[]) spawnTracer(f); }
-  if(m.t==='world'){ const prevSt=W.stations.slice(); Object.assign(W,m.w); W.stations.forEach((c,i)=>{ if(c&&!prevSt[i]) lightStation(i); }); applyPaint(); }
+    for(const f of m.f||[]) spawnTracer(f); for(const t of m.mf||[]) launchMissileFx(t);
+    W.mon.on=m.mon[0]; W.mon.s=m.mon[1]; W.rj.on=m.rj[0]; W.rj.ph=m.rj[1]; W.rj.t=m.rj[2]; W.rj.side=m.rj[3]; W.gn=m.gn.map(([x,z,y])=>({x,z,yaw:y,alive:true})); }
+  if(m.t==='world'){ const prev=W.stations.slice(); Object.assign(W,m.w); W.stations.forEach((c,i)=>{ if(c&&!prev[i]) lightStation(i); }); applyPaint(); }
   if(m.t==='msg') feed(m.text,m.col);
-  if(m.t==='fx'){ if(m.k==='ram'){ shake=1; Sfx.thud(); Sfx.crash(); } if(m.k==='horn') Sfx.truckHorn(); if(m.k==='win') Sfx.win(); if(m.k==='boom'){ Sfx.thud(); shake=.6; } if(m.k==='fix') Sfx.clunk(); }
+  if(m.t==='fx') playFx(m.k);
+  if(m.t==='knock'){ knockedDown(); }
   if(m.t==='tp'){ me.mode='train'; me.seat=null; me.x=0; me.z=2; }
 }
-// ---------- lobby ----------
 function showLobby(){ $('menu').style.display='none'; $('lobby').style.display='flex'; $('lobbyHint').textContent=net.role==='host'?'Friends open this page, type the code and press JOIN':'Waiting for the host to start…'; renderLobby(); }
-function renderLobby(){
-  const ps=Object.values(S.players);
+function renderLobby(){ const ps=Object.values(S.players);
   $('plist').innerHTML=[0,1,2,3].map(i=>{ const p=ps[i]; if(!p) return '<div class="pl empty" style="border-color:#333">waiting for a player…</div>';
     return `<div class="pl" style="border-color:${p.color}">${p.id===0?'👑 ':''}${p.name}${p.id===myId()?' (you)':''}<span class="r">${p.ready?'✅ READY':'⏳ not ready'}</span></div>`; }).join('');
   const mine=S.players[myId()]; $('readyBtn').textContent=mine&&mine.ready?'✅ READY (click to undo)':"I'M READY";
-  const all=ps.length&&ps.every(p=>p.ready); $('startBtn').style.display=net.role==='host'?'block':'none'; $('startBtn').disabled=!all;
-  $('lobbyErr').textContent=net.role==='host'&&!all?'Everyone must be ready to start':'';
-}
+  const all=ps.length&&ps.every(p=>p.ready); $('startBtn').style.display=net.role==='host'?'block':'none'; $('startBtn').disabled=!all; $('lobbyErr').textContent=net.role==='host'&&!all?'Everyone must be ready to start':''; }
 $('readyBtn').onclick=()=>{ if(net.role==='host'){ S.players[0].ready=!S.players[0].ready; broadcast({t:'lobby',players:lobbyList()}); renderLobby(); } else { const p=S.players[net.myId]; net.conn.send({t:'ready',v:!(p&&p.ready)}); } };
 $('startBtn').onclick=()=>{ if(net.role!=='host') return; broadcast({t:'start'}); beginGame(); };
 
 // =====================================================================
-//  HOST GAME RULES
+//  HOST RULES
 // =====================================================================
-function lightStation(i){ for(const l of stationLamps) if(l.i===i){ l.bulb.material.color.set(0xffcf7a); l.L.material.opacity=.18; } }
-function pushWorld(){ broadcast({t:'world',w:{stations:W.stations,breaks:W.breaks,crates:W.crates,scrap:W.scrap,hp:W.hp,upg:W.upg,paint:W.paint,mon:W.mon}}); }
-function hostSeat(id,k){ const p=S.players[id]; if(!p) return;
-  if(k===null){ p.seat=null; return; }
+const atStation=i=>near(S.trainS,STATIONS[i].s)<22&&S.v<1;
+const atYard=()=>atStation(0);
+const nearAnyStation=r=>STATIONS.some(st=>near(S.trainS,st.s)<r);
+function pushWorld(){ broadcast({t:'world',w:{stations:W.stations,breaks:W.breaks,crates:W.crates,parts:W.parts,scrap:W.scrap,hp:W.hp,ammo:W.ammo,missiles:W.missiles,rails:W.rails,upg:W.upg,paint:W.paint,delivery:W.delivery,rjHp:W.rj.hp,monHp:W.mon.hp}}); }
+function hostSeat(id,k){ const p=S.players[id]; if(!p) return; if(k===null){ p.seat=null; return; }
   if(!SEATS[k]||Object.values(S.players).some(q=>q!==p&&q.seat===k)){ tell(id,'Someone is already there'); return; } p.seat=k; }
-function tell(id,text){ if(id===0) feed(text); else if(hostConns[id]) hostConns[id].conn.send({t:'msg',text}); }
-let fireCd={}; function hostFire(id){ const now=performance.now(); if((fireCd[id]||0)>now) return; fireCd[id]=now+(130-W.upg.gun*15);
-  S.fires.push([S.gunYaw,S.gunPitch]); spawnTracer([S.gunYaw,S.gunPitch]);
-  if(W.mon.on){ // hit test: does the shot line pass near the Hollow Engine's face?
-    train.updateMatrixWorld(); const o=new THREE.Vector3(0,DECK+1.3,-5.1).applyMatrix4(train.matrixWorld), d=new THREE.Vector3(Math.sin(S.gunYaw)*Math.cos(S.gunPitch),Math.sin(S.gunPitch),Math.cos(S.gunYaw)*Math.cos(S.gunPitch)).transformDirection(train.matrixWorld);
-    const c=hollow.position.clone().add(new THREE.Vector3(0,2.4,0)), oc=c.sub(o), along=oc.dot(d); if(along>0&&along<90&&oc.clone().addScaledVector(d,-along).length()<2.6){
-      W.mon.hp-=8+W.upg.gun*5; if(W.mon.hp<=0){ W.mon.on=false; W.mon.cd=50+Math.random()*30; W.scrap+=25; announce('💥 The Hollow Engine is beaten back! +25 scrap','#ffcf6a'); broadcast({t:'fx',k:'boom'}); Sfx.thud(); shake=.6; saveGame(); } } } }
-function horn(){ Sfx.truckHorn(); broadcast({t:'fx',k:'horn'}); }
-function takeCrate(i,id){ if(W.crates[i]) return; W.crates[i]=true; W.scrap+=10; announce('📦 '+(S.players[id]?.name||'Someone')+' found scrap +10','#9fe'); saveGame(); pushWorld(); }
-function buy(k){ const u=UPG[k]; if(!u) return; const lvl=W.upg[k]; if(lvl>=u.cost.length) return; if(!atYard()){ return; } if(W.scrap<u.cost[lvl]) return;
-  W.scrap-=u.cost[lvl]; W.upg[k]++; if(k==='armor') W.hp=maxHp(); announce(`🔧 Upgraded ${u.name} to level ${W.upg[k]}!`,'#ffcf6a'); Sfx.win(); broadcast({t:'fx',k:'win'}); saveGame(); pushWorld(); }
+function tell(id,text,col){ if(id===0) feed(text,col); else if(hostConns[id]) hostConns[id].conn.send({t:'msg',text,col}); }
+const gunRay=()=>{ train.updateMatrixWorld(); return {o:new THREE.Vector3(0,DECK+1.3,GUN_Z).applyMatrix4(train.matrixWorld),d:new THREE.Vector3(Math.sin(S.gunYaw)*Math.cos(S.gunPitch),Math.sin(S.gunPitch),Math.cos(S.gunYaw)*Math.cos(S.gunPitch)).transformDirection(train.matrixWorld)}; };
+const rayHit=(o,d,c,r)=>{ const oc=c.clone().sub(o), al=oc.dot(d); return al>0&&al<110&&oc.addScaledVector(d,-al).length()<r; };
+let fireCd={};
+function hostFire(id){ const now=performance.now(); if((fireCd[id]||0)>now) return; fireCd[id]=now+(130-W.upg.gun*20);
+  if(W.ammo<=0){ if(!fireCd['e'+id]||fireCd['e'+id]<now){ fireCd['e'+id]=now+2500; tell(id,'🔫 OUT OF AMMO! Craft more at the workbench (workshop car)','#ff9a7a'); } return; }
+  W.ammo--; S.fires.push([S.gunYaw,S.gunPitch]); spawnTracer([S.gunYaw,S.gunPitch]);
+  const {o,d}=gunRay(), dmg=8+W.upg.gun*5;
+  if(W.mon.on&&rayHit(o,d,hollow.position.clone().add(new THREE.Vector3(0,2.4,0)),2.6)) damageHollow(dmg);
+  if(W.rj.on&&W.rj.ph==='up'&&rayHit(o,d,RJ.head.getWorldPosition(new THREE.Vector3()),3.4)) damageRattle(dmg);
+  W.gn.forEach(g=>{ if(g.alive&&rayHit(o,d,new THREE.Vector3(g.x,hgt(g.x,g.z)+.5,g.z),.9)) killGnawer(g,id); }); }
+function damageHollow(d){ W.mon.hp-=d; if(W.mon.hp<=0){ W.mon.on=false; W.mon.cd=60+Math.random()*40; W.scrap+=25; announce('💥 The Hollow Engine is beaten back! +25 scrap','#ffcf6a'); fx('boom'); saveGame(); pushWorld(); } }
+function damageRattle(d){ W.rj.hp-=d; fx('hit'); if(W.rj.hp<=0){ W.rj.ph='dive'; W.rj.t=0; W.scrap+=45; announce('🐛 RATTLEJAW screams and dives underground! +45 scrap','#ffcf6a'); fx('roar'); saveGame(); pushWorld(); } }
+function fireMissile(id){ if(!W.upg.launcher){ tell(id,'You need to build the missile launcher at the Yard first'); return; } if(W.missiles<=0){ tell(id,'🚀 No missiles! Craft them at the workbench','#ff9a7a'); return; }
+  const target=W.rj.on&&W.rj.ph==='up'?'rj':W.mon.on?'mon':null; if(!target){ tell(id,'No monster to aim at'); return; }
+  W.missiles--; S.mfire.push(target); launchMissileFx(target); setTimeout(()=>{ const dmg=W.parts.chip?60:40; if(target==='rj'&&W.rj.on&&W.rj.ph==='up') damageRattle(dmg); if(target==='mon'&&W.mon.on) damageHollow(dmg); fx('boom'); },900); pushWorld(); }
+function takeCrate(i,id){ if(W.crates[i]) return; W.crates[i]=true; W.scrap+=10; announce('📦 '+(S.players[id]?.name||'Someone')+' found scrap +10','#9fe'); fx('pick'); saveGame(); pushWorld(); }
+function takePart(i,id){ const pt=PARTS[i]; if(W.parts[pt.k]) return; W.parts[pt.k]=true; announce(`⭐ ${S.players[id]?.name||'Someone'} found the ${pt.name.toUpperCase()}! Take it to the Yard workshop`,'#ffd27a'); fx('win'); saveGame(); pushWorld(); }
+function buy(k){ const u=UPG[k]; if(!u||!atYard()) return; const l=W.upg[k]; if(l>=u.cost.length) return; if(u.need&&!W.parts[u.need[l]]) return; if(W.scrap<u.cost[l]) return;
+  W.scrap-=u.cost[l]; W.upg[k]++; if(k==='armor') W.hp=maxHp(); if(k==='rails') W.rails=maxRails(); announce(`🔧 ${u.name} upgraded to level ${W.upg[k]}!`,'#ffcf6a'); fx('win'); saveGame(); pushWorld(); }
+function craft(k){ if(k==='ammo'&&W.scrap>=10&&W.ammo<maxAmmo()){ W.scrap-=10; W.ammo=Math.min(maxAmmo(),W.ammo+40); fx('fix'); }
+  if(k==='missile'&&W.upg.launcher&&W.scrap>=25&&W.missiles<4){ W.scrap-=25; W.missiles++; fx('fix'); } saveGame(); pushWorld(); }
 function setPaint(i){ if(!atYard()) return; W.paint=i; applyPaint(); saveGame(); pushWorld(); }
-const atYard=()=>Math.abs(((S.trainS-STATIONS[0].s+TL/2)%TL+TL)%TL-TL/2)<25&&S.v<.6;
-function applyPaint(){ const c=PAINTS[W.paint][1]; train.traverse(o=>{ if(o.isMesh&&o.material&&o.material.map&&o.material.map.image&&o.material.userData.panel!==false&&o.material.metalness===.35) o.material.color.set(c).multiplyScalar(2.2); }); }
-// next broken spot ahead of the train (front of train = trainS + 14)
-function nextBreak(){ let best=null, bd=1e9; W.breaks.forEach((b,i)=>{ if(b.fixed) return; const d=((BREAKS[i]-(S.trainS+14))%TL+TL)%TL; if(d<bd){ bd=d; best=i; } }); return best==null?null:{i:best,d:bd}; }
+function applyPaint(){ const c=new THREE.Color(PAINTS[W.paint][1]).multiplyScalar(2.2); train.traverse(o=>{ if(o.isMesh&&o.material&&o.material.map&&o.material.metalness===.35) o.material.color.copy(c); }); if(train.userData.launcher) train.userData.launcher.visible=!!W.upg.launcher;
+  if(train.userData.railStack) train.userData.railStack.forEach((r,i)=>r.visible=i<W.rails); if(train.userData.cargo) train.userData.cargo.forEach((c,i)=>c.visible=!!W.delivery&&i<2); }
+function nextBreak(){ let best=null,bd=1e9; W.breaks.forEach((b,i)=>{ if(b.fixed) return; const d=ahead(S.trainS+14,BREAKS[i]); if(d<bd){ bd=d; best=i; } }); return best==null?null:{i:best,d:bd}; }
+// gnawers
+function spawnGnawers(px,pz,n){ for(let k=0;k<n;k++){ if(W.gn.filter(g=>g.alive).length>=8) return; const a=Math.random()*6.28, r=14+Math.random()*6; W.gn.push({x:px+Math.cos(a)*r,z:pz+Math.sin(a)*r,yaw:0,alive:true,flee:0}); } }
+function killGnawer(g,id){ g.alive=false; W.scrap+=3; fx('hit'); if(Math.random()<.3) tell(id,'Gnawer squashed! +3 scrap','#9fe'); }
+function whack(id){ const p=S.players[id]; if(!p||p.mode!=='ground') return; for(const g of W.gn){ if(!g.alive) continue; const dx=g.x-p.x, dz=g.z-p.z, d=Math.hypot(dx,dz); if(d<2.2&&Math.cos(Math.atan2(dx,dz)-p.yaw)>.4){ killGnawer(g,id); return; } } }
+function knockedDown(){ me.mode='train'; me.seat=null; me.x=-.5; me.z=1.6; shake=1.2; Sfx.crash(); feed('😱 A gnawer knocked you down! You scrambled back onto the train.','#ff9a7a'); }
 function hostWorldStep(){
-  // repairs: players standing on the ground at a broken spot and holding E
-  W.breaks.forEach((b,i)=>{ if(b.fixed) return; const o=breakObjs[i]; let n=0; for(const p of Object.values(S.players)) if(p.mode==='ground'&&p.holdE&&Math.hypot(p.x-o.x,p.z-o.z)<2.6) n++;
-    if(n){ b.prog+=DT*(.16+W.upg.repair*.06)*(1+.6*(n-1)); if(Math.random()<.08){ Sfx.clunk(); broadcast({t:'fx',k:'fix'}); } if(b.prog>=1){ b.fixed=true; b.prog=1; W.scrap+=15; announce('🛤️ Track repaired! +15 scrap','#7dffa8'); Sfx.win(); broadcast({t:'fx',k:'win'}); saveGame(); pushWorld(); } } });
-  // stations: stop at one to connect it
-  STATIONS.forEach((st,i)=>{ if(W.stations[i]) return; const d=Math.abs(((S.trainS-st.s+TL/2)%TL+TL)%TL-TL/2); if(d<22&&S.v<4.2){ W.stations[i]=true; W.scrap+=40; lightStation(i); announce(`🏁 ${st.name} connected! +40 scrap`,'#7dffa8'); Sfx.win(); broadcast({t:'fx',k:'win'}); saveGame(); pushWorld(); } });
-  // the Hollow Engine
-  const M=W.mon, nearStation=STATIONS.some(st=>Math.abs(((S.trainS-st.s+TL/2)%TL+TL)%TL-TL/2)<30);
-  if(!M.on){ if(S.v>2&&!nearStation){ M.cd-=DT; if(M.cd<=0){ M.on=true; M.s=S.trainS-70; M.hp=60+W.stations.filter(Boolean).length*15; announce('⚠️ A horn in the fog… the HOLLOW ENGINE is behind you! Get on the gun!','#ff7a6a'); horn(); pushWorld(); } } }
-  else { const gap=((S.trainS-8)-M.s); const want=nearStation?-4:Math.max(S.v+1.8,7); M.s+=want*DT;
-    if(nearStation&&gap>60){ M.on=false; M.cd=40; announce('The Hollow Engine fades back into the fog. Stations are safe.','#9fb4ff'); pushWorld(); }
-    if(gap<1.5&&!nearStation){ const dmg=18/(1+W.upg.armor*.35); W.hp-=dmg; M.s-=22; shake=1; Sfx.thud(); Sfx.crash(); broadcast({t:'fx',k:'ram'}); announce('💥 RAMMED! The train took damage','#ff7a6a');
-      if(W.hp<=0){ W.hp=maxHp(); const lost=Math.floor(W.scrap*.2); W.scrap-=lost; S.trainS=STATIONS[0].s; S.v=0; S.throttle=0; M.on=false; M.cd=60; for(const p of Object.values(S.players)){ p.mode='train'; p.seat=null; p.x=0; p.z=2; } me.mode='train'; me.seat=null; me.x=0; me.z=2; broadcast({t:'tp'}); announce(`🚧 The train broke down and was towed back to the Yard (lost ${lost} scrap). Upgrade your shield!`,'#ffcf6a'); saveGame(); }
-      pushWorld(); } }
-  // yard: free repairs
-  if(atYard()&&W.hp<maxHp()){ W.hp=Math.min(maxHp(),W.hp+20*DT); }
+  const ground=Object.values(S.players).filter(p=>p.mode==='ground');
+  // repairs need rails from the material car
+  W.breaks.forEach((b,i)=>{ if(b.fixed) return; const o=breakObjs[i]; let n=0; for(const p of ground) if(p.holdE&&Math.hypot(p.x-o.x,p.z-o.z)<2.6) n++;
+    if(n){ if(W.rails<=0){ if(Math.random()<.01) announce('🪵 No rails left! Restock at any connected station','#ff9a7a'); return; }
+      b.prog+=DT*(.16+W.upg.repair*.06)*(1+.6*(n-1)); if(Math.random()<.06) fx('fix');
+      if(b.prog>.2&&!b.alarm&&regionAt(BREAKS[i])>=1){ b.alarm=true; const p=ground[0]; if(p) spawnGnawers(p.x,p.z,2+regionAt(BREAKS[i])); announce('🐀 The hammering woke the GNAWERS! Squash them (click) or guard with the gun','#ff9a7a'); }
+      if(b.prog>=1){ b.fixed=true; b.prog=1; W.rails--; W.scrap+=15; announce('🛤️ Track repaired! +15 scrap','#7dffa8'); fx('win'); saveGame(); pushWorld(); } } });
+  // stations: slow down to connect; also restock rails + deliveries
+  STATIONS.forEach((st,i)=>{ const d=near(S.trainS,st.s);
+    if(!W.stations[i]&&d<22&&S.v<4.2){ W.stations[i]=true; W.scrap+=40; lightStation(i); announce(`🏁 ${st.name} connected! +40 scrap (${W.stations.filter(Boolean).length}/25)`,'#7dffa8'); fx('win');
+      if(i%5===0&&i>0) announce(`🗺️ You reached ${REGIONS[st.region].name}!`,'#ffd27a'); saveGame(); pushWorld(); }
+    if(W.stations[i]&&d<22&&S.v<1){ if(W.rails<maxRails()){ W.rails=maxRails(); announce('🪵 Rails restocked at '+st.name,'#9fe'); pushWorld(); }
+      if(W.delivery&&W.delivery.to===i){ W.scrap+=35; announce(`📦 Delivery complete at ${st.name}! +35 scrap`,'#7dffa8'); fx('win'); W.delivery=null; saveGame(); pushWorld(); }
+      else if(!W.delivery&&i!==W.lastOffer){ W.lastOffer=i; const to=(i+2+Math.floor(Math.random()*3))%25; W.delivery={from:i,to}; announce(`📦 New delivery: carry crates from ${st.name} to ${STATIONS[to].name}`,'#9fe'); pushWorld(); } } });
+  // the Hollow Engine (from station 3 on)
+  const M=W.mon, safe=nearAnyStation(30), cnt=W.stations.filter(Boolean).length;
+  if(!M.on){ if(cnt>=3&&S.v>2&&!safe){ M.cd-=DT; if(M.cd<=0){ M.on=true; M.s=S.trainS-85; M.hp=60+cnt*6; announce('⚠️ A horn in the fog… the HOLLOW ENGINE is behind you! Man the rear gun!','#ff7a6a'); fx('horn'); pushWorld(); } } }
+  else { const gap=(S.trainS+REAR)-M.s; M.s+=(safe?-4:Math.max(S.v+1.8,7))*DT;
+    if(safe&&gap>60){ M.on=false; M.cd=40; announce('The Hollow Engine fades back into the fog. Stations are safe.','#9fb4ff'); pushWorld(); }
+    if(gap<1.5&&!safe){ W.hp-=18/(1+W.upg.armor*.35); M.s-=24; fx('ram'); announce('💥 RAMMED! The train took damage','#ff7a6a'); checkBreakdown(); pushWorld(); } }
+  // RATTLEJAW (from station 8 on): tremor warning -> bursts out beside the train -> lunges -> dives
+  const J=W.rj;
+  if(!J.on){ if(cnt>=8&&S.v>1&&!safe&&!M.on){ J.cd-=DT; if(J.cd<=0){ J.on=true; J.ph='tremor'; J.t=0; J.side=Math.random()<.5?-1:1; J.hp=110+cnt*5; J.bite=0; announce(`🌋 The ground is SHAKING… something huge is coming from the ${J.side<0?'LEFT':'RIGHT'}!`,'#ff7a6a'); fx('quake'); } } }
+  else { J.t+=DT;
+    if(J.ph==='tremor'){ if(Math.random()<.04) fx('quake'); if(J.t>4){ J.ph='up'; J.t=0; announce('🐛 RATTLEJAW! Shoot its glowing eyes!','#ff4a3a'); fx('roar'); } }
+    else if(J.ph==='up'){ J.bite+=DT; if(J.bite>5){ J.bite=0; W.hp-=24/(1+W.upg.armor*.35); fx('bite'); announce('🦷 Rattlejaw BIT the train!','#ff7a6a'); checkBreakdown(); pushWorld(); } if(J.t>22||safe){ J.ph='dive'; J.t=0; announce('Rattlejaw sinks back underground…','#9fb4ff'); } }
+    else if(J.ph==='dive'&&J.t>2.5){ J.on=false; J.cd=80+Math.random()*50; pushWorld(); } }
+  // gnawers chase people on foot; they flee if nobody is on the ground
+  for(const g of W.gn){ if(!g.alive) continue; let tgt=null,td=1e9; for(const p of ground){ const d=Math.hypot(p.x-g.x,p.z-g.z); if(d<td){ td=d; tgt=p; } }
+    if(!tgt){ g.flee+=DT; if(g.flee>4) g.alive=false; continue; }
+    const sp=3.1+regionAt(S.trainS)*.15, dx=tgt.x-g.x, dz=tgt.z-g.z; g.yaw=Math.atan2(dx,dz); g.x+=dx/td*sp*DT; g.z+=dz/td*sp*DT;
+    if(td<.8){ g.alive=false; if(tgt.id===0) knockedDown(); else if(hostConns[tgt.id]) hostConns[tgt.id].conn.send({t:'knock'}); tgt.mode='train'; announce(`🐀 ${tgt.name} was knocked down by a gnawer!`,'#ff9a7a'); } }
+  W.gn=W.gn.filter(g=>g.alive);
+  // random gnawer ambushes while people are on foot (not at the Yard, not in the farmlands)
+  if(ground.length&&!atYard()&&regionAt(S.trainS)>=1&&Math.random()<DT/12){ const p=ground[Math.floor(Math.random()*ground.length)]; spawnGnawers(p.x,p.z,1+Math.floor(regionAt(S.trainS)/2)); announce('👀 Something is moving in the grass…','#ffb08a'); }
+  if(atYard()&&W.hp<maxHp()) W.hp=Math.min(maxHp(),W.hp+20*DT);
 }
-function spawnTracer([gy,gp]){ const t=tracers.find(t=>t.life<=0); if(!t) return; train.updateMatrixWorld(); const muzzle=new THREE.Vector3(0,DECK+1.3,-5.1).applyMatrix4(train.matrixWorld);
+function checkBreakdown(){ if(W.hp>0) return; W.hp=maxHp(); const lost=Math.floor(W.scrap*.2); W.scrap-=lost; S.trainS=STATIONS[0].s; S.v=0; S.throttle=0; W.mon.on=false; W.mon.cd=60; W.rj.on=false; W.rj.cd=90; W.gn=[];
+  for(const p of Object.values(S.players)){ p.mode='train'; p.seat=null; p.x=0; p.z=2; } me.mode='train'; me.seat=null; me.x=0; me.z=2; broadcast({t:'tp'});
+  announce(`🚧 The train broke down and was towed back to the Yard (lost ${lost} scrap). Upgrade your shield plates!`,'#ffcf6a'); saveGame(); }
+function spawnTracer([gy,gp]){ const t=tracers.find(t=>t.life<=0); if(!t) return; train.updateMatrixWorld(); const muzzle=new THREE.Vector3(0,DECK+1.3,GUN_Z).applyMatrix4(train.matrixWorld);
   const dir=new THREE.Vector3(Math.sin(gy)*Math.cos(gp),Math.sin(gp),Math.cos(gy)*Math.cos(gp)).transformDirection(train.matrixWorld);
   t.m.position.copy(muzzle).addScaledVector(dir,1.8); t.v.copy(dir).multiplyScalar(90); t.m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir); t.m.visible=true; t.life=.6; Sfx.clunk(); }
+function launchMissileFx(target){ const m=missiles.find(m=>!m.on); if(!m) return; train.updateMatrixWorld(); m.m.position.copy(new THREE.Vector3(0,DECK+3.8,6.2).applyMatrix4(train.matrixWorld)); m.on=true; m.t=0; m.target=target; m.m.visible=true; Sfx.truckHorn(); }
 
 // =====================================================================
 //  GAME LOOP
 // =====================================================================
 function beginGame(){ S.started=true; $('lobby').style.display='none'; $('hud').style.display='block'; $('clickToPlay').style.display='block';
   const p=S.players[myId()]; me.x=p?p.x:0; me.z=p?p.z:2; W.stations.forEach((c,i)=>{ if(c) lightStation(i); }); applyPaint();
-  feed('All aboard! Follow the mission at the top of the screen.','#ffcf6a'); Sfx.truckHorn(); if(net.role==='host') pushWorld(); }
+  feed('All aboard! Follow the MISSION at the top. Connect all 25 stations!','#ffcf6a'); Sfx.truckHorn(); if(net.role==='host') pushWorld(); }
 $('clickToPlay').onclick=()=>renderer.domElement.requestPointerLock();
 renderer.domElement.addEventListener('click',()=>{ if(S.started&&!document.pointerLockElement&&$('shop').style.display!=='block') renderer.domElement.requestPointerLock(); });
 document.addEventListener('pointerlockchange',()=>{ $('clickToPlay').style.display=document.pointerLockElement||!S.started||$('shop').style.display==='block'?'none':'block'; });
 addEventListener('mousemove',e=>{ if(document.pointerLockElement){ me.yaw-=e.movementX*.0022; me.pitch=clamp(me.pitch-e.movementY*.0022,-1.3,1.3); } });
-const keys={}, tapped={}; addEventListener('keydown',e=>{ keys[e.code]=true; tapped[e.code]=true; if(e.code==='Space') e.preventDefault(); }); addEventListener('keyup',e=>keys[e.code]=false);
-let mouseDown=false; addEventListener('mousedown',e=>{ if(document.pointerLockElement&&e.button===0) mouseDown=true; }); addEventListener('mouseup',()=>mouseDown=false);
-const trainYaw=()=>{ const q=new THREE.Euler().setFromQuaternion(train.quaternion,'YXZ'); return q.y; };
-let shake=0;
-const DT=1/60; let netT=0, worldT=0, last=performance.now(), acc=0;
+const keys={}, tapped={}; addEventListener('keydown',e=>{ keys[e.code]=true; tapped[e.code]=true; if(e.code==='Space'||e.code==='Tab') e.preventDefault(); }); addEventListener('keyup',e=>keys[e.code]=false);
+let mouseDown=false, clicked=false; addEventListener('mousedown',e=>{ if(document.pointerLockElement&&e.button===0){ mouseDown=true; clicked=true; } }); addEventListener('mouseup',()=>mouseDown=false);
+const trainYaw=()=>new THREE.Euler().setFromQuaternion(train.quaternion,'YXZ').y;
+let shake=0; const DT=1/60; let netT=0, worldT=0, last=performance.now(), acc=0;
 function step(){
   const gp=[...(navigator.getGamepads?navigator.getGamepads():[])].find(g=>g&&g.connected), n=gp?Input.named(gp):{}, dz=v=>Math.abs(v||0)<.18?0:v;
   me.yaw-=dz(n.rx)*.045; me.pitch=clamp(me.pitch-dz(n.ry)*.035,-1.3,1.3);
   const useP=tapped.KeyE||(n.cross&&!step.pc); step.pc=n.cross; const holdE=!!(keys.KeyE||n.cross);
+  const attack=clicked||(n.r2&&!step.pr2); step.pr2=n.r2; clicked=false;
   if(tapped.Tab||(n.triangle&&!step.pt)) toggleShop(); step.pt=n.triangle;
   let prompt='';
   if(S.started){
     if(me.seat){ if(useP) requestSeat(null);
-      if(me.seat==='drive'){ const th=clamp(S.throttle+((keys.KeyW||n.r2||dz(-n.ly)>.3)?.6:0)*DT-((keys.KeyS||dz(n.ly)>.3)?.6:0)*DT,0,1), br=!!(keys.Space||n.l2||n.square), hr=!!(tapped.KeyH||(n.circle&&!step.pcir));
-        sendCtl({throttle:th,brake:br,horn:hr}); if(net.role==='host'){ S.throttle=th; S.brake=br?1:0; if(hr) horn(); } prompt='DRIVING · W/S throttle · Space brake · H horn · E leave'; }
-      if(me.seat==='gun'){ const gy=me.yaw, gpch=clamp(me.pitch,-.25,.6), fire=mouseDown||n.r2; sendCtl({gy,gp:gpch,fire}); if(net.role==='host'){ S.gunYaw=gy; S.gunPitch=gpch; if(fire) hostFire(0); } prompt='ON THE GUN · click / R2 fire · E leave'; }
+      if(me.seat==='drive'){ const th=clamp(S.throttle+((keys.KeyW||n.r2||dz(-n.ly)>.3)?.6:0)*DT-((keys.KeyS||dz(n.ly)>.3)?.6:0)*DT,0,1), br=!!(keys.Space||n.l2||n.square), hr=!!(tapped.KeyH||(n.circle&&!step.pcir)), ms=!!(tapped.KeyM||(n.dup&&!step.pdu));
+        sendCtl({throttle:th,brake:br,horn:hr,missile:ms}); if(net.role==='host'){ S.throttle=th; S.brake=br?1:0; if(hr) fx('horn'); if(ms) fireMissile(0); }
+        prompt='DRIVING · W/S throttle · Space brake · H horn'+(W.upg.launcher?` · M missile (${W.missiles})`:'')+' · E leave'; }
+      if(me.seat==='gun'){ const gy=me.yaw, gpch=clamp(me.pitch,-.3,.6), fire=mouseDown||n.r2; sendCtl({gy,gp:gpch,fire}); if(net.role==='host'){ S.gunYaw=gy; S.gunPitch=gpch; if(fire) hostFire(0); } prompt=`ON THE GUN · click / R2 fire · ammo ${W.ammo} · E leave`; }
       const st=SEATS[me.seat]; me.x=st.x; me.z=st.z;
     } else {
-      const sp=(keys.ShiftLeft||n.l3?4.2:2.5)*DT, f=(keys.KeyW?1:0)-(keys.KeyS?1:0)-dz(n.ly), r=(keys.KeyD?1:0)-(keys.KeyA?1:0)+dz(n.lx);
+      const sp=(keys.ShiftLeft||n.l3?4.3:2.5)*DT, f=(keys.KeyW?1:0)-(keys.KeyS?1:0)-dz(n.ly), r=(keys.KeyD?1:0)-(keys.KeyA?1:0)+dz(n.lx);
       const mv=new THREE.Vector3(Math.sin(me.yaw),0,Math.cos(me.yaw)).multiplyScalar(f).add(new THREE.Vector3(-Math.cos(me.yaw),0,Math.sin(me.yaw)).multiplyScalar(r)); if(mv.lengthSq()>1) mv.normalize();
       if(me.mode==='train'){ const tx=me.x+mv.x*sp, tz=me.z+mv.z*sp; if(inside(tx,tz)){ me.x=tx; me.z=tz; } else if(inside(tx,me.z)) me.x=tx; else if(inside(me.x,tz)) me.z=tz;
         for(const k in SEATS){ const st=SEATS[k]; if(Math.hypot(me.x-st.x,me.z-st.z)<1.3){ prompt=`[E] ${SEATS[k].label}`; if(useP) requestSeat(k); } }
         const door=DOORS.find(d=>Math.hypot(me.x-d.x,me.z-d.z)<.9);
         if(door){ if(S.v>2) prompt='Too fast to jump off! Ask the driver to slow down'; else { prompt='[E] step off the train'; if(useP){ const w=new THREE.Vector3(door.x*2.1,0,door.z).applyMatrix4(train.matrixWorld); me.mode='ground'; me.gx=w.x; me.gz=w.z; me.yaw+=trainYaw(); Sfx.step(); } } }
-        if(Math.hypot(me.x-BENCH.x,me.z-BENCH.z)<1.2){ prompt=atYard()?'[E] / [Tab] open the Yard workshop (upgrades)':'Workbench: upgrades are only available at THE YARD'; if(useP&&atYard()) toggleShop(); }
-      } else { // on the ground
+        if(Math.hypot(me.x-BENCH.x,me.z-BENCH.z)<1.2){ prompt='[E] / [Tab] workbench: craft ammo & missiles'+(atYard()?' · UPGRADES (you are at the Yard)':''); if(useP) toggleShop(); }
+      } else {
         me.gx+=mv.x*sp; me.gz+=mv.z*sp;
-        // keep people out of the train's body
-        const lp=train.worldToLocal(new THREE.Vector3(me.gx,0,me.gz)); if(Math.abs(lp.x)<1.75&&lp.z>-8.2&&lp.z<14.5){ lp.x=Math.sign(lp.x||1)*1.75; const w=train.localToWorld(lp); me.gx=w.x; me.gz=w.z; }
-        if(Math.abs(lp.x)<2.6&&lp.z>-8&&lp.z<4){ if(S.v>2) prompt='The train is moving!'; else { prompt='[E] climb back aboard'; if(useP){ me.mode='train'; me.x=clamp(lp.x,-1.2,1.2); me.z=clamp(lp.z,-7.5,3.4); if(!inside(me.x,me.z)){ me.x=0; } me.yaw-=trainYaw(); Sfx.step(); } } }
-        W.breaks.forEach((b,i)=>{ if(b.fixed) return; const o=breakObjs[i]; if(Math.hypot(me.gx-o.x,me.gz-o.z)<2.6) prompt=`HOLD [E] to repair the track · ${Math.round(b.prog*100)}%`; });
+        const lp=train.worldToLocal(new THREE.Vector3(me.gx,0,me.gz)); if(Math.abs(lp.x)<1.75&&lp.z>REAR&&lp.z<14.5){ lp.x=Math.sign(lp.x||1)*1.75; const w=train.localToWorld(lp); me.gx=w.x; me.gz=w.z; }
+        if(Math.abs(lp.x)<2.6&&lp.z>REAR&&lp.z<4){ if(S.v>2) prompt='The train is moving!'; else { prompt='[E] climb back aboard'; if(useP){ me.mode='train'; me.x=clamp(lp.x,-1.2,1.2); me.z=clamp(lp.z,-19.5,3.4); if(!inside(me.x,me.z)) me.x=0; me.yaw-=trainYaw(); Sfx.step(); } } }
+        W.breaks.forEach((b,i)=>{ if(b.fixed) return; const o=breakObjs[i]; if(Math.hypot(me.gx-o.x,me.gz-o.z)<2.6) prompt=W.rails>0?`HOLD [E] to repair the track · ${Math.round(b.prog*100)}% · rails left ${W.rails}`:'No rails in the material car! Restock at a connected station'; });
         CRATES.forEach((c,i)=>{ if(W.crates[i]) return; if(Math.hypot(me.gx-c.x,me.gz-c.z)<1.8){ prompt='[E] grab the scrap crate'; if(useP){ if(net.role==='host') takeCrate(i,0); else net.conn.send({t:'crate',i}); } } });
+        PARTS.forEach((pt,i)=>{ if(W.parts[pt.k]) return; if(Math.hypot(me.gx-pt.x,me.gz-pt.z)<2){ prompt=`[E] take the ${pt.name}`; if(useP){ if(net.role==='host') takePart(i,0); else net.conn.send({t:'part',i}); } } });
+        if(attack){ swing=1; Sfx.step(); if(net.role==='host') whack(0); else net.conn.send({t:'whack'}); }
+        if(!prompt&&W.gn.length) prompt='CLICK / R2 to whack gnawers with your wrench · SHIFT to sprint';
       }
     }
-    // host: train physics + world rules
     if(net.role==='host'){
       const top=8+W.upg.engine*2.2, a=S.throttle*(2.0+W.upg.engine*.5)-S.brake*6-.05*S.v-.6*Math.max(0,S.v-top);
       S.v=Math.max(0,S.v+a*DT); let ns=S.trainS+S.v*DT;
-      const nb=nextBreak(); if(nb&&nb.d<S.v*DT+.5){ ns=S.trainS+Math.max(0,nb.d-.5); if(S.v>1){ announce('🛑 BROKEN TRACK! Step off and hold E at the glowing ring to fix it','#ffcf6a'); shake=.4; } S.v=0; }
+      const nb=nextBreak(); if(nb&&nb.d<S.v*DT+.5){ ns=S.trainS+Math.max(0,nb.d-.5); if(S.v>1){ announce('🛑 BROKEN TRACK! Step off and hold E at the glowing ring','#ffcf6a'); shake=.4; } S.v=0; }
       S.trainS=(ns%TL+TL)%TL;
       const p0=S.players[0]; if(p0){ p0.mode=me.mode; p0.x=me.mode==='train'?me.x:me.gx; p0.z=me.mode==='train'?me.z:me.gz; p0.yaw=me.yaw; p0.pitch=me.pitch; p0.holdE=holdE; }
       hostWorldStep();
-      netT+=DT; if(netT>1/15){ netT=0; broadcast({t:'state',s:S.trainS,v:S.v,th:S.throttle,br:S.brake,gy:S.gunYaw,gp:S.gunPitch,p:Object.values(S.players).map(p=>[p.id,p.mode,+(+p.x).toFixed(2),+(+p.z).toFixed(2),+p.yaw.toFixed(2),+p.pitch.toFixed(2),p.seat]),f:S.fires}); S.fires=[]; }
+      netT+=DT; if(netT>1/15){ netT=0; broadcast({t:'state',s:S.trainS,v:S.v,th:S.throttle,br:S.brake,gy:S.gunYaw,gp:S.gunPitch,p:Object.values(S.players).map(p=>[p.id,p.mode,+(+p.x).toFixed(2),+(+p.z).toFixed(2),+p.yaw.toFixed(2),+p.pitch.toFixed(2),p.seat]),f:S.fires,mf:S.mfire,
+        mon:[W.mon.on,+W.mon.s.toFixed(1)],rj:[W.rj.on,W.rj.ph,+W.rj.t.toFixed(2),W.rj.side],gn:W.gn.map(g=>[+g.x.toFixed(1),+g.z.toFixed(1),+g.yaw.toFixed(2)])}); S.fires=[]; S.mfire=[]; }
       worldT+=DT; if(worldT>.5){ worldT=0; pushWorld(); }
     } else {
       if(S.trainSnap!=null){ S.trainS=(S.trainS+S.v*DT)%TL; let d=S.trainSnap-S.trainS; if(d>TL/2) d-=TL; if(d<-TL/2) d+=TL; S.trainS=(S.trainS+d*.1+TL)%TL; S.trainSnap+=S.v*DT; }
-      if(W.mon.on) W.mon.s+=Math.max(S.v+1.8,7)*DT;
+      if(W.rj.on) W.rj.t+=DT;
       netT+=DT; if(netT>1/15){ netT=0; net.conn.send({t:'pose',m:me.mode,p:me.mode==='train'?[+me.x.toFixed(2),+me.z.toFixed(2),+me.yaw.toFixed(2),+me.pitch.toFixed(2)]:[+me.gx.toFixed(2),+me.gz.toFixed(2),+me.yaw.toFixed(2),+me.pitch.toFixed(2)],e:holdE}); }
     }
     for(const p of Object.values(S.players)) if(p.tx!=null){ p.x=lerp(p.x,p.tx,.25); p.z=lerp(p.z,p.tz,.25); }
   }
   $('prompt').style.display=prompt?'block':'none'; $('prompt').textContent=prompt;
-  for(const k in tapped) delete tapped[k]; step.pcir=n.circle;
+  for(const k in tapped) delete tapped[k]; step.pcir=n.circle; step.pdu=n.dup;
 }
-let lastCtl=0; function sendCtl(c){ if(net.role!=='client') return; const now=performance.now(); if(now-lastCtl<50&&!c.fire&&!c.horn) return; lastCtl=now; net.conn.send({t:'ctl',...c}); }
+let swing=0;
+let lastCtl=0; function sendCtl(c){ if(net.role!=='client') return; const now=performance.now(); if(now-lastCtl<50&&!c.fire&&!c.horn&&!c.missile) return; lastCtl=now; net.conn.send({t:'ctl',...c}); }
 function requestSeat(k){ if(k==='drive'){ me.yaw=0; me.pitch=-.05; } if(k==='gun'){ me.yaw=Math.PI; me.pitch=-.08; }
   if(net.role==='host'){ hostSeat(0,k); me.seat=S.players[0].seat; } else { net.conn.send({t:'seat',k}); if(k===null) me.seat=null; } Sfx.tick(); }
 
-// ---------- mission tracker: always one clear goal + one side goal ----------
+// ---------- mission tracker ----------
 function missionText(){
-  const done=W.stations.filter(Boolean).length; if(done===STATIONS.length) return ['🎉 Every station is connected!','More of the island is coming soon. Keep collecting scrap and upgrading.'];
-  const nb=nextBreak(); const ti=W.stations.findIndex((c,i)=>!c); const tgt=STATIONS[ti];
-  const dT=((tgt.s-S.trainS)%TL+TL)%TL;
-  let main;
-  if(nb&&nb.d<dT) main=nb.d<6?'Step off and fix the broken track (hold E at the glowing ring)':`Drive on. Broken track ahead in ${Math.round(nb.d)} m`;
+  const done=W.stations.filter(Boolean).length; if(done===25) return ['🏆 ALL 25 STATIONS CONNECTED! The island railway lives again!','Keep hunting monsters, finish deliveries and max your upgrades.'];
+  const ti=W.stations.findIndex(c=>!c), tgt=STATIONS[ti], dT=ahead(S.trainS,tgt.s), nb=nextBreak(); let main;
+  if(nb&&nb.d<dT) main=nb.d<6?'🛠️ Step off and fix the broken track (hold E at the glowing ring)':`Drive on. Broken track ahead in ${Math.round(nb.d)} m`;
   else main=dT<70?`🏁 ${tgt.name} ahead: SLOW DOWN to connect it (${Math.round(dT)} m)`:`Drive to ${tgt.name} (${Math.round(dT)} m)`;
-  if(!Object.values(S.players).some(p=>p.seat==='drive')&&S.v<.5&&!(nb&&nb.d<6)) main='Get in the cab (front of the train) and drive · '+main;
-  let side=W.mon.on?'⚠️ The Hollow Engine is chasing you. Man the rear gun!':'';
-  if(!side){ const cheapest=Math.min(...Object.keys(UPG).map(k=>W.upg[k]<UPG[k].cost.length?UPG[k].cost[W.upg[k]]:1e9)); side=W.scrap>=cheapest?'🔧 You can afford an upgrade! Visit the workbench at THE YARD':`📦 Grab scrap crates beside the track (${W.crates.filter(Boolean).length}/${CRATES.length})`; }
+  if(!Object.values(S.players).some(p=>p.seat==='drive')&&S.v<.5&&!(nb&&nb.d<6)) main='Get in the cab (front) and drive · '+main;
+  let side='';
+  if(W.rj.on) side=W.rj.ph==='tremor'?`🌋 RATTLEJAW is coming from the ${W.rj.side<0?'LEFT':'RIGHT'}! Get on the gun!`:'🐛 Shoot RATTLEJAW\'s glowing eyes! (missiles: M in the cab)';
+  else if(W.mon.on) side='⚠️ The Hollow Engine is chasing you. Man the rear gun!';
+  else if(W.gn.length) side='🐀 Gnawers! Whack them (click / R2) or run back to the train';
+  else if(W.ammo<15) side='🔫 Low ammo! Craft more at the workbench in the workshop car';
+  else if(W.rails===0) side='🪵 Out of rails! Stop at any connected station to restock';
+  else if(W.delivery) side=`📦 Delivery: bring the crates to ${STATIONS[W.delivery.to].name}`;
+  else { const pt=PARTS.find(p=>!W.parts[p.k]&&W.stations[p.st]); if(pt) side=`⭐ A ${pt.name} is hidden behind ${STATIONS[pt.st].name} (follow the light beam)`;
+    else { const cheap=Object.keys(UPG).some(k=>{ const l=W.upg[k],u=UPG[k]; return l<u.cost.length&&W.scrap>=u.cost[l]&&(!u.need||W.parts[u.need[l]]); }); side=cheap?'🔧 You can afford an upgrade! Visit the workbench at THE YARD':`📦 Grab scrap crates beside the track (${W.crates.filter(Boolean).length}/${CRATES.length})`; } }
   return [main,side]; }
 
-// ---------- Yard workshop (upgrade menu) ----------
-function toggleShop(){ const sh=$('shop'); if(sh.style.display==='block'){ sh.style.display='none'; return; } if(!atYard()){ feed('Upgrades are only available at THE YARD'); return; } sh.style.display='block'; document.exitPointerLock&&document.exitPointerLock(); renderShop(); }
-function renderShop(){ $('shopScrap').textContent=W.scrap;
-  $('shopList').innerHTML=Object.entries(UPG).map(([k,u])=>{ const l=W.upg[k], max=l>=u.cost.length, c=max?0:u.cost[l]; return `<div class="up"><div><b>${u.name}</b> <span style="color:#9a8a70">lvl ${l}/${u.cost.length}</span><br><small>${u.desc}</small></div><button data-k="${k}" ${max||W.scrap<c?'disabled':''}>${max?'MAX':c+' scrap'}</button></div>`; }).join('')
-    +`<div class="up"><div><b>Paint</b><br><small>pick your train's colour (free)</small></div><div>${PAINTS.map((p,i)=>`<span class="sw" data-i="${i}" title="${p[0]}" style="background:#${p[1].toString(16).padStart(6,'0')};${W.paint===i?'outline:3px solid #ffcf6a':''}"></span>`).join('')}</div></div>`;
-  $('shopList').querySelectorAll('button').forEach(b=>b.onclick=()=>{ if(net.role==='host') buy(b.dataset.k); else net.conn.send({t:'buy',k:b.dataset.k}); setTimeout(renderShop,300); });
-  $('shopList').querySelectorAll('.sw').forEach(s=>s.onclick=()=>{ if(net.role==='host') setPaint(+s.dataset.i); else net.conn.send({t:'paint',i:+s.dataset.i}); setTimeout(renderShop,300); }); }
+// ---------- workbench / Yard workshop ----------
+function toggleShop(){ const sh=$('shop'); if(sh.style.display==='block'){ sh.style.display='none'; return; } sh.style.display='block'; document.exitPointerLock&&document.exitPointerLock(); renderShop(); }
+function renderShop(){ $('shopScrap').textContent=W.scrap; const yard=atYard();
+  let h=`<div class="sh">CRAFT (any time)</div>
+   <div class="up"><div><b>Ammo +40</b><br><small>you have ${W.ammo}/${maxAmmo()}</small></div><button data-c="ammo" ${W.scrap<10||W.ammo>=maxAmmo()?'disabled':''}>10 scrap</button></div>
+   <div class="up"><div><b>Missile</b><br><small>${W.upg.launcher?`you have ${W.missiles}/4 · driver fires with M`:'build the launcher at the Yard first'}</small></div><button data-c="missile" ${!W.upg.launcher||W.scrap<25||W.missiles>=4?'disabled':''}>25 scrap</button></div>
+   <div class="sh">${yard?'YARD UPGRADES':'UPGRADES · only at THE YARD'}</div>`;
+  h+=Object.entries(UPG).map(([k,u])=>{ const l=W.upg[k], max=l>=u.cost.length, c=max?0:u.cost[l], part=!max&&u.need?u.need[l]:null, hasPart=!part||W.parts[part];
+    const pn=part?PARTS.find(p=>p.k===part).name:''; return `<div class="up"><div><b>${u.name}</b> <span style="color:#9a8a70">lvl ${l}/${u.cost.length}</span><br><small>${u.desc}${part?` · needs <span style="color:${hasPart?'#7dffa8':'#ff9a7a'}">${pn}</span>`:''}</small></div><button data-k="${k}" ${max||!yard||W.scrap<c||!hasPart?'disabled':''}>${max?'MAX':c+' scrap'}</button></div>`; }).join('');
+  h+=`<div class="up"><div><b>Paint</b><br><small>${yard?'pick a colour (free)':'only at the Yard'}</small></div><div>${PAINTS.map((p,i)=>`<span class="sw" data-i="${i}" title="${p[0]}" style="background:#${p[1].toString(16).padStart(6,'0')};${W.paint===i?'outline:3px solid #ffcf6a':''}"></span>`).join('')}</div></div>`;
+  $('shopList').innerHTML=h;
+  $('shopList').querySelectorAll('button[data-k]').forEach(b=>b.onclick=()=>{ if(net.role==='host') buy(b.dataset.k); else net.conn.send({t:'buy',k:b.dataset.k}); setTimeout(renderShop,300); });
+  $('shopList').querySelectorAll('button[data-c]').forEach(b=>b.onclick=()=>{ if(net.role==='host') craft(b.dataset.c); else net.conn.send({t:'craft',k:b.dataset.c}); setTimeout(renderShop,300); });
+  $('shopList').querySelectorAll('.sw').forEach(s=>s.onclick=()=>{ if(!yard) return; if(net.role==='host') setPaint(+s.dataset.i); else net.conn.send({t:'paint',i:+s.dataset.i}); setTimeout(renderShop,300); }); }
 $('shopClose').onclick=()=>{ $('shop').style.display='none'; };
 
 // ---------- avatars ----------
@@ -416,23 +491,38 @@ function avatar(p){ if(avatars[p.id]) return avatars[p.id]; const g=new THREE.Gr
   const cv=document.createElement('canvas'); cv.width=256; cv.height=64; const x=cv.getContext('2d'); x.font='bold 34px Georgia'; x.textAlign='center'; x.fillStyle='#000a'; x.fillRect(0,8,256,48); x.fillStyle=p.color; x.fillText(p.name,128,44);
   const tag=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false})); tag.scale.set(1.2,.3,1); tag.position.y=2.05; g.add(tag);
   g.traverse(o=>{ if(o.isMesh) o.castShadow=true; }); avatars[p.id]=g; return g; }
-// my own lantern so it's never pitch black on foot
 const myLamp=new THREE.PointLight(0xffc888,6,12,1.6); scene.add(myLamp);
+// first-person wrench (visible on foot)
+const wrench=new THREE.Group(); { const sh=new THREE.Mesh(new THREE.BoxGeometry(.04,.5,.05),std(0x8a9098,{metalness:.8,roughness:.3})); wrench.add(sh); const jw=new THREE.Mesh(new THREE.TorusGeometry(.06,.02,6,10,4.6),sh.material); jw.position.y=.28; wrench.add(jw); } camera.add(wrench); scene.add(camera);
 
 // ---------- render ----------
-const up=new THREE.Vector3(0,1,0);
+const up=new THREE.Vector3(0,1,0), fogC=new THREE.Color(), tmp=new THREE.Vector3();
 function render(){
   const u=((S.trainS/TL)%1+1)%1, p=curve.getPointAt(u), t=curve.getTangentAt(u);
   train.position.set(p.x,.25,p.z); train.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),t); train.updateMatrixWorld();
   moon.position.copy(train.position).add(new THREE.Vector3(-30,45,15)); moon.target.position.copy(train.position);
+  const reg=REGIONS[regionAt(S.trainS)]; fogC.set(reg.fog); scene.fog.color.lerp(fogC,.02); scene.background.lerp(fogC,.02);
   if(GUN){ GUN.rotation.y=S.gunYaw; GUN.rotation.x=-S.gunPitch; }
-  // world objects
   W.breaks.forEach((b,i)=>{ const o=breakObjs[i]; o.bad.visible=!b.fixed; o.good.visible=b.fixed; o.ring.material.opacity=.5+Math.sin(performance.now()/200)*.3; o.ring.scale.setScalar(1+(b.prog||0)*.5); });
-  crateObjs.forEach((g,i)=>{ g.visible=!W.crates[i]; g.rotation.y+=.01; });
-  // hollow engine
-  hollow.visible=W.mon.on; if(W.mon.on){ const q=trackPos(W.mon.s); hollow.position.set(q.p.x,.25,q.p.z); hollow.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),q.t);
+  crateObjs.forEach((g,i)=>{ g.visible=!W.crates[i]; });
+  partObjs.forEach((g,i)=>{ g.visible=!W.parts[PARTS[i].k]&&W.stations[PARTS[i].st]; g.userData.star.rotation.y+=.03; });
+  // Hollow Engine
+  hollow.visible=W.mon.on; if(W.mon.on){ if(net.role!=='host') W.mon.s+=Math.max(S.v+1.8,7)/60; const q=trackPos(W.mon.s); hollow.position.set(q.p.x,.25,q.p.z); hollow.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),q.t);
     if(Math.random()<.5){ const s=blackSmoke.find(s=>s.life<=0); if(s){ s.m.position.copy(hollow.position).add(new THREE.Vector3(0,5.3,0)).addScaledVector(q.t,3.5); s.m.scale.setScalar(.6); s.m.visible=true; s.life=2.5; } } }
   for(const s of blackSmoke) if(s.life>0){ s.life-=1/60; s.m.position.y+=.06; s.m.scale.multiplyScalar(1.015); s.m.material.opacity=Math.max(0,s.life/2.5*.55); if(s.life<=0) s.m.visible=false; }
+  // Rattlejaw: rises beside the train, follows it, lunges, dives
+  rattle.visible=W.rj.on&&W.rj.ph!=='tremor';
+  if(rattle.visible){ const J=W.rj, rise=J.ph==='up'?Math.min(1,J.t/1.4):Math.max(0,1-J.t/2.2), lunge=J.ph==='up'?Math.max(0,Math.sin((J.t%5)/5*Math.PI*2-1.2))*.9:0;
+    const headL=new THREE.Vector3(J.side*(9-lunge*4.5),lerp(-7,3.6,rise)+lunge*1.2,-6+Math.sin(J.t*.8)*2); const headW=headL.clone().applyMatrix4(train.matrixWorld);
+    RJ.head.position.copy(headW); RJ.head.lookAt(tmp.set(0,DECK+1.5,-6).applyMatrix4(train.matrixWorld)); RJ.jawTop.rotation.x=-.25-lunge*.3; RJ.jawBot.rotation.x=.4+lunge*.5+Math.sin(performance.now()/90)*.05;
+    RJ.segs.forEach((Sg,i)=>{ const k=i+1, lp=new THREE.Vector3(J.side*(10.5+k*.4+Math.sin(k*.6+J.t*2)*1.5),lerp(-9,3.2-k*.75,rise),-6-k*2.6+Math.sin(J.t+k)*.5); Sg.s.position.copy(lp.applyMatrix4(train.matrixWorld)); Sg.s.lookAt(i===0?RJ.head.position:RJ.segs[i-1].s.position); });
+    if(J.ph==='up'&&J.t<1.4&&Math.random()<.6){ const d=dirt.find(d=>d.life<=0); if(d){ d.m.position.copy(headW).setY(hgt(headW.x,headW.z)); d.v.set((Math.random()-.5)*8,6+Math.random()*6,(Math.random()-.5)*8); d.life=1.5; d.m.visible=true; } } }
+  for(const d of dirt) if(d.life>0){ d.life-=1/60; d.v.y-=.3; d.m.position.addScaledVector(d.v,1/60); d.m.rotation.x+=.1; if(d.life<=0) d.m.visible=false; }
+  // gnawers
+  gnawerObjs.forEach((o,i)=>{ const g=W.gn[i]; o.visible=!!g; if(g){ o.position.set(g.x,hgt(g.x,g.z),g.z); o.rotation.y=g.yaw; o.position.y+=Math.abs(Math.sin(performance.now()/70+i))*.12; } });
+  // missiles home in
+  for(const m of missiles){ if(!m.on) continue; m.t+=1/60; const tgt=m.target==='rj'?RJ.head.position:hollow.position.clone().add(new THREE.Vector3(0,2.4,0)); const dir=tgt.clone().sub(m.m.position); const dist=dir.length(); dir.normalize();
+    m.m.position.addScaledVector(dir,Math.min(dist,45/60)); m.m.lookAt(tgt); if(dist<1.5||m.t>2){ m.on=false; m.m.visible=false; for(let k=0;k<10;k++){ const d=dirt.find(d=>d.life<=0); if(d){ d.m.position.copy(m.m.position); d.v.set((Math.random()-.5)*10,Math.random()*8,(Math.random()-.5)*10); d.life=1; d.m.visible=true; } } } }
   // avatars
   const mid=myId();
   for(const id in avatars) if(!S.players[id]){ avatars[id].parent?.remove(avatars[id]); delete avatars[id]; }
@@ -442,20 +532,22 @@ function render(){
   let eye, look;
   if(me.mode==='train'){ eye=new THREE.Vector3(me.x,DECK+(me.seat?SEATS[me.seat].eye:EYE),me.z).applyMatrix4(train.matrixWorld); look=new THREE.Vector3(Math.sin(me.yaw)*Math.cos(me.pitch),Math.sin(me.pitch),Math.cos(me.yaw)*Math.cos(me.pitch)).transformDirection(train.matrixWorld); }
   else { eye=new THREE.Vector3(me.gx,hgt(me.gx,me.gz)+EYE,me.gz); look=new THREE.Vector3(Math.sin(me.yaw)*Math.cos(me.pitch),Math.sin(me.pitch),Math.cos(me.yaw)*Math.cos(me.pitch)); }
+  if(W.rj.on&&W.rj.ph==='tremor') shake=Math.max(shake,.25);
   if(shake>.01){ eye.add(new THREE.Vector3((Math.random()-.5)*shake*.3,(Math.random()-.5)*shake*.3,(Math.random()-.5)*shake*.3)); shake*=.9; }
   camera.position.copy(eye); camera.up.copy(up); camera.lookAt(eye.clone().add(look)); myLamp.position.copy(eye).add(new THREE.Vector3(0,-.3,0));
-  // smoke
-  if(S.started&&Math.random()<.25+S.throttle*.5){ const s=smoke.find(s=>s.life<=0); if(s){ const sp=new THREE.Vector3(0,5.2,12.3).applyMatrix4(train.matrixWorld); s.m.position.copy(sp); s.m.scale.setScalar(.5); s.m.visible=true; s.life=3; } }
+  wrench.visible=me.mode==='ground'; if(wrench.visible){ swing*=.85; wrench.position.set(.32,-.32+swing*.15,-.6); wrench.rotation.set(-.5-swing*1.4,0,-.3); }
+  if(S.started&&Math.random()<.25+S.throttle*.5){ const s=smoke.find(s=>s.life<=0); if(s){ s.m.position.copy(new THREE.Vector3(0,5.2,12.3).applyMatrix4(train.matrixWorld)); s.m.scale.setScalar(.5); s.m.visible=true; s.life=3; } }
   for(const s of smoke) if(s.life>0){ s.life-=1/60; s.m.position.y+=.05; s.m.scale.multiplyScalar(1.012); s.m.material.opacity=Math.max(0,s.life/3*.45); if(s.life<=0) s.m.visible=false; }
   for(const tr of tracers) if(tr.life>0){ tr.life-=1/60; tr.m.position.addScaledVector(tr.v,1/60); if(tr.life<=0) tr.m.visible=false; }
-  // HUD
-  if(S.started){ const [m1,m2]=missionText(); $('mMain').textContent=m1; $('mSide').textContent=m2;
+  if(S.started){ const [m1,m2]=missionText(); $('mMain').textContent=m1; $('mSide').textContent=m2; $('region').textContent=reg.name;
     $('thrBar').style.width=(S.throttle*100)+'%'; $('spd').textContent=Math.round(S.v*3.6)+' km/h'+(S.brake?'  · BRAKE':'');
-    $('hpBar').style.width=clamp(W.hp/maxHp()*100,0,100)+'%'; $('scrap').textContent=W.scrap; $('stCount').textContent=W.stations.filter(Boolean).length+'/'+STATIONS.length;
-    const gap=((S.trainS-8)-W.mon.s); $('warn').style.display=W.mon.on?'block':'none'; if(W.mon.on) $('warn').textContent=`⚠️ HOLLOW ENGINE ${Math.max(0,Math.round(gap))} m behind`;
+    $('hpBar').style.width=clamp(W.hp/maxHp()*100,0,100)+'%'; $('scrap').textContent=W.scrap; $('stCount').textContent=W.stations.filter(Boolean).length+'/25';
+    $('inv').innerHTML=`🔫 ${W.ammo} &nbsp; 🚀 ${W.upg.launcher?W.missiles:'–'} &nbsp; 🪵 ${W.rails}/${maxRails()} &nbsp; ⭐ ${PARTS.filter(p=>W.parts[p.k]).length}/${PARTS.length}`;
+    const gap=(S.trainS+REAR)-W.mon.s; let wtxt=''; if(W.mon.on) wtxt=`⚠️ HOLLOW ENGINE ${Math.max(0,Math.round(gap))} m behind`; if(W.rj.on) wtxt=W.rj.ph==='tremor'?`🌋 TREMORS… ${W.rj.side<0?'◀ LEFT':'RIGHT ▶'}`:W.rj.ph==='up'?`🐛 RATTLEJAW ${W.rj.side<0?'◀ LEFT SIDE':'RIGHT SIDE ▶'}`:'';
+    $('warn').style.display=wtxt?'block':'none'; $('warn').textContent=wtxt;
     $('tl').innerHTML='Room '+net.code+'<br>'+Object.values(S.players).map(p=>`<span style="color:${p.color}">●</span> ${p.name}${p.seat==='drive'?' 🚂':p.seat==='gun'?' 🔫':p.mode==='ground'?' 🚶':''}`).join('<br>'); }
   renderer.render(scene,camera);
 }
 (function loop(now=performance.now()){ acc+=Math.min(250,now-last); last=now; while(acc>=1000/60){ step(); acc-=1000/60; } render(); requestAnimationFrame(loop); })();
-window.__rails={S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,TL,hostWorldStep};
+window.__rails={S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy};
 </script></body></html>
