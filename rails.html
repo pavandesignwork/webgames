@@ -75,7 +75,7 @@
   <div id="stats"><div class="bar"><i id="hpBar" style="background:linear-gradient(90deg,#3ac05a,#9aef6a);width:100%"></i></div><div id="inv"></div></div>
   <div id="shop"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:22px;color:#d9c08a">🚂 YOUR TRAIN</b><span style="font-size:18px">🔩 <b id="shopScrap">0</b> scrap</span></div>
     <div id="shopRoom" style="font-size:13px;color:#9a8a70;margin-top:2px"></div><div id="shopWhere" style="font-size:13px;margin:4px 0 6px"></div><div id="shopList"></div>
-    <div id="shopHint">↑ ↓ choose · ✕ / E / Enter buy · ← → paint colour · ○ / Tab close</div><button id="shopClose" class="alt" style="margin-top:8px;padding:8px">CLOSE</button></div>
+    <div id="shopHint">↑ ↓ choose · ✕ / E buy · □ / Q store a car in the Yard · ← → paint · ○ / Tab close</div><button id="shopClose" class="alt" style="margin-top:8px;padding:8px">CLOSE</button></div>
   <div id="speed"><span id="spd">0</span> km/h<div class="bar"><i id="thrBar"></i></div></div>
   <div id="help"></div>
   <div id="clickToPlay">CLICK TO PLAY</div></div>
@@ -96,6 +96,7 @@ import * as THREE from 'three';
 import {buildTrain,DECK,GUN_Z,GUN_SHIFT,layout,WALKS,DOORZ,CARS,BLOCKS} from './train_model.js';
 import {makeRattlejaw,makeGnawer} from './monsters.js';
 import {A} from './rails_audio.js';
+import {buildYard,YARD,slotSign} from './yard.js';
 const $=id=>document.getElementById(id);
 NetLink.setPrefix('pdw-webgames-rails-');
 const COLORS=['#e8b24a','#4ab0e8','#e85a4a','#7ae84a'];
@@ -132,11 +133,11 @@ function hgt(x,z){ const [d,u]=trackDist(x,z), [ds,yard]=stationNear(u), flat=8+
 // ---- simple world colliders: circles (trees, rocks, posts) in a grid + oriented boxes (huts, sheds, platforms) ----
 const COLL=new Map(), CELL=16, ckey=(i,j)=>i*100003+j, OBOX=[];
 function addColl(x,z,r){ const k=ckey(Math.floor(x/CELL),Math.floor(z/CELL)); let L=COLL.get(k); if(!L) COLL.set(k,L=[]); L.push({x,z,r}); }
-function addBox(gx,gz,th,lx,lz,hx,hz,walkTop){ const c=Math.cos(th), sn=Math.sin(th); OBOX.push({x:gx+lx*c+lz*sn,z:gz-lx*sn+lz*c,c,s:sn,hx,hz,R:Math.hypot(hx,hz),top:walkTop}); }
+function addBox(gx,gz,th,lx,lz,hx,hz,walkTop,when){ const c=Math.cos(th), sn=Math.sin(th); OBOX.push({x:gx+lx*c+lz*sn,z:gz-lx*sn+lz*c,c,s:sn,hx,hz,R:Math.hypot(hx,hz),top:walkTop,when}); }
 function collide(p,rad){ const i=Math.floor(p.x/CELL), j=Math.floor(p.z/CELL);
   for(let a=-1;a<=1;a++) for(let b=-1;b<=1;b++){ const L=COLL.get(ckey(i+a,j+b)); if(!L) continue;
     for(const c of L){ const dx=p.x-c.x, dz=p.z-c.z, rr=c.r+rad, d2=dx*dx+dz*dz; if(d2<rr*rr){ const d=Math.sqrt(d2)||.001; p.x=c.x+dx/d*rr; p.z=c.z+dz/d*rr; } } }
-  for(const o of OBOX){ if(o.top) continue; const dx=p.x-o.x, dz=p.z-o.z; if(dx*dx+dz*dz>(o.R+rad)**2) continue; let lx=dx*o.c-dz*o.s, lz=dx*o.s+dz*o.c; const ex=o.hx+rad, ez=o.hz+rad;
+  for(const o of OBOX){ if(o.top||(o.when&&!o.when())) continue; const dx=p.x-o.x, dz=p.z-o.z; if(dx*dx+dz*dz>(o.R+rad)**2) continue; let lx=dx*o.c-dz*o.s, lz=dx*o.s+dz*o.c; const ex=o.hx+rad, ez=o.hz+rad;
     if(Math.abs(lx)<ex&&Math.abs(lz)<ez){ if(ex-Math.abs(lx)<ez-Math.abs(lz)) lx=Math.sign(lx||1)*ex; else lz=Math.sign(lz||1)*ez; p.x=o.x+lx*o.c+lz*o.s; p.z=o.z-lx*o.s+lz*o.c; } } }
 // ground height for feet: terrain, or the top of a station platform
 function groundH(x,z){ let h=hgt(x,z); for(const o of OBOX){ if(!o.top) continue; const dx=x-o.x, dz=z-o.z; if(dx*dx+dz*dz>o.R*o.R) continue; const lx=dx*o.c-dz*o.s, lz=dx*o.s+dz*o.c; if(Math.abs(lx)<o.hx&&Math.abs(lz)<o.hz) h=Math.max(h,o.top); } return h; }
@@ -200,7 +201,7 @@ const UPG={
 const UPG_ORDER=['engine','armor','plough','light','horn','workshop','material','cargo','gun','launcher'];
 const PAINTS=[['Hazard yellow',0xf2c21a],['Rust red',0xc0442a],['Ice blue',0x4a8ad0],['Coal black',0x3a3c44],['Toxic green',0x7ac83a]];
 const W={stations:STATIONS.map((x,i)=>i===0),breaks:BREAKS.map(()=>({fixed:false,prog:0})),crates:CRATES.map(()=>false),parts:{},scrap:60,hp:100,ammo:120,missiles:0,rails:1,
-  upg:{engine:1,armor:0,plough:0,light:0,horn:0,workshop:0,material:0,cargo:0,gun:0,launcher:0},paint:0,delivery:null,
+  upg:{engine:1,armor:0,plough:0,light:0,horn:0,workshop:0,material:0,cargo:0,gun:0,launcher:0},store:{workshop:0,material:0,cargo:0,gun:0},paint:0,delivery:null,
   mon:{on:false,s:0,hp:0,cd:60},rj:{on:false,ph:'',t:0,side:1,hp:0,cd:90,bite:0},gn:[],
   boss:{on:false,phase:0,hp:0,max:900,done:false},stats:{hollow:0,rj:0,gn:0,fix:0,del:0,t:0}};
 W.breaks[BOSSB].fixed=true;
@@ -208,11 +209,12 @@ const maxHp=()=>100+W.upg.armor*45, maxRails=()=>[1,3,5,7][W.upg.material], maxA
 const dmgMul=()=>1/(1+W.upg.armor*.3), biteMul=()=>1-.15*W.upg.plough;
 const GUN_DMG=[0,8,9,14,40], GUN_CD=[0,150,100,95,240];
 const saveKey='rails-save-v3';
-function saveGame(){ if(net.role!=='host') return; localStorage.setItem(saveKey,JSON.stringify({stations:W.stations,breaks:W.breaks.map(b=>b.fixed),crates:W.crates,parts:W.parts,scrap:W.scrap,ammo:W.ammo,missiles:W.missiles,rails:W.rails,upg:W.upg,paint:W.paint,trainS:S.trainS,bossDone:W.boss.done,stats:W.stats})); }
-function loadGame(){ try{ const d=JSON.parse(localStorage.getItem(saveKey)); if(!d) return false; W.stations=d.stations; d.breaks.forEach((f,i)=>{ if(W.breaks[i]) W.breaks[i].fixed=f; }); Object.assign(W,{crates:d.crates,parts:d.parts||{},scrap:d.scrap,ammo:d.ammo,missiles:d.missiles,rails:d.rails,paint:d.paint||0}); Object.assign(W.upg,d.upg); S.trainS=d.trainS||0; W.boss.done=!!d.bossDone; if(d.stats) Object.assign(W.stats,d.stats); W.breaks[BOSSB].fixed=true; return true; }catch(e){ return false; } }
+function saveGame(){ if(net.role!=='host') return; localStorage.setItem(saveKey,JSON.stringify({stations:W.stations,breaks:W.breaks.map(b=>b.fixed),crates:W.crates,parts:W.parts,scrap:W.scrap,ammo:W.ammo,missiles:W.missiles,rails:W.rails,upg:W.upg,store:W.store,paint:W.paint,trainS:S.trainS,bossDone:W.boss.done,stats:W.stats})); }
+function loadGame(){ try{ const d=JSON.parse(localStorage.getItem(saveKey)); if(!d) return false; W.stations=d.stations; d.breaks.forEach((f,i)=>{ if(W.breaks[i]) W.breaks[i].fixed=f; }); Object.assign(W,{crates:d.crates,parts:d.parts||{},scrap:d.scrap,ammo:d.ammo,missiles:d.missiles,rails:d.rails,paint:d.paint||0}); Object.assign(W.upg,d.upg); Object.assign(W.store,d.store||{}); S.trainS=d.trainS||0; W.boss.done=!!d.bossDone; if(d.stats) Object.assign(W.stats,d.stats); W.breaks[BOSSB].fixed=true; return true; }catch(e){ return false; } }
 // ---- station models ----
 const stationLamps=[];
-STATIONS.forEach((st,i)=>{ const {p,t}=trackPos(st.s), g=new THREE.Group(); const n=new THREE.Vector3(t.z,0,-t.x);
+STATIONS.forEach((st,i)=>{ if(i===0) return;   // the Yard has its own buildings (below)
+  const {p,t}=trackPos(st.s), g=new THREE.Group(); const n=new THREE.Vector3(t.z,0,-t.x);
   g.position.set(p.x+n.x*4.2,0,p.z+n.z*4.2); g.rotation.y=Math.atan2(t.x,t.z); scene.add(g);
   const plat=new THREE.Mesh(new THREE.BoxGeometry(3.6,1,22),std(0x5a5650)); plat.position.y=.5; plat.receiveShadow=true; g.add(plat);
   { const gx=g.position.x, gz=g.position.z, th=g.rotation.y; addBox(gx,gz,th,0,0,1.8,11,1.0); if(i===0) addBox(gx,gz,th,6,0,4.6,14.1); else addBox(gx,gz,th,1,-5,1.6,2.6);
@@ -226,6 +228,24 @@ STATIONS.forEach((st,i)=>{ const {p,t}=trackPos(st.s), g=new THREE.Group(); cons
     const pool=new THREE.Mesh(new THREE.CircleGeometry(3.2,20),new THREE.MeshBasicMaterial({color:0xffb860,transparent:true,opacity:i===0?.18:0,depthWrite:false})); pool.rotation.x=-Math.PI/2; pool.position.set(-1,1.03,z); g.add(pool); stationLamps.push({i,bulb,pool}); }
   const cv=document.createElement('canvas'); cv.width=512; cv.height=96; const x=cv.getContext('2d'); x.fillStyle='#1d1a14'; x.fillRect(0,0,512,96); x.strokeStyle='#c9a24a'; x.lineWidth=6; x.strokeRect(4,4,504,88); x.fillStyle='#e8dcc0'; x.font='bold 44px Georgia'; x.textAlign='center'; x.fillText(st.name.toUpperCase(),256,64);
   const tex=new THREE.CanvasTexture(cv); tex.colorSpace=THREE.SRGBColorSpace; for(const k of [1,-1]){ const sign=new THREE.Mesh(new THREE.PlaneGeometry(4,.75),new THREE.MeshBasicMaterial({map:tex})); sign.position.set(.02*k,3.6,9.5); sign.rotation.y=Math.PI/2*k; g.add(sign); } });
+// ---- THE YARD: engine shed over the main line, storage siding with spare / for-sale cars, office ----
+const yardG=new THREE.Group(); { const {p,t}=trackPos(0); yardG.position.set(p.x,0,p.z); yardG.rotation.y=Math.atan2(t.x,t.z); scene.add(yardG); yardG.updateMatrixWorld(); }
+{ const mainAt=dz=>{ const q=yardG.worldToLocal(trackPos(dz).p.clone().setY(0)); return {x:q.x,z:q.z}; };
+  const Y=buildYard(yardG,{mainAt}), gx=yardG.position.x, gz=yardG.position.z, th=yardG.rotation.y, c=Math.cos(th), sn=Math.sin(th);
+  for(const b of Y.boxes) addBox(gx,gz,th,b.x,b.z,b.hx,b.hz); for(const k of Y.circles) addColl(gx+k.x*c+k.z*sn,gz-k.x*sn+k.z*c,k.r); }
+// a second copy of the train's cars, parked on the siding (no lights, no engine)
+const yardTrain=buildTrain(); { const rm=[]; yardTrain.traverse(o=>{ if(o.isLight) rm.push(o); }); rm.forEach(o=>o.parent.remove(o)); }
+yardTrain.position.set(YARD.SIDING_X,.25,0); yardG.add(yardTrain); yardTrain.children.find(o=>o.name==='cab').visible=false;
+const yardCars={}, yardSigns={}, yardShown={}, CAR_MID={workshop:.7,material:-5.3,cargo:-11.3,gun:-17.4};
+for(const c of CARS){ yardCars[c]=yardTrain.children.find(o=>o.name===c); const sg=slotSign(); sg.position.set(3.25,3.6,YARD.SLOT_Z[c]); sg.rotation.y=-Math.PI/2; yardG.add(sg); yardSigns[c]=sg;
+  { const th=yardG.rotation.y; addBox(yardG.position.x,yardG.position.z,th,YARD.SIDING_X,YARD.SLOT_Z[c],1.75,3.1,undefined,()=>yardShown[c]); } }
+// cars you don't own wait "for sale" on the siding; stored cars wait there too
+function updateYard(){ const u={...W.upg}; for(const c of CARS){ const st=W.store[c]||0, own=W.upg[c]||0; u[c]=st||(own?0:1); }
+  yardTrain.userData.setLevels(u);
+  for(const c of CARS){ const st=W.store[c]||0, own=W.upg[c]||0, shown=!!(st||!own); yardShown[c]=shown; yardCars[c].visible=shown; yardCars[c].position.z=YARD.SLOT_Z[c]-CAR_MID[c];
+    const sg=yardSigns[c], U=UPG[c]; sg.visible=shown; if(st) sg.userData.draw(U.name.toUpperCase(),'stored · level '+st,'#7dffa8'); else if(!own) sg.userData.draw(U.name.toUpperCase(),'for sale · '+U.cost[1]+' scrap','#ffcf6a'); }
+  yardTrain.userData.paintMat?.color.set(PAINTS[W.paint]?.[1]??PAINTS[0][1]); }
+updateYard();
 function lightStation(i){ for(const l of stationLamps) if(l.i===i){ l.bulb.material.color.set(0xffcf7a); l.pool.material.opacity=.18; } }
 // ---- broken track ----
 const breakObjs=BREAKS.map(s=>{ const {p,t}=trackPos(s), g=new THREE.Group(); g.position.set(p.x,0,p.z); g.rotation.y=Math.atan2(t.x,t.z); scene.add(g);
@@ -318,7 +338,7 @@ $('hostBtn').onclick=()=>{ net.role='host'; $('hostBtn').disabled=true; $('menuE
         if(m.t==='seat') hostSeat(id,m.k);
         if(m.t==='ctl'){ if(p.seat==='drive'){ S.throttle=clamp(+m.throttle||0,0,1); S.brake=m.brake?1:0; if(m.horn) hostHorn(); if(m.missile) fireMissile(id); } if(p.seat==='gun'){ S.gunYaw=+m.gy; S.gunPitch=+m.gp; if(m.fire) hostFire(id); } }
         if(m.t==='crate') takeCrate(m.i,id); if(m.t==='part') takePart(m.i,id); if(m.t==='whack') whack(id);
-        if(m.t==='buy') buy(m.k); if(m.t==='paint') setPaint(m.i); if(m.t==='craft') craft(m.k);
+        if(m.t==='buy') buy(m.k); if(m.t==='attach') attachCar(m.k); if(m.t==='store') storeCar(m.k); if(m.t==='paint') setPaint(m.i); if(m.t==='craft') craft(m.k);
       });
       conn.on('close',()=>{ if(id==null) return; const p=S.players[id]; delete S.players[id]; delete hostConns[id]; broadcast({t:'lobby',players:lobbyList()}); renderLobby(); if(p) announce(p.name+' left'); }); } }); };
 $('joinBtn').onclick=()=>{ const code=$('joinCode').value.replace(/\D/g,''); if(code.length!==4){ $('menuErr').textContent='Type the 4-digit room code.'; return; }
@@ -356,7 +376,7 @@ $('startBtn').onclick=()=>{ if(net.role!=='host') return; broadcast({t:'start'})
 const atStation=i=>near(S.trainS,STATIONS[i].s)<22&&S.v<1;
 const atYard=()=>atStation(0);
 const nearAnyStation=r=>STATIONS.some(st=>near(S.trainS,st.s)<r);
-function pushWorld(){ broadcast({t:'world',w:{stations:W.stations,breaks:W.breaks,crates:W.crates,parts:W.parts,scrap:W.scrap,hp:W.hp,ammo:W.ammo,missiles:W.missiles,rails:W.rails,upg:W.upg,paint:W.paint,delivery:W.delivery,rjHp:W.rj.hp,monHp:W.mon.hp,boss:W.boss,stats:W.stats,bb:BREAKS[BOSSB]}}); }
+function pushWorld(){ broadcast({t:'world',w:{stations:W.stations,breaks:W.breaks,crates:W.crates,parts:W.parts,scrap:W.scrap,hp:W.hp,ammo:W.ammo,missiles:W.missiles,rails:W.rails,upg:W.upg,store:W.store,paint:W.paint,delivery:W.delivery,rjHp:W.rj.hp,monHp:W.mon.hp,boss:W.boss,stats:W.stats,bb:BREAKS[BOSSB]}}); }
 function hostSeat(id,k){ const p=S.players[id]; if(!p) return; if(k===null){ p.seat=null; return; }
   if(!SEATS[k]||Object.values(S.players).some(q=>q!==p&&q.seat===k)){ tell(id,'Someone is already there'); return; } p.seat=k; }
 function tell(id,text,col){ if(id===0) feed(text,col); else if(hostConns[id]) hostConns[id].conn.send({t:'msg',text,col}); }
@@ -378,16 +398,20 @@ function fireMissile(id){ if(!W.upg.launcher){ tell(id,'You need to build the mi
 function takeCrate(i,id){ if(W.crates[i]) return; W.crates[i]=true; W.scrap+=10; announce('📦 '+(S.players[id]?.name||'Someone')+' found scrap +10','#9fe'); fx('pick'); saveGame(); pushWorld(); }
 function takePart(i,id){ const pt=PARTS[i]; if(W.parts[pt.k]) return; W.parts[pt.k]=true; announce(`⭐ ${S.players[id]?.name||'Someone'} found the ${pt.name.toUpperCase()}! Take it to the Yard workshop`,'#ffd27a'); fx('win'); saveGame(); pushWorld(); }
 // '' = can buy now, otherwise the reason it can't
-function canBuy(k,anywhere){ const u=UPG[k], n=(W.upg[k]||0)+1; if(n>u.max) return 'max'; if(u.need&&u.need[n]&&!W.parts[u.need[n]]) return 'part'; if(W.scrap<u.cost[n]) return 'scrap'; if(!anywhere&&!atYard()) return 'yard'; return ''; }
+function canBuy(k,anywhere){ const u=UPG[k], n=(W.upg[k]||0)+1; if(u.car&&W.store[k]) return 'stored'; if(n>u.max) return 'max'; if(u.need&&u.need[n]&&!W.parts[u.need[n]]) return 'part'; if(W.scrap<u.cost[n]) return 'scrap'; if(!anywhere&&!atYard()) return 'yard'; return ''; }
 function buy(k){ const u=UPG[k]; if(!u||canBuy(k)) return; const n=W.upg[k]+1; W.scrap-=u.cost[n]; W.upg[k]=n;
   if(k==='armor') W.hp=maxHp(); if(k==='material') W.rails=maxRails(); if(k==='gun'&&n===1) W.ammo=Math.max(W.ammo,maxAmmo()); if(k==='launcher') W.missiles=Math.min(missileCap(),Math.max(W.missiles,2));
   announce(`🔧 ${u.icon} ${u.name} level ${n}: ${u.lv[n].split(' · ')[0]}!`,'#ffcf6a'); fx('win'); applyPaint(); saveGame(); pushWorld(); if(shopOpen()) renderShop(); }
+function attachCar(c){ if(!atYard()||!W.store[c]) return; W.upg[c]=W.store[c]; W.store[c]=0; announce(`🔗 ${UPG[c].name} attached to the train`,'#9fe'); fx('pick'); applyPaint(); saveGame(); pushWorld(); if(shopOpen()) renderShop(); }
+function storeCar(c){ if(!atYard()||!UPG[c]?.car||!W.upg[c]) return; W.store[c]=W.upg[c]; W.upg[c]=0; if(c==='material') W.rails=Math.min(W.rails,maxRails()); if(c==='gun') for(const p of Object.values(S.players)) if(p.seat==='gun') p.seat=null;
+  announce(`🅿️ ${UPG[c].name} parked in the Yard`,'#9fe'); fx('pick'); applyPaint(); saveGame(); pushWorld(); if(shopOpen()) renderShop(); }
+function sendAct(t,k){ if(net.role==='host'){ if(t==='buy') buy(k); if(t==='attach') attachCar(k); if(t==='store') storeCar(k); } else net.conn.send({t,k}); }
 const canCraft=()=>W.upg.workshop>=1||atYard(), ammoCost=()=>W.upg.workshop>=2?6:10;
 function craft(k){ if(!canCraft()) return; if(k==='ammo'&&W.upg.gun&&W.scrap>=ammoCost()&&W.ammo<maxAmmo()){ W.scrap-=ammoCost(); W.ammo=Math.min(maxAmmo(),W.ammo+40); fx('fix'); }
   if(k==='missile'&&W.upg.launcher&&W.scrap>=25&&W.missiles<missileCap()){ W.scrap-=25; W.missiles++; fx('fix'); } saveGame(); pushWorld(); if(shopOpen()) renderShop(); }
 function hostHorn(){ fx('horn'); if(W.upg.horn>=1){ const n=W.gn.filter(g=>g.alive&&!g.scared).length; W.gn.forEach(g=>{ if(!g.scared) g.scared=2.5; }); if(n) announce('📯 The scare-horns sent the gnawers running!','#9fe'); } }
 function setPaint(i){ if(!atYard()) return; W.paint=i; applyPaint(); saveGame(); pushWorld(); }
-function applyPaint(){ train.userData.paintMat?.color.set(PAINTS[W.paint]?.[1]??PAINTS[0][1]); const uk=JSON.stringify(W.upg); if(uk!==lastUpg){ lastUpg=uk; relayout(); }
+function applyPaint(){ train.userData.paintMat?.color.set(PAINTS[W.paint]?.[1]??PAINTS[0][1]); const uk=JSON.stringify([W.upg,W.store,W.paint]); if(uk!==lastUpg){ lastUpg=uk; relayout(); updateYard(); }
   if(train.userData.railStack) train.userData.railStack.forEach((r,i)=>r.visible=i<W.rails); if(train.userData.cargo) train.userData.cargo.forEach((c,i)=>c.visible=!!W.delivery&&i<2); }
 function nextBreak(){ let best=null,bd=1e9; W.breaks.forEach((b,i)=>{ if(b.fixed) return; const d=ahead(S.trainS+14,BREAKS[i]); if(d<bd){ bd=d; best=i; } }); return best==null?null:{i:best,d:bd}; }
 // gnawers
@@ -489,6 +513,7 @@ function step(){
     if(upP||dnP){ shopSel=clamp(shopSel+(dnP?1:-1),0,shopRows.length-1); renderShop(); }
     if((lfP||rtP)&&shopRows[shopSel]?.t==='paint') shopAct(shopRows[shopSel],rtP?1:-1);
     if(useP||tapped.Enter||tapped.NumpadEnter) shopAct(shopRows[shopSel]);
+    if((tapped.KeyQ||e('q',!!n.square))&&shopRows[shopSel]?.t==='up'&&UPG[shopRows[shopSel].k].car&&W.upg[shopRows[shopSel].k]&&atYard()) shopAct({t:'store',k:shopRows[shopSel].k});
     if((n.circle&&!step.pcir)||tapped.Escape) toggleShop(); }
   let prompt='';
   if(S.started){
@@ -514,6 +539,10 @@ function step(){
         W.breaks.forEach((b,i)=>{ if(b.fixed) return; const o=breakObjs[i]; if(Math.hypot(me.gx-o.x,me.gz-o.z)<2.6) prompt=W.rails>0?`HOLD [E] to repair the track · ${Math.round(b.prog*100)}% · rails left ${W.rails}`:'No rails in the material car! Restock at a connected station'; });
         CRATES.forEach((c,i)=>{ if(W.crates[i]) return; if(Math.hypot(me.gx-c.x,me.gz-c.z)<1.8){ prompt='[E] grab the scrap crate'; if(useP){ if(net.role==='host') takeCrate(i,0); else net.conn.send({t:'crate',i}); } } });
         PARTS.forEach((pt,i)=>{ if(W.parts[pt.k]) return; if(Math.hypot(me.gx-pt.x,me.gz-pt.z)<2){ prompt=`[E] take the ${pt.name}`; if(useP){ if(net.role==='host') takePart(i,0); else net.conn.send({t:'part',i}); } } });
+        { const lq=yardG.worldToLocal(new THREE.Vector3(me.gx,0,me.gz)); for(const c of CARS){ if(!yardShown[c]) continue; if(Math.abs(lq.x-YARD.SIDING_X)<3.3&&Math.abs(lq.z-YARD.SLOT_Z[c])<3.3){ const U=UPG[c], st=W.store[c], E=padActive?'✕':'E';
+          if(!atYard()) prompt=`Stop the train in the Yard first`;
+          else if(st){ prompt=`[${E}] Attach the ${U.name} to your train`; if(useP) sendAct('attach',c); }
+          else { const why=canBuy(c); prompt=why==='scrap'?`${U.name} · ${U.cost[1]} scrap (you have ${W.scrap})`:`[${E}] Buy the ${U.name} · ${U.cost[1]} scrap`; if(useP&&!why) sendAct('buy',c); } } } }
         if(attack){ swing=1; A.step(); if(net.role==='host') whack(0); else net.conn.send({t:'whack'}); }
         if(!prompt&&W.gn.length) prompt=padActive?'R2 whack gnawers':'Click to whack gnawers';
       }
@@ -572,7 +601,8 @@ const shopOpen=()=>$('shop').style.display==='block'; let shopSel=0, shopRows=[]
 function toggleShop(){ const sh=$('shop'); if(shopOpen()){ sh.style.display='none'; if(!padActive) try{ renderer.domElement.requestPointerLock(); }catch(e){} return; }
   sh.style.display='block'; document.exitPointerLock&&document.exitPointerLock(); renderShop(); }
 function shopAct(r,dir=1){ if(!r) return; const send=(m,f)=>{ if(net.role==='host') f(); else net.conn.send(m); };
-  if(r.t==='up'){ if(canBuy(r.k)){ A.dry(); return; } send({t:'buy',k:r.k},()=>buy(r.k)); }
+  if(r.t==='up'){ if(W.store[r.k]){ if(atYard()) sendAct('attach',r.k); else A.dry(); } else if(canBuy(r.k)){ A.dry(); return; } else sendAct('buy',r.k); }
+  if(r.t==='store'){ sendAct('store',r.k); }
   if(r.t==='craft') send({t:'craft',k:r.k},()=>craft(r.k));
   if(r.t==='paint'){ if(!atYard()){ A.dry(); return; } const i=(W.paint+dir+PAINTS.length)%PAINTS.length; send({t:'paint',i},()=>setPaint(i)); }
   setTimeout(renderShop,250); }
@@ -585,8 +615,11 @@ function renderShop(){ $('shopScrap').textContent=W.scrap; $('shopRoom').innerHT
       return `<div class="up${sel}" data-i="${i}"><div class="ic">${am?'🧨':'🎯'}</div><div class="tx"><b>Craft ${am?'ammo +40':'a missile'}</b><br><small>${info}${cc?'':' · <span class="need">craft at the Yard, or buy the workshop car</span>'}</small></div><button ${ok&&cc?'':'disabled'}>${am?ammoCost():25} 🔩</button></div>`; }
     if(r.t==='paint') return `<div class="up${sel}" data-i="${i}"><div class="ic">🎨</div><div class="tx"><b>Paint</b> <small>${PAINTS[W.paint][0]}</small><br><small>${yard?'free · ← → to change':'only at the Yard'}</small></div><div>${PAINTS.map((p,j)=>`<span class="sw" data-p="${j}" style="background:#${p[1].toString(16).padStart(6,'0')};${W.paint===j?'outline:3px solid #ffcf6a':''}"></span>`).join('')}</div></div>`;
     const u=UPG[r.k], l=W.upg[r.k], why=canBuy(r.k), n=l+1, max=n>u.max, pips='●'.repeat(l-(u.min||0))+'○'.repeat(u.max-l), need=!max&&u.need&&u.need[n]?PARTS.find(p=>p.k===u.need[n]):null;
-    return `<div class="up${sel}" data-i="${i}"><div class="ic">${u.icon}</div><div class="tx"><b>${u.name}</b> <span class="pips">${pips}</span><br><small>Now: ${u.lv[l]}</small><br>${max?'<small class="nx">⭐ Fully upgraded!</small>':`<small class="nx">Next: ${u.lv[n]}</small>${need?` <small class="${W.parts[need.k]?'nx':'need'}">· needs ${need.name}${W.parts[need.k]?' ✓':` (behind ${STATIONS[need.st].name})`}</small>`:''}`}</div><button ${why?'disabled':''}>${max?'MAX':(u.car&&!l?'ATTACH ':'')+u.cost[n]+' 🔩'}</button></div>`; }).join('');
-  $('shopList').querySelectorAll('.up').forEach(d=>{ const i=+d.dataset.i; d.onmouseenter=()=>{ shopSel=i; d.parentNode.querySelectorAll('.up').forEach(x=>x.classList.toggle('sel',x===d)); }; const b=d.querySelector('button'); if(b) b.onclick=()=>{ shopSel=i; shopAct(shopRows[i]); }; });
+    const stored=u.car&&W.store[r.k];
+    if(stored) return `<div class="up${sel}" data-i="${i}"><div class="ic">${u.icon}</div><div class="tx"><b>${u.name}</b> <span class="pips">${'●'.repeat(stored)+'○'.repeat(u.max-stored)}</span><br><small>🅿️ Parked in the Yard (level ${stored})</small></div><button ${yard?'':'disabled'}>ATTACH</button></div>`;
+    const stBtn=u.car&&l>0&&yard?`<button class="stb" style="margin-right:6px;border-color:#5a6a7a;background:#141a24;color:#c8d4e0">STORE</button>`:'';
+    return `<div class="up${sel}" data-i="${i}"><div class="ic">${u.icon}</div><div class="tx"><b>${u.name}</b> <span class="pips">${pips}</span><br><small>Now: ${u.lv[l]}</small><br>${max?'<small class="nx">⭐ Fully upgraded!</small>':`<small class="nx">Next: ${u.lv[n]}</small>${need?` <small class="${W.parts[need.k]?'nx':'need'}">· needs ${need.name}${W.parts[need.k]?' ✓':` (behind ${STATIONS[need.st].name})`}</small>`:''}`}</div>${stBtn}<button class="bb" ${why?'disabled':''}>${max?'MAX':(u.car&&!l?'ATTACH ':'')+u.cost[n]+' 🔩'}</button></div>`; }).join('');
+  $('shopList').querySelectorAll('.up').forEach(d=>{ const i=+d.dataset.i; d.onmouseenter=()=>{ shopSel=i; d.parentNode.querySelectorAll('.up').forEach(x=>x.classList.toggle('sel',x===d)); }; const bs=d.querySelectorAll('button'); bs.forEach(b=>b.onclick=()=>{ shopSel=i; shopAct(b.classList.contains('stb')?{t:'store',k:shopRows[i].k}:shopRows[i]); }); });
   $('shopList').querySelectorAll('.sw').forEach(sw=>sw.onclick=()=>{ if(!atYard()) return; const j=+sw.dataset.p; if(net.role==='host') setPaint(j); else net.conn.send({t:'paint',i:j}); setTimeout(renderShop,250); });
   $('shopList').querySelector('.sel')?.scrollIntoView({block:'nearest'}); }
 $('shopClose').onclick=()=>toggleShop();
@@ -672,6 +705,7 @@ function render(){
     const inv=`🔩 ${W.scrap} &nbsp; 🛤️ ${W.stations.filter(Boolean).length}/25`+(W.upg.gun?` &nbsp; 🔫 ${W.ammo}`:'')+` &nbsp; 🪵 ${W.rails}/${maxRails()}`+(W.upg.launcher?` &nbsp; 🚀 ${W.missiles}`:'');
     if($('inv').innerHTML!==inv) $('inv').innerHTML=inv;
     $('boss').style.display=W.boss.on?'block':'none'; if(W.boss.on){ $('bossBar').style.width=clamp(W.boss.hp/W.boss.max*100,0,100)+'%'; $('bossPh').textContent='PHASE '+W.boss.phase+' / 3'; } }
+  yardTrain.visible=camera.position.distanceTo(yardG.position)<200;
   audioFrame();
   renderer.render(scene,camera);
 }
@@ -689,5 +723,5 @@ function audioFrame(){ if(!S.started) return; const dt=1/60;
   let ten=0; if(W.mon.on) ten=Math.max(ten,clamp(1-gap/80,.35,1)); if(W.rj.on) ten=Math.max(ten,W.rj.ph==='tremor'?.7:.95); if(W.gn.length) ten=Math.max(ten,.6); if(W.boss.on) ten=1;
   A.update(dt,{tension:ten,quake:W.rj.on&&W.rj.ph==='tremor'?.8:W.rj.on&&W.rj.ph==='up'&&W.rj.t<1.5?.6:0,region:regionAt(S.trainS),boss:W.boss.on}); }
 (function loop(now=performance.now()){ acc+=Math.min(250,now-last); last=now; while(acc>=1000/60){ step(); acc-=1000/60; } render(); requestAnimationFrame(loop); })();
-window.__rails={startBoss,bossDamage,A,S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy,WALK,SEATS,get REAR(){ return REAR; },train,relayout,inside,collide,groundH,COLL,OBOX,hgt,BLK};
+window.__rails={startBoss,bossDamage,A,S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy,WALK,SEATS,yardG,yardShown,attachCar,storeCar,get REAR(){ return REAR; },train,relayout,inside,collide,groundH,COLL,OBOX,hgt,BLK};
 </script></body></html>
