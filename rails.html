@@ -100,6 +100,7 @@ import {makeRattlejaw,makeGnawer} from './monsters.js';
 import {A} from './rails_audio.js';
 import {buildYard,YARD,slotSign} from './yard.js';
 import {Crew,OUTFITS} from './chars.js';
+import {planIsland,islandH,buildIsland,SEA_Y} from './island.js';
 const $=id=>document.getElementById(id);
 NetLink.setPrefix('pdw-webgames-rails-');
 const COLORS=['#e8b24a','#4ab0e8','#e85a4a','#7ae84a'];
@@ -116,8 +117,8 @@ const scene=new THREE.Scene(); scene.background=new THREE.Color(0x1a1f2e); scene
 const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.05,500);
 addEventListener('resize',()=>{ renderer.setSize(innerWidth,innerHeight); camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); });
 const std=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.9,...o});
-const hemi=new THREE.HemisphereLight(0x7a88b8,0x2a2018,.9); scene.add(hemi);
-const moon=new THREE.DirectionalLight(0xb0c4ff,1.4); moon.castShadow=true; moon.shadow.mapSize.set(2048,2048); Object.assign(moon.shadow.camera,{left:-45,right:45,top:45,bottom:-45,far:160}); scene.add(moon,moon.target);
+const hemi=new THREE.HemisphereLight(0x8a98c8,0x3a3024,1.25); scene.add(hemi);
+const moon=new THREE.DirectionalLight(0xb0c4ff,1.8); moon.castShadow=true; moon.shadow.mapSize.set(2048,2048); Object.assign(moon.shadow.camera,{left:-45,right:45,top:45,bottom:-45,far:160}); scene.add(moon,moon.target);
 const R=(()=>{ let s=99; return ()=>{ s=(s*16807)%2147483647; return s/2147483647; }; })();
 // a long wiggly loop (~2.7 km)
 const ctrl=[]; for(let i=0;i<22;i++){ const a=i/22*Math.PI*2, r=420+Math.sin(i*1.7)*70+Math.cos(i*2.9)*45; ctrl.push([Math.cos(a)*r,Math.sin(a)*r*.85]); }
@@ -129,10 +130,11 @@ const regionAt=s=>Math.min(4,Math.floor((((s/TL)%1+1)%1)*5));
 const tpts=curve.getSpacedPoints(500), tptsU=tpts.map((_,i)=>i/500);
 function trackDist(x,z){ let d=1e9,u=0; for(let i=0;i<tpts.length;i+=2){ const q=tpts[i], dd=(q.x-x)**2+(q.z-z)**2; if(dd<d){ d=dd; u=tptsU[i]; } } return [Math.sqrt(d),u]; }
 const SP25=TL/25;
+const PLAN=planIsland({curve,TL,trackDist});   // lakes, river, tunnel, caves, villages, landmarks…
 // distance along the track to the nearest station, and whether it's the Yard
 function stationNear(u){ const s=u*TL, m=((s%SP25)+SP25)%SP25, ds=Math.min(m,SP25-m), yard=Math.round(s/SP25)%25===0; return [ds,yard]; }
 function hgt(x,z){ const [d,u]=trackDist(x,z), [ds,yard]=stationNear(u), flat=8+(1-clamp((ds-14)/16,0,1))*(yard?26:16);
-  return (Math.sin(x*.03)*3+Math.cos(z*.025)*4+Math.sin((x+z)*.07)+Math.max(0,Math.sin(x*.008)*Math.cos(z*.01))*10)*clamp((d-flat)/30,0,1); }
+  return islandH(PLAN,x,z,Math.max(.25,Math.sin(x*.03)*3+Math.cos(z*.025)*4+Math.sin((x+z)*.07)+Math.max(0,Math.sin(x*.008)*Math.cos(z*.01))*10)*clamp((d-flat)/30,0,1)); }
 // ---- simple world colliders: circles (trees, rocks, posts) in a grid + oriented boxes (huts, sheds, platforms) ----
 const COLL=new Map(), CELL=16, ckey=(i,j)=>i*100003+j, OBOX=[];
 function addColl(x,z,r){ const k=ckey(Math.floor(x/CELL),Math.floor(z/CELL)); let L=COLL.get(k); if(!L) COLL.set(k,L=[]); L.push({x,z,r}); }
@@ -144,11 +146,11 @@ function collide(p,rad){ const i=Math.floor(p.x/CELL), j=Math.floor(p.z/CELL);
     if(Math.abs(lx)<ex&&Math.abs(lz)<ez){ if(ex-Math.abs(lx)<ez-Math.abs(lz)) lx=Math.sign(lx||1)*ex; else lz=Math.sign(lz||1)*ez; p.x=o.x+lx*o.c+lz*o.s; p.z=o.z-lx*o.s+lz*o.c; } } }
 // ground height for feet: terrain, or the top of a station platform
 function groundH(x,z){ let h=hgt(x,z); for(const o of OBOX){ if(!o.top) continue; const dx=x-o.x, dz=z-o.z; if(dx*dx+dz*dz>o.R*o.R) continue; const lx=dx*o.c-dz*o.s, lz=dx*o.s+dz*o.c; if(Math.abs(lx)<o.hx&&Math.abs(lz)<o.hz) h=Math.max(h,o.top); } return h; }
-{ const g=new THREE.PlaneGeometry(1500,1350,190,170); g.rotateX(-Math.PI/2); const p=g.attributes.position, col=[], c=new THREE.Color();
+{ const g=new THREE.PlaneGeometry(1800,1800,225,225); g.rotateX(-Math.PI/2); const p=g.attributes.position, col=[], c=new THREE.Color();
   for(let i=0;i<p.count;i++){ const x=p.getX(i), z=p.getZ(i); p.setY(i,hgt(x,z)); const [,u]=trackDist(x,z), ri=Math.min(4,Math.floor(u*5)), rn=(Math.min(4,ri+1)), f=(u*5)%1;
-    c.set(REGIONS[ri].ground).lerp(new THREE.Color(REGIONS[rn===5?4:rn].ground),Math.max(0,f-.8)*5); c.offsetHSL(0,0,(Math.random()-.5)*.03); col.push(c.r,c.g,c.b); }
+    c.set(REGIONS[ri].ground).lerp(new THREE.Color(REGIONS[rn===5?4:rn].ground),Math.max(0,f-.8)*5); const hy=p.getY(i), rr=Math.hypot(x,z), Rc=PLAN.coastR(Math.atan2(z,x)); if(hy<.9&&rr>Rc-75) c.lerp(new THREE.Color(0x8a7a5a),clamp((.9-hy)/1.2,0,1)); if(hy<-.2) c.lerp(new THREE.Color(0x2e2a22),clamp(-hy/2,0,.8)); c.offsetHSL(0,0,(Math.random()-.5)*.03); col.push(c.r,c.g,c.b); }
   g.setAttribute('color',new THREE.Float32BufferAttribute(col,3)); g.computeVertexNormals(); const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1})); m.receiveShadow=true; scene.add(m);
-  const sea=new THREE.Mesh(new THREE.PlaneGeometry(4000,4000),std(0x0d1828,{roughness:.3,metalness:.3})); sea.rotation.x=-Math.PI/2; sea.position.y=-3; scene.add(sea); }
+  const sea=new THREE.Mesh(new THREE.PlaneGeometry(4000,4000),std(0x13222c,{roughness:.2,metalness:.4})); sea.rotation.x=-Math.PI/2; sea.position.y=SEA_Y; scene.add(sea); }
 // sleepers + rails
 { const n=Math.floor(TL/1.1), sl=new THREE.InstancedMesh(new THREE.BoxGeometry(3.4,.2,.5),std(0x3a2a1c),n), m4=new THREE.Matrix4(), q=new THREE.Quaternion(), f=new THREE.Vector3(0,0,1), one=new THREE.Vector3(1,1,1);
   for(let i=0;i<n;i++){ const u=i/n, p=curve.getPointAt(u), t=curve.getTangentAt(u); q.setFromUnitVectors(f,t); p.y=.1; sl.setMatrixAt(i,m4.compose(p,q,one)); }
@@ -157,12 +159,12 @@ function groundH(x,z){ let h=hgt(x,z); for(const o of OBOX){ if(!o.top) continue
     scene.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,true),3200,.08,5,true),std(0x8a8f98,{metalness:.8,roughness:.35}))); } }
 // trees, rocks, region props
 { const tg=new THREE.CylinderGeometry(.15,.45,1,6), bg=new THREE.CylinderGeometry(.04,.12,1,5), trees=new THREE.InstancedMesh(tg,std(0xffffff),1400), br=new THREE.InstancedMesh(bg,std(0xffffff),5000), m4=new THREE.Matrix4(), q=new THREE.Quaternion(), e=new THREE.Euler(), c=new THREE.Color(); let nt=0,nb=0;
-  for(let k=0;k<6000&&nt<1400;k++){ const x=(R()-.5)*1400, z=(R()-.5)*1250, [d,u]=trackDist(x,z); if(d<9) continue; const [sd,yd]=stationNear(u); if(sd<24&&d<(yd?34:24)) continue; const reg=REGIONS[Math.min(4,Math.floor(u*5))]; if(R()>reg.trees*.35) continue; const h=5+R()*10; addColl(x,z,.45);
+  for(let k=0;k<6000&&nt<1400;k++){ const x=(R()-.5)*1400, z=(R()-.5)*1250, [d,u]=trackDist(x,z); if(d<9) continue; const [sd,yd]=stationNear(u); if(sd<24&&d<(yd?34:24)) continue; if(PLAN.blocked(x,z)||hgt(x,z)<-.2) continue; const reg=REGIONS[Math.min(4,Math.floor(u*5))]; if(R()>reg.trees*.35) continue; const h=5+R()*10; addColl(x,z,.45);
     e.set((R()-.5)*.2,0,(R()-.5)*.2); q.setFromEuler(e); trees.setMatrixAt(nt,m4.compose(new THREE.Vector3(x,hgt(x,z)+h/2,z),q,new THREE.Vector3(1,h,1))); trees.setColorAt(nt++,c.set(reg.tree));
     for(let b=0;b<4&&nb<5000;b++){ e.set(R()*1.2+.4,R()*6.3,0); q.setFromEuler(e); br.setMatrixAt(nb,m4.compose(new THREE.Vector3(x,hgt(x,z)+h*(.5+R()*.45),z),q,new THREE.Vector3(1,2+R()*2,1))); br.setColorAt(nb++,c.set(reg.tree)); } }
   trees.count=nt; br.count=nb; trees.castShadow=br.castShadow=true; scene.add(trees,br);
   const rk=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1,0),std(0xffffff,{flatShading:true}),500); let nr=0;
-  for(let k=0;k<3000&&nr<500;k++){ const x=(R()-.5)*1400, z=(R()-.5)*1250, [d,u]=trackDist(x,z); if(d<8) continue; const [sd,yd]=stationNear(u); if(sd<24&&d<(yd?34:24)) continue; const ri=Math.min(4,Math.floor(u*5)); if(R()>(ri===2||ri===4?.6:.12)) continue; const s=.6+R()*(ri===2?5:2.5); if(d<9+s*1.1) continue; addColl(x,z,s*.85);
+  for(let k=0;k<3000&&nr<500;k++){ const x=(R()-.5)*1400, z=(R()-.5)*1250, [d,u]=trackDist(x,z); if(d<8) continue; const [sd,yd]=stationNear(u); if(sd<24&&d<(yd?34:24)) continue; if(PLAN.blocked(x,z)||hgt(x,z)<-.2) continue; const ri=Math.min(4,Math.floor(u*5)); if(R()>(ri===2||ri===4?.6:.12)) continue; const s=.6+R()*(ri===2?5:2.5); if(d<9+s*1.1) continue; addColl(x,z,s*.85);
     e.set(R()*3,R()*3,R()*3); q.setFromEuler(e); rk.setMatrixAt(nr,m4.compose(new THREE.Vector3(x,hgt(x,z)+s*.2,z),q,new THREE.Vector3(s,s*.7,s))); rk.setColorAt(nr++,c.set(ri===4?0x5a2a20:0x4a4a52)); }
   rk.count=nr; rk.castShadow=true; scene.add(rk); }
 // the train
@@ -186,7 +188,7 @@ const STATIONS=NAMES.map((name,i)=>({name,s:i/25*TL,region:Math.floor(i/5)}));
 const BREAKS=[]; for(let i=1;i<25;i++){ BREAKS.push((i-.5)/25*TL); if(i%3===0) BREAKS.push((i-.25)/25*TL); } BREAKS.push(24.5/25*TL);
 const BOSSB=BREAKS.length; BREAKS.push(0);   // a spare break Rattlejaw tears open during the boss fight
 const CRATES=[]; { const RR=(()=>{ let s=7; return ()=>{ s=(s*16807)%2147483647; return s/2147483647; }; })();
-  for(let i=0;i<50;i++){ const s=(i/50)*TL+20+RR()*25, {p,t}=trackPos(s), m=((s%(TL/25))+TL/25)%(TL/25), nearSt=Math.min(m,TL/25-m)<16; let side=RR()<.5?-1:1; if(nearSt) side=-1; const off=side*(4.5+RR()*3.5); CRATES.push({x:p.x+t.z*off,z:p.z-t.x*off}); } }
+  for(let i=0;i<50;i++){ const s=(i/50)*TL+20+RR()*25, {p,t}=trackPos(s), m=((s%(TL/25))+TL/25)%(TL/25), nearSt=Math.min(m,TL/25-m)<16; let side=RR()<.5?-1:1; if(nearSt) side=-1; const off=side*(4.5+RR()*3.5); CRATES.push({x:p.x+t.z*off,z:p.z-t.x*off}); } CRATES.push(...PLAN.extraCrates); }
 // hidden parts (found on foot behind a station)
 const PARTS=[{k:'spring',name:'Gun spring',st:3},{k:'rocket',name:'Rocket parts',st:7},{k:'barrel',name:'Long gun barrel',st:11},{k:'chip',name:'Missile guidance chip',st:16},{k:'scope',name:'Brass gun scope',st:19}].map(p=>{ const {p:q,t}=trackPos(STATIONS[p.st].s); const n=new THREE.Vector3(-t.z,0,t.x); return {...p,x:q.x+n.x*13,z:q.z+n.z*13}; });
 // every train part: levels, prices (to reach that level), hidden parts needed, what each level does
@@ -251,6 +253,7 @@ function updateYard(){ const u={...W.upg}; for(const c of CARS){ const st=W.stor
     const sg=yardSigns[c], U=UPG[c]; sg.visible=shown; if(st) sg.userData.draw(U.name.toUpperCase(),'stored · level '+st,'#7dffa8'); else if(!own) sg.userData.draw(U.name.toUpperCase(),'for sale · '+U.cost[1]+' scrap','#ffcf6a'); }
   yardTrain.userData.paintMat?.color.set(PAINTS[W.paint]?.[1]??PAINTS[0][1]); }
 updateYard();
+const ISL=buildIsland({scene,plan:PLAN,hgt,addColl,addBox,trackDist}); ISL.finish();
 function lightStation(i){ for(const l of stationLamps) if(l.i===i){ l.bulb.material.color.set(0xffcf7a); l.pool.material.opacity=.18; } }
 // ---- broken track ----
 const breakObjs=BREAKS.map(s=>{ const {p,t}=trackPos(s), g=new THREE.Group(); g.position.set(p.x,0,p.z); g.rotation.y=Math.atan2(t.x,t.z); scene.add(g);
@@ -546,7 +549,7 @@ function step(){
         if(door){ if(S.v>2) prompt='Too fast to jump off! Ask the driver to slow down'; else { prompt='[E] step off the train'; if(useP){ const w=new THREE.Vector3(door.x*2.1,0,door.z).applyMatrix4(train.matrixWorld); me.mode='ground'; me.gx=w.x; me.gz=w.z; me.yaw+=trainYaw(); A.step(); } } }
         if(BENCH&&Math.hypot(me.x-BENCH.x,me.z-BENCH.z)<1.2){ prompt='[E] workbench: craft ammo & missiles'+(atYard()?' · UPGRADES (you are at the Yard)':''); if(useP) toggleShop(); }
       } else {
-        me.gx+=mv.x*sp; me.gz+=mv.z*sp; { const q={x:me.gx,z:me.gz}; collide(q,.35); me.gx=q.x; me.gz=q.z; }
+        { const ox=me.gx, oz=me.gz; me.gx+=mv.x*sp; me.gz+=mv.z*sp; const q={x:me.gx,z:me.gz}; collide(q,.35); me.gx=q.x; me.gz=q.z; if(groundH(me.gx,me.gz)<-1.25){ me.gx=ox; me.gz=oz; } }
         const lp=train.worldToLocal(new THREE.Vector3(me.gx,0,me.gz)); const hw=lp.z>7.9?2.15:1.95; if(Math.abs(lp.x)<hw&&lp.z>REAR-.3&&lp.z<15.4){ lp.x=Math.sign(lp.x||1)*hw; const w=train.localToWorld(lp); me.gx=w.x; me.gz=w.z; }
         if(Math.abs(lp.x)<2.6&&lp.z>REAR&&lp.z<7.5){ if(S.v>2) prompt='The train is moving!'; else { prompt='[E] climb back aboard'; if(useP){ me.mode='train'; me.x=clamp(lp.x,-1.2,1.2); me.z=clamp(lp.z,REAR+.5,6.8); if(!inside(me.x,me.z)) me.x=0; if(!inside(me.x,me.z)){ me.x=0; me.z=5.0; } me.yaw-=trainYaw(); A.step(); } } }
         W.breaks.forEach((b,i)=>{ if(b.fixed) return; const o=breakObjs[i]; if(Math.hypot(me.gx-o.x,me.gz-o.z)<2.6) prompt=W.rails>0?`HOLD [E] to repair the track · ${Math.round(b.prog*100)}% · rails left ${W.rails}`:'No rails in the material car! Restock at a connected station'; });
@@ -654,7 +657,7 @@ function render(){
   const u=((S.trainS/TL)%1+1)%1, p=curve.getPointAt(u), t=curve.getTangentAt(u);
   train.position.set(p.x,.25,p.z); train.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),t); train.updateMatrixWorld();
   moon.position.copy(train.position).add(new THREE.Vector3(-30,45,15)); moon.target.position.copy(train.position);
-  const reg=REGIONS[regionAt(S.trainS)]; fogC.set(reg.fog); scene.fog.density=lerp(scene.fog.density,[.022,.016,.012][W.upg.light]||.022,.02); scene.fog.color.lerp(fogC,.02); scene.background.lerp(fogC,.02);
+  const reg=REGIONS[regionAt(S.trainS)]; fogC.set(reg.fog); scene.fog.density=lerp(scene.fog.density,[.018,.014,.011][W.upg.light]||.018,.02); scene.fog.color.lerp(fogC,.02); scene.background.lerp(fogC,.02);
   if(GUN){ GUN.rotation.y=S.gunYaw; GUN.rotation.x=-S.gunPitch; }
   W.breaks.forEach((b,i)=>{ const o=breakObjs[i]; o.bad.visible=!b.fixed; o.good.visible=b.fixed; o.ring.material.opacity=.5+Math.sin(performance.now()/200)*.3; o.ring.scale.setScalar(1+(b.prog||0)*.5); });
   crateObjs.forEach((g,i)=>{ g.visible=!W.crates[i]; });
@@ -701,6 +704,7 @@ function render(){
   if(shake>.01){ eye.add(new THREE.Vector3((Math.random()-.5)*shake*.3,(Math.random()-.5)*shake*.3,(Math.random()-.5)*shake*.3)); shake*=.9; }
   if(shopOpen()){ const mid=(REAR+14)/2, R=(14-REAR)/2+9, a=performance.now()/9000; eye=new THREE.Vector3(Math.sin(a)*R,4.5+R*.12,mid+Math.cos(a)*R).applyMatrix4(train.matrixWorld); look=new THREE.Vector3(0,1.8,mid).applyMatrix4(train.matrixWorld).sub(eye).normalize();
     if((shopT=(shopT+1)%30)===0) renderShop(); }
+  if(window.__cam){ const [ex,ey,ez,tx,ty,tz]=window.__cam; eye=new THREE.Vector3(ex,ey,ez); look=new THREE.Vector3(tx-ex,ty-ey,tz-ez).normalize(); }   // test camera
   camera.position.copy(eye); camera.up.copy(up); camera.lookAt(eye.clone().add(look)); myLamp.position.copy(eye).add(new THREE.Vector3(0,-.3,0));
   wrench.visible=me.mode==='ground'&&!shopOpen(); if(wrench.visible){ swing*=.85; wrench.position.set(.32,-.32+swing*.15,-.6); wrench.rotation.set(-.5-swing*1.4,0,-.3); }
   if(S.started&&Math.random()<.25+S.throttle*.5){ const s=smoke.find(s=>s.life<=0); if(s){ s.m.position.copy(new THREE.Vector3(0,5.2,12.3).applyMatrix4(train.matrixWorld)); s.m.scale.setScalar(.5); s.m.visible=true; s.life=3; } }
@@ -724,7 +728,7 @@ function render(){
     const inv=`🔩 ${W.scrap} &nbsp; 🛤️ ${W.stations.filter(Boolean).length}/25`+(W.upg.gun?` &nbsp; 🔫 ${W.ammo}`:'')+` &nbsp; 🪵 ${W.rails}/${maxRails()}`+(W.upg.launcher?` &nbsp; 🚀 ${W.missiles}`:'');
     if($('inv').innerHTML!==inv) $('inv').innerHTML=inv;
     $('boss').style.display=W.boss.on?'block':'none'; if(W.boss.on){ $('bossBar').style.width=clamp(W.boss.hp/W.boss.max*100,0,100)+'%'; $('bossPh').textContent='PHASE '+W.boss.phase+' / 3'; } }
-  yardTrain.visible=camera.position.distanceTo(yardG.position)<200;
+  yardTrain.visible=camera.position.distanceTo(yardG.position)<200; ISL.update(performance.now()/1000);
   audioFrame();
   renderer.render(scene,camera);
 }
@@ -742,5 +746,5 @@ function audioFrame(){ if(!S.started) return; const dt=1/60;
   let ten=0; if(W.mon.on) ten=Math.max(ten,clamp(1-gap/80,.35,1)); if(W.rj.on) ten=Math.max(ten,W.rj.ph==='tremor'?.7:.95); if(W.gn.length) ten=Math.max(ten,.6); if(W.boss.on) ten=1;
   A.update(dt,{tension:ten,quake:W.rj.on&&W.rj.ph==='tremor'?.8:W.rj.on&&W.rj.ph==='up'&&W.rj.t<1.5?.6:0,region:regionAt(S.trainS),boss:W.boss.on}); }
 (function loop(now=performance.now()){ acc+=Math.min(250,now-last); last=now; while(acc>=1000/60){ step(); acc-=1000/60; } render(); requestAnimationFrame(loop); })();
-window.__rails={startBoss,bossDamage,A,S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy,WALK,SEATS,yardG,avatars,yardShown,attachCar,storeCar,get REAR(){ return REAR; },train,relayout,inside,collide,groundH,COLL,OBOX,hgt,BLK};
+window.__rails={startBoss,bossDamage,A,S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy,WALK,SEATS,yardG,avatars,PLAN,ISL,camera,yardShown,attachCar,storeCar,get REAR(){ return REAR; },train,relayout,inside,collide,groundH,COLL,OBOX,hgt,BLK};
 </script></body></html>
