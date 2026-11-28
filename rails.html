@@ -32,8 +32,9 @@
  #feed{top:60px}
  #mission{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#0b0e16d8;border:1px solid #4a3a26;border-radius:4px;padding:8px 18px;text-align:center;min-width:420px;max-width:70vw}
  #mission .mt{font-size:11px;letter-spacing:3px;color:#c9a24a} #mMain{font-size:19px;color:#f0e8d8} #mSide{font-size:14px;color:#a8b8c8;margin-top:3px}
- #warn{position:absolute;left:50%;top:120px;transform:translateX(-50%);background:#5a0a06d8;color:#fff;padding:6px 16px;border-radius:4px;font-size:18px;display:none;animation:blink 1s infinite}
+ #warn{position:absolute;left:50%;top:150px;transform:translateX(-50%);background:#5a0a06d8;color:#fff;padding:6px 16px;border-radius:4px;font-size:18px;display:none;animation:blink 1s infinite}
  @keyframes blink{50%{opacity:.55}}
+ #boss{position:absolute;left:50%;top:92px;transform:translateX(-50%);width:min(560px,70vw);background:#1a0606d8;border:1px solid #8a2a1a;border-radius:4px;padding:6px 12px;display:none;color:#ffd0c0;font-size:15px}
  #stats{position:absolute;left:16px;bottom:20px;background:#000a;padding:10px 14px;border-radius:4px;font-size:16px;min-width:220px}
  #shop{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,92vw);background:#11151ef2;border:2px solid #c9a24a;border-radius:6px;padding:20px 24px;display:none;pointer-events:auto}
  .up{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid #2a2a2a} .up button{width:auto;margin:0;padding:8px 14px;font-size:16px;white-space:nowrap}
@@ -62,11 +63,18 @@
 <div id="hud"><div id="cross"></div><div id="prompt"></div><div id="tl"></div><div id="feed"></div>
   <div id="mission"><div class="mt">MISSION</div><div id="mMain"></div><div id="mSide"></div></div>
   <div id="warn"></div>
+  <div id="boss"><div style="display:flex;justify-content:space-between"><b>💀 RATTLEJAW</b><span id="bossPh"></span></div><div class="bar" style="height:16px"><i id="bossBar" style="background:linear-gradient(90deg,#8a0a06,#ff3a1a);width:100%"></i></div></div>
   <div id="stats"><div id="region" style="color:#c9a24a;letter-spacing:2px;font-size:13px;margin-bottom:4px"></div>🛤️ Stations <b id="stCount">1/25</b> &nbsp; 🔩 Scrap <b id="scrap">0</b><div id="inv" style="margin-top:6px;font-size:15px"></div><div style="margin-top:6px">TRAIN<div class="bar"><i id="hpBar" style="background:linear-gradient(90deg,#3ac05a,#9aef6a);width:100%"></i></div></div></div>
   <div id="shop"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:22px;color:#d9c08a">WORKBENCH</b><span>🔩 <b id="shopScrap">0</b></span></div><div id="shopList"></div><button id="shopClose" class="alt">CLOSE (Tab)</button></div>
   <div id="speed">THROTTLE<div class="bar"><i id="thrBar"></i></div><div style="margin-top:8px" id="spd">0 km/h</div></div>
   <div id="help">WASD move · mouse look · E use · Tab workbench · click whack (on foot) · Esc unlock mouse · controller: sticks, ✕ use, R2 fire/throttle, △ workshop</div>
   <div id="clickToPlay">CLICK TO PLAY</div></div>
+<div id="victory" class="screen"><div class="box" style="text-align:center">
+  <h1 style="font-size:40px">THE ISLAND IS SAVED</h1><div class="tag">Rattlejaw has been defeated and all 25 stations are connected.</div>
+  <div id="vStats" style="font-size:19px;line-height:1.8;text-align:left;display:inline-block"></div>
+  <div style="margin-top:18px;color:#9a8a70;letter-spacing:3px;font-size:12px">YOUR CREW</div><div id="vCrew" style="font-size:22px;margin:6px 0 4px"></div>
+  <div class="small">A game made for a brave young engineer 🚂</div>
+  <button onclick="document.getElementById('victory').style.display='none'">KEEP PLAYING (free play)</button></div></div>
 <script src="vendor/peerjs.min.js"></script>
 <script>window.SFX_NO_HINT=true;</script>
 <script src="sound.js"></script>
@@ -77,6 +85,7 @@
 import * as THREE from 'three';
 import {buildTrain,DECK,GUN_Z,GUN_SHIFT} from './train_model.js';
 import {makeRattlejaw,makeGnawer} from './monsters.js';
+import {A} from './rails_audio.js';
 const $=id=>document.getElementById(id);
 NetLink.setPrefix('pdw-webgames-rails-');
 const COLORS=['#e8b24a','#4ab0e8','#e85a4a','#7ae84a'];
@@ -146,6 +155,7 @@ const NAMES=['The Yard','Mill Station','Crow Farm','Haybale Halt','Windmill Junc
   'Scar Gate','Ashfield','Cinder Rock','Bone Valley','Rattlejaw Pit'];
 const STATIONS=NAMES.map((name,i)=>({name,s:i/25*TL,region:Math.floor(i/5)}));
 const BREAKS=[]; for(let i=1;i<25;i++){ BREAKS.push((i-.5)/25*TL); if(i%3===0) BREAKS.push((i-.25)/25*TL); } BREAKS.push(24.5/25*TL);
+const BOSSB=BREAKS.length; BREAKS.push(0);   // a spare break Rattlejaw tears open during the boss fight
 const CRATES=[]; { const RR=(()=>{ let s=7; return ()=>{ s=(s*16807)%2147483647; return s/2147483647; }; })();
   for(let i=0;i<50;i++){ const s=(i/50)*TL+20+RR()*25, {p,t}=trackPos(s), side=RR()<.5?-1:1, off=side*(4.5+RR()*5); CRATES.push({x:p.x+t.z*off,z:p.z-t.x*off}); } }
 // hidden parts (found on foot behind a station)
@@ -156,11 +166,13 @@ const UPG={engine:{name:'Engine',desc:'faster train',cost:[40,80,140,200]},armor
 const PAINTS=[['Forest green',0x3d4f3c],['Rust red',0x7a2a20],['Midnight blue',0x253a5a],['Coal black',0x22242a],['Mustard',0x9a7a22]];
 const W={stations:STATIONS.map((x,i)=>i===0),breaks:BREAKS.map(()=>({fixed:false,prog:0})),crates:CRATES.map(()=>false),parts:{},scrap:0,hp:100,ammo:120,missiles:0,rails:3,
   upg:{engine:0,armor:0,gun:0,repair:0,rails:0,launcher:0},paint:0,delivery:null,
-  mon:{on:false,s:0,hp:0,cd:60},rj:{on:false,ph:'',t:0,side:1,hp:0,cd:90,bite:0},gn:[]};
+  mon:{on:false,s:0,hp:0,cd:60},rj:{on:false,ph:'',t:0,side:1,hp:0,cd:90,bite:0},gn:[],
+  boss:{on:false,phase:0,hp:0,max:900,done:false},stats:{hollow:0,rj:0,gn:0,fix:0,del:0,t:0}};
+W.breaks[BOSSB].fixed=true;
 const maxHp=()=>100+W.upg.armor*40, maxRails=()=>3+W.upg.rails*2, maxAmmo=()=>120+W.upg.gun*60;
 const saveKey='rails-save-v2';
-function saveGame(){ if(net.role!=='host') return; localStorage.setItem(saveKey,JSON.stringify({stations:W.stations,breaks:W.breaks.map(b=>b.fixed),crates:W.crates,parts:W.parts,scrap:W.scrap,ammo:W.ammo,missiles:W.missiles,rails:W.rails,upg:W.upg,paint:W.paint,trainS:S.trainS})); }
-function loadGame(){ try{ const d=JSON.parse(localStorage.getItem(saveKey)); if(!d) return false; W.stations=d.stations; d.breaks.forEach((f,i)=>{ if(W.breaks[i]) W.breaks[i].fixed=f; }); Object.assign(W,{crates:d.crates,parts:d.parts||{},scrap:d.scrap,ammo:d.ammo,missiles:d.missiles,rails:d.rails,paint:d.paint||0}); Object.assign(W.upg,d.upg); S.trainS=d.trainS||0; return true; }catch(e){ return false; } }
+function saveGame(){ if(net.role!=='host') return; localStorage.setItem(saveKey,JSON.stringify({stations:W.stations,breaks:W.breaks.map(b=>b.fixed),crates:W.crates,parts:W.parts,scrap:W.scrap,ammo:W.ammo,missiles:W.missiles,rails:W.rails,upg:W.upg,paint:W.paint,trainS:S.trainS,bossDone:W.boss.done,stats:W.stats})); }
+function loadGame(){ try{ const d=JSON.parse(localStorage.getItem(saveKey)); if(!d) return false; W.stations=d.stations; d.breaks.forEach((f,i)=>{ if(W.breaks[i]) W.breaks[i].fixed=f; }); Object.assign(W,{crates:d.crates,parts:d.parts||{},scrap:d.scrap,ammo:d.ammo,missiles:d.missiles,rails:d.rails,paint:d.paint||0}); Object.assign(W.upg,d.upg); S.trainS=d.trainS||0; W.boss.done=!!d.bossDone; if(d.stats) Object.assign(W.stats,d.stats); W.breaks[BOSSB].fixed=true; return true; }catch(e){ return false; } }
 // ---- station models ----
 const stationLamps=[];
 STATIONS.forEach((st,i)=>{ const {p,t}=trackPos(st.s), g=new THREE.Group(); const n=new THREE.Vector3(t.z,0,-t.x);
@@ -186,6 +198,7 @@ const breakObjs=BREAKS.map(s=>{ const {p,t}=trackPos(s), g=new THREE.Group(); g.
   for(const k of [-.75,.75]){ const r=new THREE.Mesh(new THREE.BoxGeometry(.12,.16,4),std(0xd0d6de,{metalness:.9,roughness:.2})); r.position.set(k,.3,1); good.add(r); }
   const ring=new THREE.Mesh(new THREE.RingGeometry(1,1.25,24),new THREE.MeshBasicMaterial({color:0xffc84a,transparent:true,opacity:.8,side:THREE.DoubleSide})); ring.rotation.x=-Math.PI/2; ring.position.set(0,.4,1); bad.add(ring);
   return {g,bad,good,ring,x:p.x+t.x,z:p.z+t.z}; });
+function moveBreak(i,s){ BREAKS[i]=s; const {p,t}=trackPos(s), o=breakObjs[i]; o.g.position.set(p.x,0,p.z); o.g.rotation.y=Math.atan2(t.x,t.z); o.x=p.x+t.x; o.z=p.z+t.z; }
 // ---- crates and parts ----
 const crateObjs=CRATES.map(c=>{ const g=new THREE.Group(); const b=new THREE.Mesh(new THREE.BoxGeometry(.8,.6,.8),std(0x6a4a2a)); b.position.y=.3; g.add(b);
   const glow=new THREE.Mesh(new THREE.SphereGeometry(.16,8,6),new THREE.MeshBasicMaterial({color:0x7ad0ff})); glow.position.y=.95; g.add(glow); g.position.set(c.x,hgt(c.x,c.z),c.z); scene.add(g); return g; });
@@ -236,7 +249,7 @@ function broadcast(m){ for(const id in hostConns) hostConns[id].conn.send(m); }
 function feed(t,col){ const d=document.createElement('div'); d.textContent=t; if(col) d.style.color=col; $('feed').appendChild(d); setTimeout(()=>d.remove(),6000); while($('feed').children.length>5) $('feed').firstChild.remove(); }
 function announce(t,col){ feed(t,col); broadcast({t:'msg',text:t,col}); }
 function fx(k){ playFx(k); broadcast({t:'fx',k}); }
-function playFx(k){ if(k==='ram'){ shake=1; Sfx.thud(); Sfx.crash(); } if(k==='horn') Sfx.truckHorn(); if(k==='win') Sfx.win(); if(k==='boom'){ Sfx.thud(); shake=.6; } if(k==='fix') Sfx.clunk(); if(k==='quake'){ shake=.5; Sfx.thud(); } if(k==='roar'){ Sfx.crash(); Sfx.thud(); shake=1; } if(k==='bite'){ Sfx.crash(); shake=1.2; } if(k==='pick') Sfx.heart(); if(k==='hit') Sfx.boing(); }
+function playFx(k){ const F={ram:()=>{ shake=1; A.ram(); },horn:()=>A.whistle(),win:()=>A.fanfare(),boom:()=>{ A.boom(); shake=.6; },fix:()=>A.hammer(),quake:()=>{ shake=.5; },roar:()=>{ A.roar(); shake=1; },bite:()=>{ A.bite(); shake=1.2; },pick:()=>A.pickup(),hit:()=>A.splat(),ghost:()=>A.ghostHorn(.35),victory:()=>A.win(),phase:()=>{ A.roar(1); shake=1.5; }}; F[k]&&F[k](); }
 $('name').value=localStorage.getItem('rails-name')||'';
 if(localStorage.getItem(saveKey)) $('saveRow').style.display='block';
 const myName=()=>{ const n=($('name').value.trim()||'Engineer').slice(0,14); localStorage.setItem('rails-name',n); return n; };
@@ -273,10 +286,11 @@ function onHostMsg(m){
     for(const [id,mode,x,z,yaw,pitch,seat] of m.p){ const p=S.players[id]; if(!p) continue; if(id!==net.myId){ if(p.mode!==mode){ p.x=x; p.z=z; } p.mode=mode; p.tx=x; p.tz=z; p.yaw=yaw; p.pitch=pitch; } p.seat=seat; if(id===net.myId) me.seat=seat; }
     for(const f of m.f||[]) spawnTracer(f); for(const t of m.mf||[]) launchMissileFx(t);
     W.mon.on=m.mon[0]; W.mon.s=m.mon[1]; W.rj.on=m.rj[0]; W.rj.ph=m.rj[1]; W.rj.t=m.rj[2]; W.rj.side=m.rj[3]; W.gn=m.gn.map(([x,z,y])=>({x,z,yaw:y,alive:true})); }
-  if(m.t==='world'){ const prev=W.stations.slice(); Object.assign(W,m.w); W.stations.forEach((c,i)=>{ if(c&&!prev[i]) lightStation(i); }); applyPaint(); }
+  if(m.t==='world'){ const prev=W.stations.slice(); if(m.w.bb!=null&&m.w.bb!==BREAKS[BOSSB]) moveBreak(BOSSB,m.w.bb); delete m.w.bb; Object.assign(W,m.w); W.stations.forEach((c,i)=>{ if(c&&!prev[i]) lightStation(i); }); applyPaint(); }
   if(m.t==='msg') feed(m.text,m.col);
   if(m.t==='fx') playFx(m.k);
   if(m.t==='knock'){ knockedDown(); }
+  if(m.t==='victory') showVictory();
   if(m.t==='tp'){ me.mode='train'; me.seat=null; me.x=0; me.z=2; }
 }
 function showLobby(){ $('menu').style.display='none'; $('lobby').style.display='flex'; $('lobbyHint').textContent=net.role==='host'?'Friends open this page, type the code and press JOIN':'Waiting for the host to start…'; renderLobby(); }
@@ -294,7 +308,7 @@ $('startBtn').onclick=()=>{ if(net.role!=='host') return; broadcast({t:'start'})
 const atStation=i=>near(S.trainS,STATIONS[i].s)<22&&S.v<1;
 const atYard=()=>atStation(0);
 const nearAnyStation=r=>STATIONS.some(st=>near(S.trainS,st.s)<r);
-function pushWorld(){ broadcast({t:'world',w:{stations:W.stations,breaks:W.breaks,crates:W.crates,parts:W.parts,scrap:W.scrap,hp:W.hp,ammo:W.ammo,missiles:W.missiles,rails:W.rails,upg:W.upg,paint:W.paint,delivery:W.delivery,rjHp:W.rj.hp,monHp:W.mon.hp}}); }
+function pushWorld(){ broadcast({t:'world',w:{stations:W.stations,breaks:W.breaks,crates:W.crates,parts:W.parts,scrap:W.scrap,hp:W.hp,ammo:W.ammo,missiles:W.missiles,rails:W.rails,upg:W.upg,paint:W.paint,delivery:W.delivery,rjHp:W.rj.hp,monHp:W.mon.hp,boss:W.boss,stats:W.stats,bb:BREAKS[BOSSB]}}); }
 function hostSeat(id,k){ const p=S.players[id]; if(!p) return; if(k===null){ p.seat=null; return; }
   if(!SEATS[k]||Object.values(S.players).some(q=>q!==p&&q.seat===k)){ tell(id,'Someone is already there'); return; } p.seat=k; }
 function tell(id,text,col){ if(id===0) feed(text,col); else if(hostConns[id]) hostConns[id].conn.send({t:'msg',text,col}); }
@@ -308,11 +322,11 @@ function hostFire(id){ const now=performance.now(); if((fireCd[id]||0)>now) retu
   if(W.mon.on&&rayHit(o,d,hollow.position.clone().add(new THREE.Vector3(0,2.4,0)),2.6)) damageHollow(dmg);
   if(W.rj.on&&W.rj.ph==='up'&&rayHit(o,d,RJ.head.getWorldPosition(new THREE.Vector3()),3.4)) damageRattle(dmg);
   W.gn.forEach(g=>{ if(g.alive&&rayHit(o,d,new THREE.Vector3(g.x,hgt(g.x,g.z)+.5,g.z),.9)) killGnawer(g,id); }); }
-function damageHollow(d){ W.mon.hp-=d; if(W.mon.hp<=0){ W.mon.on=false; W.mon.cd=60+Math.random()*40; W.scrap+=25; announce('💥 The Hollow Engine is beaten back! +25 scrap','#ffcf6a'); fx('boom'); saveGame(); pushWorld(); } }
-function damageRattle(d){ W.rj.hp-=d; fx('hit'); if(W.rj.hp<=0){ W.rj.ph='dive'; W.rj.t=0; W.scrap+=45; announce('🐛 RATTLEJAW screams and dives underground! +45 scrap','#ffcf6a'); fx('roar'); saveGame(); pushWorld(); } }
+function damageHollow(d){ W.mon.hp-=d; if(W.mon.hp<=0){ W.mon.on=false; W.mon.cd=60+Math.random()*40; W.scrap+=25; W.stats.hollow++; announce('💥 The Hollow Engine is beaten back! +25 scrap','#ffcf6a'); fx('boom'); saveGame(); pushWorld(); } }
+function damageRattle(d){ if(W.boss.on){ bossDamage(d); return; } W.rj.hp-=d; fx('hit'); if(W.rj.hp<=0){ W.rj.ph='dive'; W.rj.t=0; W.scrap+=45; W.stats.rj++; announce('🐛 RATTLEJAW screams and dives underground! +45 scrap','#ffcf6a'); fx('roar'); saveGame(); pushWorld(); } }
 function fireMissile(id){ if(!W.upg.launcher){ tell(id,'You need to build the missile launcher at the Yard first'); return; } if(W.missiles<=0){ tell(id,'🚀 No missiles! Craft them at the workbench','#ff9a7a'); return; }
   const target=W.rj.on&&W.rj.ph==='up'?'rj':W.mon.on?'mon':null; if(!target){ tell(id,'No monster to aim at'); return; }
-  W.missiles--; S.mfire.push(target); launchMissileFx(target); setTimeout(()=>{ const dmg=W.parts.chip?60:40; if(target==='rj'&&W.rj.on&&W.rj.ph==='up') damageRattle(dmg); if(target==='mon'&&W.mon.on) damageHollow(dmg); fx('boom'); },900); pushWorld(); }
+  W.missiles--; S.mfire.push(target); launchMissileFx(target); setTimeout(()=>{ const dmg=(W.parts.chip?60:40)*(W.boss.on&&W.boss.phase===3?3:1); if(target==='rj'&&W.rj.on&&W.rj.ph==='up') damageRattle(dmg); if(target==='mon'&&W.mon.on) damageHollow(dmg); fx('boom'); },900); pushWorld(); }
 function takeCrate(i,id){ if(W.crates[i]) return; W.crates[i]=true; W.scrap+=10; announce('📦 '+(S.players[id]?.name||'Someone')+' found scrap +10','#9fe'); fx('pick'); saveGame(); pushWorld(); }
 function takePart(i,id){ const pt=PARTS[i]; if(W.parts[pt.k]) return; W.parts[pt.k]=true; announce(`⭐ ${S.players[id]?.name||'Someone'} found the ${pt.name.toUpperCase()}! Take it to the Yard workshop`,'#ffd27a'); fx('win'); saveGame(); pushWorld(); }
 function buy(k){ const u=UPG[k]; if(!u||!atYard()) return; const l=W.upg[k]; if(l>=u.cost.length) return; if(u.need&&!W.parts[u.need[l]]) return; if(W.scrap<u.cost[l]) return;
@@ -325,9 +339,9 @@ function applyPaint(){ const c=new THREE.Color(PAINTS[W.paint][1]).multiplyScala
 function nextBreak(){ let best=null,bd=1e9; W.breaks.forEach((b,i)=>{ if(b.fixed) return; const d=ahead(S.trainS+14,BREAKS[i]); if(d<bd){ bd=d; best=i; } }); return best==null?null:{i:best,d:bd}; }
 // gnawers
 function spawnGnawers(px,pz,n){ for(let k=0;k<n;k++){ if(W.gn.filter(g=>g.alive).length>=8) return; const a=Math.random()*6.28, r=14+Math.random()*6; W.gn.push({x:px+Math.cos(a)*r,z:pz+Math.sin(a)*r,yaw:0,alive:true,flee:0}); } }
-function killGnawer(g,id){ g.alive=false; W.scrap+=3; fx('hit'); if(Math.random()<.3) tell(id,'Gnawer squashed! +3 scrap','#9fe'); }
+function killGnawer(g,id){ g.alive=false; W.scrap+=3; W.stats.gn++; fx('hit'); if(Math.random()<.3) tell(id,'Gnawer squashed! +3 scrap','#9fe'); }
 function whack(id){ const p=S.players[id]; if(!p||p.mode!=='ground') return; for(const g of W.gn){ if(!g.alive) continue; const dx=g.x-p.x, dz=g.z-p.z, d=Math.hypot(dx,dz); if(d<2.2&&Math.cos(Math.atan2(dx,dz)-p.yaw)>.4){ killGnawer(g,id); return; } } }
-function knockedDown(){ me.mode='train'; me.seat=null; me.x=-.5; me.z=1.6; shake=1.2; Sfx.crash(); feed('😱 A gnawer knocked you down! You scrambled back onto the train.','#ff9a7a'); }
+function knockedDown(){ me.mode='train'; me.seat=null; me.x=-.5; me.z=1.6; shake=1.2; A.hurt(); feed('😱 A gnawer knocked you down! You scrambled back onto the train.','#ff9a7a'); }
 function hostWorldStep(){
   const ground=Object.values(S.players).filter(p=>p.mode==='ground');
   // repairs need rails from the material car
@@ -335,22 +349,25 @@ function hostWorldStep(){
     if(n){ if(W.rails<=0){ if(Math.random()<.01) announce('🪵 No rails left! Restock at any connected station','#ff9a7a'); return; }
       b.prog+=DT*(.16+W.upg.repair*.06)*(1+.6*(n-1)); if(Math.random()<.06) fx('fix');
       if(b.prog>.2&&!b.alarm&&regionAt(BREAKS[i])>=1){ b.alarm=true; const p=ground[0]; if(p) spawnGnawers(p.x,p.z,2+regionAt(BREAKS[i])); announce('🐀 The hammering woke the GNAWERS! Squash them (click) or guard with the gun','#ff9a7a'); }
-      if(b.prog>=1){ b.fixed=true; b.prog=1; W.rails--; W.scrap+=15; announce('🛤️ Track repaired! +15 scrap','#7dffa8'); fx('win'); saveGame(); pushWorld(); } } });
+      if(b.prog>=1){ b.fixed=true; b.prog=1; W.rails--; W.scrap+=15; W.stats.fix++; announce('🛤️ Track repaired! +15 scrap','#7dffa8'); fx('win'); saveGame(); pushWorld(); } } });
   // stations: slow down to connect; also restock rails + deliveries
   STATIONS.forEach((st,i)=>{ const d=near(S.trainS,st.s);
     if(!W.stations[i]&&d<22&&S.v<4.2){ W.stations[i]=true; W.scrap+=40; lightStation(i); announce(`🏁 ${st.name} connected! +40 scrap (${W.stations.filter(Boolean).length}/25)`,'#7dffa8'); fx('win');
       if(i%5===0&&i>0) announce(`🗺️ You reached ${REGIONS[st.region].name}!`,'#ffd27a'); saveGame(); pushWorld(); }
     if(W.stations[i]&&d<22&&S.v<1){ if(W.rails<maxRails()){ W.rails=maxRails(); announce('🪵 Rails restocked at '+st.name,'#9fe'); pushWorld(); }
-      if(W.delivery&&W.delivery.to===i){ W.scrap+=35; announce(`📦 Delivery complete at ${st.name}! +35 scrap`,'#7dffa8'); fx('win'); W.delivery=null; saveGame(); pushWorld(); }
+      if(W.delivery&&W.delivery.to===i){ W.scrap+=35; W.stats.del++; announce(`📦 Delivery complete at ${st.name}! +35 scrap`,'#7dffa8'); fx('win'); W.delivery=null; saveGame(); pushWorld(); }
       else if(!W.delivery&&i!==W.lastOffer){ W.lastOffer=i; const to=(i+2+Math.floor(Math.random()*3))%25; W.delivery={from:i,to}; announce(`📦 New delivery: carry crates from ${st.name} to ${STATIONS[to].name}`,'#9fe'); pushWorld(); } } });
   // the Hollow Engine (from station 3 on)
-  const M=W.mon, safe=nearAnyStation(30), cnt=W.stations.filter(Boolean).length;
-  if(!M.on){ if(cnt>=3&&S.v>2&&!safe){ M.cd-=DT; if(M.cd<=0){ M.on=true; M.s=S.trainS-85; M.hp=60+cnt*6; announce('⚠️ A horn in the fog… the HOLLOW ENGINE is behind you! Man the rear gun!','#ff7a6a'); fx('horn'); pushWorld(); } } }
+  const cnt=W.stations.filter(Boolean).length, M=W.mon, safe=nearAnyStation(30)&&!W.boss.on;
+  if(!M.on){ if(cnt>=3&&S.v>2&&!safe){ M.cd-=DT; if(M.cd<=0){ M.on=true; M.s=S.trainS-85; M.hp=60+cnt*6; announce('⚠️ A horn in the fog… the HOLLOW ENGINE is behind you! Man the rear gun!','#ff7a6a'); fx('ghost'); pushWorld(); } } }
   else { const gap=(S.trainS+REAR)-M.s; M.s+=(safe?-4:Math.max(S.v+1.8,7))*DT;
     if(safe&&gap>60){ M.on=false; M.cd=40; announce('The Hollow Engine fades back into the fog. Stations are safe.','#9fb4ff'); pushWorld(); }
     if(gap<1.5&&!safe){ W.hp-=18/(1+W.upg.armor*.35); M.s-=24; fx('ram'); announce('💥 RAMMED! The train took damage','#ff7a6a'); checkBreakdown(); pushWorld(); } }
+  // FINAL BOSS: all 25 stations connected -> stop at Rattlejaw Pit -> 3-phase battle
+  if(!W.boss.on&&!W.boss.done&&cnt===25&&near(S.trainS,STATIONS[24].s)<25&&S.v<1.5) startBoss();
+  if(W.boss.on){ bossStep(); }
   // RATTLEJAW (from station 8 on): tremor warning -> bursts out beside the train -> lunges -> dives
-  const J=W.rj;
+  const J=W.rj; if(W.boss.on){} else
   if(!J.on){ if(cnt>=8&&S.v>1&&!safe&&!M.on){ J.cd-=DT; if(J.cd<=0){ J.on=true; J.ph='tremor'; J.t=0; J.side=Math.random()<.5?-1:1; J.hp=110+cnt*5; J.bite=0; announce(`🌋 The ground is SHAKING… something huge is coming from the ${J.side<0?'LEFT':'RIGHT'}!`,'#ff7a6a'); fx('quake'); } } }
   else { J.t+=DT;
     if(J.ph==='tremor'){ if(Math.random()<.04) fx('quake'); if(J.t>4){ J.ph='up'; J.t=0; announce('🐛 RATTLEJAW! Shoot its glowing eyes!','#ff4a3a'); fx('roar'); } }
@@ -366,20 +383,37 @@ function hostWorldStep(){
   if(ground.length&&!atYard()&&regionAt(S.trainS)>=1&&Math.random()<DT/12){ const p=ground[Math.floor(Math.random()*ground.length)]; spawnGnawers(p.x,p.z,1+Math.floor(regionAt(S.trainS)/2)); announce('👀 Something is moving in the grass…','#ffb08a'); }
   if(atYard()&&W.hp<maxHp()) W.hp=Math.min(maxHp(),W.hp+20*DT);
 }
-function checkBreakdown(){ if(W.hp>0) return; W.hp=maxHp(); const lost=Math.floor(W.scrap*.2); W.scrap-=lost; S.trainS=STATIONS[0].s; S.v=0; S.throttle=0; W.mon.on=false; W.mon.cd=60; W.rj.on=false; W.rj.cd=90; W.gn=[];
+function startBoss(){ const B=W.boss; B.on=true; B.phase=1; B.hp=B.max; W.mon.on=false; W.gn=[]; const J=W.rj; J.on=true; J.ph='tremor'; J.t=0; J.side=1; J.bite=0;
+  announce('💀 FINAL BATTLE! RATTLEJAW AWAKENS IN ITS PIT! Keep the train moving, gun its eyes, fire missiles!','#ff4a3a'); fx('phase'); pushWorld(); }
+function bossDamage(d){ const B=W.boss; if(!B.on) return; B.hp-=d*(B.phase===3&&d<40?.7:1); fx('hit');
+  if(B.phase===1&&B.hp<B.max*.66){ B.phase=2; fx('phase'); announce('💢 PHASE 2: Rattlejaw tears up the track ahead and calls the HOLLOW ENGINE! Fix the track and hold it off!','#ff7a6a');
+    moveBreak(BOSSB,(S.trainS+14+45)%TL); W.breaks[BOSSB]={fixed:false,prog:0}; W.rails=Math.max(W.rails,1); W.mon.on=true; W.mon.s=S.trainS-70; W.mon.hp=90; pushWorld(); }
+  if(B.phase===2&&B.hp<B.max*.33){ B.phase=3; fx('phase'); if(W.upg.launcher) W.missiles=Math.max(W.missiles,3); announce('⚠️ PHASE 3: the GOLDEN WHISTLE is exposed on its head! Missiles do TRIPLE damage now!'+(W.upg.launcher?' (+3 missiles)':''),'#ffd27a'); pushWorld(); }
+  if(B.hp<=0){ B.hp=0; B.on=false; B.done=true; W.breaks[BOSSB]={fixed:true,prog:1}; W.rj.ph='dive'; W.rj.t=0; W.mon.on=false; W.scrap+=300; W.stats.rj++; fx('victory'); fx('phase');
+    announce('🏆 RATTLEJAW IS DEFEATED! THE ISLAND IS SAVED! +300 scrap','#ffd27a'); saveGame(); pushWorld(); broadcast({t:'victory'}); showVictory(); } }
+function bossStep(){ const J=W.rj, B=W.boss; if(!J.on){ J.on=true; J.ph='tremor'; J.t=0; } J.t+=DT;
+  if(J.ph==='tremor'){ if(J.t>2){ J.ph='up'; J.t=0; fx('roar'); } }
+  else if(J.ph==='up'){ J.bite+=DT; const every=B.phase===3?3.2:4; if(J.bite>every){ J.bite=0; W.hp-=(20+B.phase*4)/(1+W.upg.armor*.35); fx('bite'); announce('🦷 Rattlejaw BIT the train!','#ff7a6a'); checkBreakdown(); pushWorld(); }
+    if(J.t>13){ J.ph='dive'; J.t=0; } }
+  else if(J.ph==='dive'&&J.t>2){ J.ph='tremor'; J.t=0; J.side*=-1; announce(`🌋 It's coming up on the ${J.side<0?'LEFT':'RIGHT'}!`,'#ff9a7a'); } }
+function showVictory(){ const st=W.stats; $('victory').style.display='flex'; document.exitPointerLock&&document.exitPointerLock();
+  $('vStats').innerHTML=`🛤️ Stations connected: <b>25 / 25</b><br>🔧 Track repairs: <b>${st.fix}</b><br>📦 Deliveries: <b>${st.del}</b><br>👻 Hollow Engines beaten: <b>${st.hollow}</b><br>🐛 Rattlejaw fights won: <b>${st.rj}</b><br>🐀 Gnawers squashed: <b>${st.gn}</b>`;
+  $('vCrew').innerHTML=Object.values(S.players).map(p=>`<span style="color:${p.color}">${p.name}</span>`).join(' · '); A.win(); }
+function checkBreakdown(){ if(W.hp>0) return;
+  if(W.boss.on){ W.hp=maxHp(); S.v=0; shake=1; announce('🔧 The train nearly broke! The crew patched it up. Keep fighting!','#ffcf6a'); W.boss.hp=Math.min(W.boss.max,W.boss.hp+60); pushWorld(); return; } W.hp=maxHp(); const lost=Math.floor(W.scrap*.2); W.scrap-=lost; S.trainS=STATIONS[0].s; S.v=0; S.throttle=0; W.mon.on=false; W.mon.cd=60; W.rj.on=false; W.rj.cd=90; W.gn=[];
   for(const p of Object.values(S.players)){ p.mode='train'; p.seat=null; p.x=0; p.z=2; } me.mode='train'; me.seat=null; me.x=0; me.z=2; broadcast({t:'tp'});
   announce(`🚧 The train broke down and was towed back to the Yard (lost ${lost} scrap). Upgrade your shield plates!`,'#ffcf6a'); saveGame(); }
 function spawnTracer([gy,gp]){ const t=tracers.find(t=>t.life<=0); if(!t) return; train.updateMatrixWorld(); const muzzle=new THREE.Vector3(0,DECK+1.3,GUN_Z).applyMatrix4(train.matrixWorld);
   const dir=new THREE.Vector3(Math.sin(gy)*Math.cos(gp),Math.sin(gp),Math.cos(gy)*Math.cos(gp)).transformDirection(train.matrixWorld);
-  t.m.position.copy(muzzle).addScaledVector(dir,1.8); t.v.copy(dir).multiplyScalar(90); t.m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir); t.m.visible=true; t.life=.6; Sfx.clunk(); }
-function launchMissileFx(target){ const m=missiles.find(m=>!m.on); if(!m) return; train.updateMatrixWorld(); m.m.position.copy(new THREE.Vector3(0,DECK+3.8,6.2).applyMatrix4(train.matrixWorld)); m.on=true; m.t=0; m.target=target; m.m.visible=true; Sfx.truckHorn(); }
+  t.m.position.copy(muzzle).addScaledVector(dir,1.8); t.v.copy(dir).multiplyScalar(90); t.m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir); t.m.visible=true; t.life=.6; A.gun(); }
+function launchMissileFx(target){ const m=missiles.find(m=>!m.on); if(!m) return; train.updateMatrixWorld(); m.m.position.copy(new THREE.Vector3(0,DECK+3.8,6.2).applyMatrix4(train.matrixWorld)); m.on=true; m.t=0; m.target=target; m.m.visible=true; A.whoosh(); }
 
 // =====================================================================
 //  GAME LOOP
 // =====================================================================
 function beginGame(){ S.started=true; $('lobby').style.display='none'; $('hud').style.display='block'; $('clickToPlay').style.display='block';
   const p=S.players[myId()]; me.x=p?p.x:0; me.z=p?p.z:2; W.stations.forEach((c,i)=>{ if(c) lightStation(i); }); applyPaint();
-  feed('All aboard! Follow the MISSION at the top. Connect all 25 stations!','#ffcf6a'); Sfx.truckHorn(); if(net.role==='host') pushWorld(); }
+  feed('All aboard! Follow the MISSION at the top. Connect all 25 stations!','#ffcf6a'); A.whistle(); if(net.role==='host') pushWorld(); }
 $('clickToPlay').onclick=()=>renderer.domElement.requestPointerLock();
 renderer.domElement.addEventListener('click',()=>{ if(S.started&&!document.pointerLockElement&&$('shop').style.display!=='block') renderer.domElement.requestPointerLock(); });
 document.addEventListener('pointerlockchange',()=>{ $('clickToPlay').style.display=document.pointerLockElement||!S.started||$('shop').style.display==='block'?'none':'block'; });
@@ -408,16 +442,16 @@ function step(){
       if(me.mode==='train'){ const tx=me.x+mv.x*sp, tz=me.z+mv.z*sp; if(inside(tx,tz)){ me.x=tx; me.z=tz; } else if(inside(tx,me.z)) me.x=tx; else if(inside(me.x,tz)) me.z=tz;
         for(const k in SEATS){ const st=SEATS[k]; if(Math.hypot(me.x-st.x,me.z-st.z)<1.3){ prompt=`[E] ${SEATS[k].label}`; if(useP) requestSeat(k); } }
         const door=DOORS.find(d=>Math.hypot(me.x-d.x,me.z-d.z)<.9);
-        if(door){ if(S.v>2) prompt='Too fast to jump off! Ask the driver to slow down'; else { prompt='[E] step off the train'; if(useP){ const w=new THREE.Vector3(door.x*2.1,0,door.z).applyMatrix4(train.matrixWorld); me.mode='ground'; me.gx=w.x; me.gz=w.z; me.yaw+=trainYaw(); Sfx.step(); } } }
+        if(door){ if(S.v>2) prompt='Too fast to jump off! Ask the driver to slow down'; else { prompt='[E] step off the train'; if(useP){ const w=new THREE.Vector3(door.x*2.1,0,door.z).applyMatrix4(train.matrixWorld); me.mode='ground'; me.gx=w.x; me.gz=w.z; me.yaw+=trainYaw(); A.step(); } } }
         if(Math.hypot(me.x-BENCH.x,me.z-BENCH.z)<1.2){ prompt='[E] / [Tab] workbench: craft ammo & missiles'+(atYard()?' · UPGRADES (you are at the Yard)':''); if(useP) toggleShop(); }
       } else {
         me.gx+=mv.x*sp; me.gz+=mv.z*sp;
         const lp=train.worldToLocal(new THREE.Vector3(me.gx,0,me.gz)); if(Math.abs(lp.x)<1.75&&lp.z>REAR&&lp.z<14.5){ lp.x=Math.sign(lp.x||1)*1.75; const w=train.localToWorld(lp); me.gx=w.x; me.gz=w.z; }
-        if(Math.abs(lp.x)<2.6&&lp.z>REAR&&lp.z<4){ if(S.v>2) prompt='The train is moving!'; else { prompt='[E] climb back aboard'; if(useP){ me.mode='train'; me.x=clamp(lp.x,-1.2,1.2); me.z=clamp(lp.z,-19.5,3.4); if(!inside(me.x,me.z)) me.x=0; me.yaw-=trainYaw(); Sfx.step(); } } }
+        if(Math.abs(lp.x)<2.6&&lp.z>REAR&&lp.z<4){ if(S.v>2) prompt='The train is moving!'; else { prompt='[E] climb back aboard'; if(useP){ me.mode='train'; me.x=clamp(lp.x,-1.2,1.2); me.z=clamp(lp.z,-19.5,3.4); if(!inside(me.x,me.z)) me.x=0; me.yaw-=trainYaw(); A.step(); } } }
         W.breaks.forEach((b,i)=>{ if(b.fixed) return; const o=breakObjs[i]; if(Math.hypot(me.gx-o.x,me.gz-o.z)<2.6) prompt=W.rails>0?`HOLD [E] to repair the track · ${Math.round(b.prog*100)}% · rails left ${W.rails}`:'No rails in the material car! Restock at a connected station'; });
         CRATES.forEach((c,i)=>{ if(W.crates[i]) return; if(Math.hypot(me.gx-c.x,me.gz-c.z)<1.8){ prompt='[E] grab the scrap crate'; if(useP){ if(net.role==='host') takeCrate(i,0); else net.conn.send({t:'crate',i}); } } });
         PARTS.forEach((pt,i)=>{ if(W.parts[pt.k]) return; if(Math.hypot(me.gx-pt.x,me.gz-pt.z)<2){ prompt=`[E] take the ${pt.name}`; if(useP){ if(net.role==='host') takePart(i,0); else net.conn.send({t:'part',i}); } } });
-        if(attack){ swing=1; Sfx.step(); if(net.role==='host') whack(0); else net.conn.send({t:'whack'}); }
+        if(attack){ swing=1; A.step(); if(net.role==='host') whack(0); else net.conn.send({t:'whack'}); }
         if(!prompt&&W.gn.length) prompt='CLICK / R2 to whack gnawers with your wrench · SHIFT to sprint';
       }
     }
@@ -444,11 +478,14 @@ function step(){
 let swing=0;
 let lastCtl=0; function sendCtl(c){ if(net.role!=='client') return; const now=performance.now(); if(now-lastCtl<50&&!c.fire&&!c.horn&&!c.missile) return; lastCtl=now; net.conn.send({t:'ctl',...c}); }
 function requestSeat(k){ if(k==='drive'){ me.yaw=0; me.pitch=-.05; } if(k==='gun'){ me.yaw=Math.PI; me.pitch=-.08; }
-  if(net.role==='host'){ hostSeat(0,k); me.seat=S.players[0].seat; } else { net.conn.send({t:'seat',k}); if(k===null) me.seat=null; } Sfx.tick(); }
+  if(net.role==='host'){ hostSeat(0,k); me.seat=S.players[0].seat; } else { net.conn.send({t:'seat',k}); if(k===null) me.seat=null; } A.dry(); }
 
 // ---------- mission tracker ----------
 function missionText(){
-  const done=W.stations.filter(Boolean).length; if(done===25) return ['🏆 ALL 25 STATIONS CONNECTED! The island railway lives again!','Keep hunting monsters, finish deliveries and max your upgrades.'];
+  const done=W.stations.filter(Boolean).length;
+  if(W.boss.on){ const ph=W.boss.phase; return [`💀 FINAL BATTLE · Phase ${ph}/3 · Defeat Rattlejaw!`,ph===1?'Gunner: shoot its glowing eyes when it rises · Driver: keep moving':ph===2?'Fix the torn track (hold E) while the gunner holds off the Hollow Engine!':'Hit the GOLDEN WHISTLE with missiles (driver: M) and the gun!']; }
+  if(done===25&&!W.boss.done){ const d=ahead(S.trainS,STATIONS[24].s); return [`💀 FINAL BATTLE: drive to Rattlejaw Pit and stop there (${Math.round(d)} m)`,'Stock up first: ammo, missiles, shield plates and rails!']; }
+  if(done===25) return ['🏆 YOU SAVED THE ISLAND! Free play: hunt monsters and max your train','Rattlejaw may still stir now and then…'];
   const ti=W.stations.findIndex(c=>!c), tgt=STATIONS[ti], dT=ahead(S.trainS,tgt.s), nb=nextBreak(); let main;
   if(nb&&nb.d<dT) main=nb.d<6?'🛠️ Step off and fix the broken track (hold E at the glowing ring)':`Drive on. Broken track ahead in ${Math.round(nb.d)} m`;
   else main=dT<70?`🏁 ${tgt.name} ahead: SLOW DOWN to connect it (${Math.round(dT)} m)`:`Drive to ${tgt.name} (${Math.round(dT)} m)`;
@@ -545,9 +582,24 @@ function render(){
     $('inv').innerHTML=`🔫 ${W.ammo} &nbsp; 🚀 ${W.upg.launcher?W.missiles:'–'} &nbsp; 🪵 ${W.rails}/${maxRails()} &nbsp; ⭐ ${PARTS.filter(p=>W.parts[p.k]).length}/${PARTS.length}`;
     const gap=(S.trainS+REAR)-W.mon.s; let wtxt=''; if(W.mon.on) wtxt=`⚠️ HOLLOW ENGINE ${Math.max(0,Math.round(gap))} m behind`; if(W.rj.on) wtxt=W.rj.ph==='tremor'?`🌋 TREMORS… ${W.rj.side<0?'◀ LEFT':'RIGHT ▶'}`:W.rj.ph==='up'?`🐛 RATTLEJAW ${W.rj.side<0?'◀ LEFT SIDE':'RIGHT SIDE ▶'}`:'';
     $('warn').style.display=wtxt?'block':'none'; $('warn').textContent=wtxt;
+    $('boss').style.display=W.boss.on?'block':'none'; if(W.boss.on){ $('bossBar').style.width=clamp(W.boss.hp/W.boss.max*100,0,100)+'%'; $('bossPh').textContent='PHASE '+W.boss.phase+' / 3'; }
     $('tl').innerHTML='Room '+net.code+'<br>'+Object.values(S.players).map(p=>`<span style="color:${p.color}">●</span> ${p.name}${p.seat==='drive'?' 🚂':p.seat==='gun'?' 🔫':p.mode==='ground'?' 🚶':''}`).join('<br>'); }
+  audioFrame();
   renderer.render(scene,camera);
 }
+// ---------- sound per frame: train chuffs & clacks, footsteps, gnawers, tension music ----------
+let chuffT=0, clackD=0, stepD=0, squeakT=0, ghostT=0, lastS=0, lastG=null, brakeT=0;
+function audioFrame(){ if(!S.started) return; const dt=1/60;
+  const moved=Math.abs(((S.trainS-lastS+TL/2)%TL+TL)%TL-TL/2); lastS=S.trainS;
+  if(S.v>.3){ chuffT-=dt*(S.v*.55+.4); if(chuffT<=0){ chuffT=1; A.chuff(S.v); } clackD+=moved; if(clackD>11){ clackD=0; A.clack(); } }
+  if(S.brake&&S.v>1.5){ brakeT-=dt; if(brakeT<=0){ brakeT=.7; A.brake(); } }
+  if(me.mode==='ground'){ const p=new THREE.Vector3(me.gx,0,me.gz); if(lastG){ stepD+=p.distanceTo(lastG); if(stepD>1.6){ stepD=0; A.step(); } } lastG=p; } else lastG=null;
+  let nearG=1e9; for(const g of W.gn){ const d=Math.hypot(g.x-camera.position.x,g.z-camera.position.z); nearG=Math.min(nearG,d); }
+  if(nearG<25){ squeakT-=dt; if(squeakT<=0){ squeakT=.25+Math.random()*.6; A.skitter(); if(Math.random()<.4) A.squeak(); } }
+  if(W.mon.on){ ghostT-=dt; if(ghostT<=0){ ghostT=7+Math.random()*4; A.ghostHorn(.2); } }
+  const gap=(S.trainS+REAR)-W.mon.s;
+  let ten=0; if(W.mon.on) ten=Math.max(ten,clamp(1-gap/80,.35,1)); if(W.rj.on) ten=Math.max(ten,W.rj.ph==='tremor'?.7:.95); if(W.gn.length) ten=Math.max(ten,.6); if(W.boss.on) ten=1;
+  A.update(dt,{tension:ten,quake:W.rj.on&&W.rj.ph==='tremor'?.8:W.rj.on&&W.rj.ph==='up'&&W.rj.t<1.5?.6:0,region:regionAt(S.trainS),boss:W.boss.on}); }
 (function loop(now=performance.now()){ acc+=Math.min(250,now-last); last=now; while(acc>=1000/60){ step(); acc-=1000/60; } render(); requestAnimationFrame(loop); })();
-window.__rails={S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy};
+window.__rails={startBoss,bossDamage,A,S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy};
 </script></body></html>
