@@ -163,7 +163,7 @@ const PARTS=[{k:'spring',name:'Gun spring',st:3},{k:'rocket',name:'Rocket parts'
 const UPG={engine:{name:'Engine',desc:'faster train',cost:[40,80,140,200]},armor:{name:'Shield plates',desc:'train takes less damage',cost:[40,80,140,200]},
   gun:{name:'Gun',desc:'more damage, faster fire',cost:[50,100,160],need:['spring','barrel','scope']},repair:{name:'Tool kit',desc:'fix track faster',cost:[30,60,100]},
   rails:{name:'Material car',desc:'carry more rails',cost:[30,60,90]},launcher:{name:'Missile launcher',desc:'cab-roof launcher (missiles home in on monsters)',cost:[80],need:['rocket']}};
-const PAINTS=[['Forest green',0x3d4f3c],['Rust red',0x7a2a20],['Midnight blue',0x253a5a],['Coal black',0x22242a],['Mustard',0x9a7a22]];
+const PAINTS=[['Hazard yellow',0xf2c21a],['Rust red',0xc0442a],['Ice blue',0x4a8ad0],['Coal black',0x3a3c44],['Toxic green',0x7ac83a]];
 const W={stations:STATIONS.map((x,i)=>i===0),breaks:BREAKS.map(()=>({fixed:false,prog:0})),crates:CRATES.map(()=>false),parts:{},scrap:0,hp:100,ammo:120,missiles:0,rails:3,
   upg:{engine:0,armor:0,gun:0,repair:0,rails:0,launcher:0},paint:0,delivery:null,
   mon:{on:false,s:0,hp:0,cd:60},rj:{on:false,ph:'',t:0,side:1,hp:0,cd:90,bite:0},gn:[],
@@ -233,7 +233,7 @@ const missiles=[]; for(let i=0;i<4;i++){ const m=new THREE.Group(); const b=new 
 const GS=GUN_SHIFT;
 const WALK=[[-1.35,1.35,4.15,6.9],[-.5,.5,3.4,4.3],[-1.35,1.35,-2.05,3.5],[-.5,.5,-2.95,-2.0],[-1.45,1.45,-8.1,-2.5],[-.5,.5,-8.7,-7.9],[-1.45,1.45,-14.1,-8.5],[-.5,.5,-14.7,-13.9],[-1.45,1.45,-7.85+GS,-2.85+GS]];
 const inside=(x,z)=>WALK.some(([a,b,c,d])=>x>=a&&x<=b&&z>=c&&z<=d);
-const SEATS={drive:{x:0,z:5.55,eye:1.72,label:'drive the train'},gun:{x:0,z:-4.75+GS,eye:2.05,label:'use the gun'}};
+const SEATS={drive:{x:0,z:5.55,eye:1.9,label:'drive the train'},gun:{x:0,z:-4.75+GS,eye:2.05,label:'use the gun'}};
 const DOORS=[{x:1.3,z:1.0},{x:-1.3,z:1.0},{x:1.35,z:-5.3},{x:-1.35,z:-5.3},{x:1.35,z:-11.3},{x:-1.35,z:-11.3},{x:1.35,z:-5.5+GS},{x:-1.35,z:-5.5+GS}];
 const BENCH={x:-.6,z:0.8}, REAR=-20.2, EYE=1.62;
 // =====================================================================
@@ -334,7 +334,7 @@ function buy(k){ const u=UPG[k]; if(!u||!atYard()) return; const l=W.upg[k]; if(
 function craft(k){ if(k==='ammo'&&W.scrap>=10&&W.ammo<maxAmmo()){ W.scrap-=10; W.ammo=Math.min(maxAmmo(),W.ammo+40); fx('fix'); }
   if(k==='missile'&&W.upg.launcher&&W.scrap>=25&&W.missiles<4){ W.scrap-=25; W.missiles++; fx('fix'); } saveGame(); pushWorld(); }
 function setPaint(i){ if(!atYard()) return; W.paint=i; applyPaint(); saveGame(); pushWorld(); }
-function applyPaint(){ const c=new THREE.Color(PAINTS[W.paint][1]).multiplyScalar(2.2); train.traverse(o=>{ if(o.isMesh&&o.material&&o.material.map&&o.material.metalness===.35) o.material.color.copy(c); }); if(train.userData.launcher) train.userData.launcher.visible=!!W.upg.launcher;
+function applyPaint(){ train.userData.paintMat?.color.set(PAINTS[W.paint]?.[1]??PAINTS[0][1]); if(train.userData.launcher) train.userData.launcher.visible=!!W.upg.launcher;
   if(train.userData.railStack) train.userData.railStack.forEach((r,i)=>r.visible=i<W.rails); if(train.userData.cargo) train.userData.cargo.forEach((c,i)=>c.visible=!!W.delivery&&i<2); }
 function nextBreak(){ let best=null,bd=1e9; W.breaks.forEach((b,i)=>{ if(b.fixed) return; const d=ahead(S.trainS+14,BREAKS[i]); if(d<bd){ bd=d; best=i; } }); return best==null?null:{i:best,d:bd}; }
 // gnawers
