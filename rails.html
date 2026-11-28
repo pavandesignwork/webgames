@@ -21,9 +21,9 @@
  .small{font-size:13px;color:#8a8070;text-align:center;margin-top:12px;line-height:1.5}
  #hud{position:fixed;inset:0;pointer-events:none;display:none}
  #cross{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#fff9}
- #prompt{position:absolute;left:50%;top:58%;transform:translateX(-50%);background:#000a;padding:6px 14px;border-radius:4px;font-size:18px;display:none}
+ #prompt{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);background:#000a;padding:5px 12px;border-radius:4px;font-size:15px;display:none}
  #tl{position:absolute;left:16px;top:14px;font-size:15px;line-height:1.6;background:#0009;padding:8px 12px;border-radius:4px}
- #speed{position:absolute;right:20px;bottom:20px;background:#000a;padding:10px 14px;border-radius:4px;font-size:16px;min-width:200px}
+ #speed{position:absolute;right:20px;bottom:44px;background:#000a;padding:10px 14px;border-radius:4px;font-size:16px;min-width:200px}
  .bar{height:12px;background:#222;border-radius:2px;margin-top:6px;overflow:hidden} .bar i{display:block;height:100%;background:linear-gradient(90deg,#c9a24a,#ff6a2a)}
  #help{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);font-size:13px;color:#cfc6b0;background:#0008;padding:5px 12px;border-radius:4px;white-space:nowrap}
  #clickToPlay{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-size:24px;background:#000c;padding:14px 26px;border:2px solid #c9a24a;border-radius:4px;display:none;pointer-events:auto;cursor:pointer}
@@ -35,8 +35,12 @@
  #warn{position:absolute;left:50%;top:150px;transform:translateX(-50%);background:#5a0a06d8;color:#fff;padding:6px 16px;border-radius:4px;font-size:18px;display:none;animation:blink 1s infinite}
  @keyframes blink{50%{opacity:.55}}
  #boss{position:absolute;left:50%;top:92px;transform:translateX(-50%);width:min(560px,70vw);background:#1a0606d8;border:1px solid #8a2a1a;border-radius:4px;padding:6px 12px;display:none;color:#ffd0c0;font-size:15px}
- #stats{position:absolute;left:16px;bottom:20px;background:#000a;padding:10px 14px;border-radius:4px;font-size:16px;min-width:220px}
- #shop{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,92vw);background:#11151ef2;border:2px solid #c9a24a;border-radius:6px;padding:20px 24px;display:none;pointer-events:auto}
+ #stats{position:absolute;left:16px;bottom:44px;background:#000a;padding:10px 14px;border-radius:4px;font-size:16px;min-width:220px}
+ #shop{position:absolute;right:2vw;top:50%;transform:translateY(-50%);width:min(600px,56vw);background:#0d1018ee;border:2px solid #c9a24a;border-radius:6px;padding:14px 18px;display:none;pointer-events:auto}
+ #shop .up{padding:7px 8px;border-radius:4px} #shop .up.sel{background:#2e2610;outline:2px solid #ffcf6a}
+ #shop .ic{font-size:26px;width:36px;text-align:center} #shop .tx{flex:1} #shop .pips{color:#ffcf6a;letter-spacing:2px;font-size:14px} #shop small{color:#b8ad94} #shop .nx{color:#9fe0b0}
+ #shop .need{color:#ff9a7a}
+ #hud.shopping>*:not(#shop):not(#feed){display:none!important} #shopHint{font-size:12px;color:#8a8070;margin-top:8px;text-align:center}
  .up{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid #2a2a2a} .up button{width:auto;margin:0;padding:8px 14px;font-size:16px;white-space:nowrap}
  .sh{margin-top:14px;font-size:12px;letter-spacing:3px;color:#c9a24a}
  #shopList{max-height:62vh;overflow:auto}
@@ -65,9 +69,11 @@
   <div id="warn"></div>
   <div id="boss"><div style="display:flex;justify-content:space-between"><b>💀 RATTLEJAW</b><span id="bossPh"></span></div><div class="bar" style="height:16px"><i id="bossBar" style="background:linear-gradient(90deg,#8a0a06,#ff3a1a);width:100%"></i></div></div>
   <div id="stats"><div id="region" style="color:#c9a24a;letter-spacing:2px;font-size:13px;margin-bottom:4px"></div>🛤️ Stations <b id="stCount">1/25</b> &nbsp; 🔩 Scrap <b id="scrap">0</b><div id="inv" style="margin-top:6px;font-size:15px"></div><div style="margin-top:6px">TRAIN<div class="bar"><i id="hpBar" style="background:linear-gradient(90deg,#3ac05a,#9aef6a);width:100%"></i></div></div></div>
-  <div id="shop"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:22px;color:#d9c08a">WORKBENCH</b><span>🔩 <b id="shopScrap">0</b></span></div><div id="shopList"></div><button id="shopClose" class="alt">CLOSE (Tab)</button></div>
+  <div id="shop"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:22px;color:#d9c08a">🚂 YOUR TRAIN</b><span style="font-size:18px">🔩 <b id="shopScrap">0</b> scrap</span></div>
+    <div id="shopWhere" style="font-size:13px;margin:4px 0 6px"></div><div id="shopList"></div>
+    <div id="shopHint">↑ ↓ choose · ✕ / E / Enter buy · ← → paint colour · ○ / Tab close</div><button id="shopClose" class="alt" style="margin-top:8px;padding:8px">CLOSE</button></div>
   <div id="speed">THROTTLE<div class="bar"><i id="thrBar"></i></div><div style="margin-top:8px" id="spd">0 km/h</div></div>
-  <div id="help">WASD move · mouse look · E use · Tab workbench · click whack (on foot) · Esc unlock mouse · controller: sticks, ✕ use, R2 fire/throttle, △ workshop</div>
+  <div id="help"></div>
   <div id="clickToPlay">CLICK TO PLAY</div></div>
 <div id="victory" class="screen"><div class="box" style="text-align:center">
   <h1 style="font-size:40px">THE ISLAND IS SAVED</h1><div class="tag">Rattlejaw has been defeated and all 25 stations are connected.</div>
@@ -83,7 +89,7 @@
 <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
 <script type="module">
 import * as THREE from 'three';
-import {buildTrain,DECK,GUN_Z,GUN_SHIFT} from './train_model.js';
+import {buildTrain,DECK,GUN_Z,GUN_SHIFT,layout,WALKS,DOORZ,CARS} from './train_model.js';
 import {makeRattlejaw,makeGnawer} from './monsters.js';
 import {A} from './rails_audio.js';
 const $=id=>document.getElementById(id);
@@ -160,17 +166,29 @@ const CRATES=[]; { const RR=(()=>{ let s=7; return ()=>{ s=(s*16807)%2147483647;
   for(let i=0;i<50;i++){ const s=(i/50)*TL+20+RR()*25, {p,t}=trackPos(s), side=RR()<.5?-1:1, off=side*(4.5+RR()*5); CRATES.push({x:p.x+t.z*off,z:p.z-t.x*off}); } }
 // hidden parts (found on foot behind a station)
 const PARTS=[{k:'spring',name:'Gun spring',st:3},{k:'rocket',name:'Rocket parts',st:7},{k:'barrel',name:'Long gun barrel',st:11},{k:'chip',name:'Missile guidance chip',st:16},{k:'scope',name:'Brass gun scope',st:19}].map(p=>{ const {p:q,t}=trackPos(STATIONS[p.st].s); const n=new THREE.Vector3(-t.z,0,t.x); return {...p,x:q.x+n.x*13,z:q.z+n.z*13}; });
-const UPG={engine:{name:'Engine',desc:'faster train',cost:[40,80,140,200]},armor:{name:'Shield plates',desc:'train takes less damage',cost:[40,80,140,200]},
-  gun:{name:'Gun',desc:'more damage, faster fire',cost:[50,100,160],need:['spring','barrel','scope']},repair:{name:'Tool kit',desc:'fix track faster',cost:[30,60,100]},
-  rails:{name:'Material car',desc:'carry more rails',cost:[30,60,90]},launcher:{name:'Missile launcher',desc:'cab-roof launcher (missiles home in on monsters)',cost:[80],need:['rocket']}};
+// every train part: levels, prices (to reach that level), hidden parts needed, what each level does
+const UPG={
+ engine:{icon:'🔥',name:'Engine',min:1,max:4,cost:{2:60,3:120,4:200},lv:['','Rusty boiler · slow','Brass boiler · faster','Armoured hood · even faster','Twin-stack war engine · top speed']},
+ armor:{icon:'🛡️',name:'Armour',max:3,cost:{1:50,2:110,3:180},lv:['No armour','Wheel skirts · +45 train health','X-braced plating · +90 health','Spiked full armour · +135 health']},
+ plough:{icon:'🐂',name:'Front plough',max:3,cost:{1:40,2:90,3:160},lv:['Little cowcatcher','Steel plough · Rattlejaw bites 15% weaker','Spiked plough · bites 30% weaker','Horned ram · bites 45% weaker and hurt Rattlejaw back']},
+ light:{icon:'💡',name:'Headlight',max:2,cost:{1:40,2:100},lv:['Small lamp','Big headlight · see much further','Roof searchlight · see furthest, fewer gnawer ambushes']},
+ horn:{icon:'📯',name:'Horn',max:1,cost:{1:50},lv:['Brass whistle','Scare-horns · honk to send gnawers running']},
+ workshop:{icon:'🧰',name:'Workshop car',car:1,max:3,cost:{1:40,2:80,3:140},lv:['Not attached','Workbench on board · craft ammo anywhere','Better tools · cheaper ammo, faster track repair','Repair crane · slowly fixes the train']},
+ material:{icon:'🪵',name:'Material car',car:1,max:3,cost:{1:30,2:60,3:100},lv:['Not attached · carry only 1 rail','Carry 3 rails','Tall stakes · carry 5 rails','Rail crane · carry 7 rails']},
+ cargo:{icon:'📦',name:'Cargo car',car:1,max:2,cost:{1:50,2:100},lv:['Not attached','Deliveries unlocked (+35 scrap each)','Covered cargo · deliveries pay double']},
+ gun:{icon:'🔫',name:'Gun deck',car:1,max:4,cost:{1:40,2:90,3:150,4:220},need:{2:'spring',3:'barrel',4:'scope'},lv:['Not attached','Single gun','Twin gun · fires faster','Shielded twin gun · more damage','Heavy cannon · huge damage']},
+ launcher:{icon:'🚀',name:'Missile launcher',max:3,cost:{1:80,2:120,3:180},need:{1:'rocket',3:'chip'},lv:['Not built','1 tube · carry 2 missiles','2 tubes · carry 4 missiles','4 tubes + guidance · carry 6, more damage']}};
+const UPG_ORDER=['engine','armor','plough','light','horn','workshop','material','cargo','gun','launcher'];
 const PAINTS=[['Hazard yellow',0xf2c21a],['Rust red',0xc0442a],['Ice blue',0x4a8ad0],['Coal black',0x3a3c44],['Toxic green',0x7ac83a]];
-const W={stations:STATIONS.map((x,i)=>i===0),breaks:BREAKS.map(()=>({fixed:false,prog:0})),crates:CRATES.map(()=>false),parts:{},scrap:0,hp:100,ammo:120,missiles:0,rails:3,
-  upg:{engine:0,armor:0,gun:0,repair:0,rails:0,launcher:0},paint:0,delivery:null,
+const W={stations:STATIONS.map((x,i)=>i===0),breaks:BREAKS.map(()=>({fixed:false,prog:0})),crates:CRATES.map(()=>false),parts:{},scrap:60,hp:100,ammo:120,missiles:0,rails:1,
+  upg:{engine:1,armor:0,plough:0,light:0,horn:0,workshop:0,material:0,cargo:0,gun:0,launcher:0},paint:0,delivery:null,
   mon:{on:false,s:0,hp:0,cd:60},rj:{on:false,ph:'',t:0,side:1,hp:0,cd:90,bite:0},gn:[],
   boss:{on:false,phase:0,hp:0,max:900,done:false},stats:{hollow:0,rj:0,gn:0,fix:0,del:0,t:0}};
 W.breaks[BOSSB].fixed=true;
-const maxHp=()=>100+W.upg.armor*40, maxRails=()=>3+W.upg.rails*2, maxAmmo=()=>120+W.upg.gun*60;
-const saveKey='rails-save-v2';
+const maxHp=()=>100+W.upg.armor*45, maxRails=()=>[1,3,5,7][W.upg.material], maxAmmo=()=>120+Math.max(0,W.upg.gun-1)*40, missileCap=()=>[0,2,4,6][W.upg.launcher];
+const dmgMul=()=>1/(1+W.upg.armor*.3), biteMul=()=>1-.15*W.upg.plough;
+const GUN_DMG=[0,8,9,14,40], GUN_CD=[0,150,100,95,240];
+const saveKey='rails-save-v3';
 function saveGame(){ if(net.role!=='host') return; localStorage.setItem(saveKey,JSON.stringify({stations:W.stations,breaks:W.breaks.map(b=>b.fixed),crates:W.crates,parts:W.parts,scrap:W.scrap,ammo:W.ammo,missiles:W.missiles,rails:W.rails,upg:W.upg,paint:W.paint,trainS:S.trainS,bossDone:W.boss.done,stats:W.stats})); }
 function loadGame(){ try{ const d=JSON.parse(localStorage.getItem(saveKey)); if(!d) return false; W.stations=d.stations; d.breaks.forEach((f,i)=>{ if(W.breaks[i]) W.breaks[i].fixed=f; }); Object.assign(W,{crates:d.crates,parts:d.parts||{},scrap:d.scrap,ammo:d.ammo,missiles:d.missiles,rails:d.rails,paint:d.paint||0}); Object.assign(W.upg,d.upg); S.trainS=d.trainS||0; W.boss.done=!!d.bossDone; if(d.stats) Object.assign(W.stats,d.stats); W.breaks[BOSSB].fixed=true; return true; }catch(e){ return false; } }
 // ---- station models ----
@@ -185,7 +203,7 @@ STATIONS.forEach((st,i)=>{ const {p,t}=trackPos(st.s), g=new THREE.Group(); cons
     const bulb=new THREE.Mesh(new THREE.SphereGeometry(.22,10,8),new THREE.MeshBasicMaterial({color:i===0?0xffcf7a:0x333333})); bulb.position.set(-1,4.45,z); g.add(bulb);
     const pool=new THREE.Mesh(new THREE.CircleGeometry(3.2,20),new THREE.MeshBasicMaterial({color:0xffb860,transparent:true,opacity:i===0?.18:0,depthWrite:false})); pool.rotation.x=-Math.PI/2; pool.position.set(-1,1.03,z); g.add(pool); stationLamps.push({i,bulb,pool}); }
   const cv=document.createElement('canvas'); cv.width=512; cv.height=96; const x=cv.getContext('2d'); x.fillStyle='#1d1a14'; x.fillRect(0,0,512,96); x.strokeStyle='#c9a24a'; x.lineWidth=6; x.strokeRect(4,4,504,88); x.fillStyle='#e8dcc0'; x.font='bold 44px Georgia'; x.textAlign='center'; x.fillText(st.name.toUpperCase(),256,64);
-  const tex=new THREE.CanvasTexture(cv); tex.colorSpace=THREE.SRGBColorSpace; const sign=new THREE.Mesh(new THREE.PlaneGeometry(4,.75),new THREE.MeshBasicMaterial({map:tex,side:THREE.DoubleSide})); sign.position.set(0,3.6,9.5); sign.rotation.y=Math.PI/2; g.add(sign); });
+  const tex=new THREE.CanvasTexture(cv); tex.colorSpace=THREE.SRGBColorSpace; for(const k of [1,-1]){ const sign=new THREE.Mesh(new THREE.PlaneGeometry(4,.75),new THREE.MeshBasicMaterial({map:tex})); sign.position.set(.02*k,3.6,9.5); sign.rotation.y=Math.PI/2*k; g.add(sign); } });
 function lightStation(i){ for(const l of stationLamps) if(l.i===i){ l.bulb.material.color.set(0xffcf7a); l.pool.material.opacity=.18; } }
 // ---- broken track ----
 const breakObjs=BREAKS.map(s=>{ const {p,t}=trackPos(s), g=new THREE.Group(); g.position.set(p.x,0,p.z); g.rotation.y=Math.atan2(t.x,t.z); scene.add(g);
@@ -231,17 +249,23 @@ const missiles=[]; for(let i=0;i<4;i++){ const m=new THREE.Group(); const b=new 
 //  WALKING (train space on board, world space on foot)
 // =====================================================================
 const GS=GUN_SHIFT;
-const WALK=[[-1.35,1.35,4.15,6.9],[-.5,.5,3.4,4.3],[-1.35,1.35,-2.05,3.5],[-.5,.5,-2.95,-2.0],[-1.45,1.45,-8.1,-2.5],[-.5,.5,-8.7,-7.9],[-1.45,1.45,-14.1,-8.5],[-.5,.5,-14.7,-13.9],[-1.45,1.45,-7.85+GS,-2.85+GS]];
+const WALK=[], DOORS=[], SEATS={drive:{x:.85,z:5.55,eye:2.05,label:'drive the train'}}; let BENCH=null, REAR=3.9, GUNOFF=0; const EYE=1.62;
 const inside=(x,z)=>WALK.some(([a,b,c,d])=>x>=a&&x<=b&&z>=c&&z<=d);
-const SEATS={drive:{x:0,z:5.55,eye:1.9,label:'drive the train'},gun:{x:0,z:-4.75+GS,eye:2.05,label:'use the gun'}};
-const DOORS=[{x:1.3,z:1.0},{x:-1.3,z:1.0},{x:1.35,z:-5.3},{x:-1.35,z:-5.3},{x:1.35,z:-11.3},{x:-1.35,z:-11.3},{x:1.35,z:-5.5+GS},{x:-1.35,z:-5.5+GS}];
-const BENCH={x:-.6,z:0.8}, REAR=-20.2, EYE=1.62;
+const gunZ=()=>GUN_Z+GUNOFF;
+// rebuild walkable floor, doors, seats and the train's look from the upgrade levels (cars you own slide together)
+function relayout(){ const L=train.userData.setLevels(W.upg); WALK.length=0; DOORS.length=0; BENCH=null; delete SEATS.gun; REAR=L.rear;
+  for(const c of ['cab',...CARS]){ const off=c==='cab'?0:L[c]; if(off==null) continue; for(const [a,b,z0,z1] of WALKS[c]) WALK.push([a,b,z0+off,z1+off]); DOORS.push({x:1.3,z:DOORZ[c]+off},{x:-1.3,z:DOORZ[c]+off}); }
+  if(L.workshop!=null) BENCH={x:-.6,z:.8+L.workshop};
+  if(L.gun!=null){ GUNOFF=L.gun; SEATS.gun={x:0,z:-16.75+L.gun,eye:2.05,label:'use the gun'}; }
+  if(me.seat&&!SEATS[me.seat]) me.seat=null;
+  if(me.mode==='train'&&!me.seat&&!inside(me.x,me.z)){ me.x=0; me.z=5.0; } }
+let lastUpg='';
 // =====================================================================
 //  NETWORK + LOBBY
 // =====================================================================
 const net={role:null,conn:null,myId:0,code:null};
 const S={started:false,trainS:0,v:0,throttle:0,brake:0,players:{},gunYaw:Math.PI,gunPitch:0,fires:[],mfire:[]};
-let me={mode:'train',x:0,z:5.3,gx:0,gz:0,yaw:0,pitch:0,seat:null};
+let me={mode:'train',x:0,z:5.3,gx:0,gz:0,yaw:0,pitch:0,seat:null,view:'out'};
 const hostConns={}; let nextId=1;
 const myId=()=>net.role==='host'?0:net.myId;
 function lobbyList(){ return Object.values(S.players).map(p=>({id:p.id,name:p.name,color:p.color,ready:p.ready})); }
@@ -268,7 +292,7 @@ $('hostBtn').onclick=()=>{ net.role='host'; $('hostBtn').disabled=true; $('menuE
         if(m.t==='ready'){ p.ready=!!m.v; broadcast({t:'lobby',players:lobbyList()}); renderLobby(); }
         if(m.t==='pose'){ p.mode=m.m; [p.x,p.z,p.yaw,p.pitch]=m.p; p.holdE=!!m.e; }
         if(m.t==='seat') hostSeat(id,m.k);
-        if(m.t==='ctl'){ if(p.seat==='drive'){ S.throttle=clamp(+m.throttle||0,0,1); S.brake=m.brake?1:0; if(m.horn) fx('horn'); if(m.missile) fireMissile(id); } if(p.seat==='gun'){ S.gunYaw=+m.gy; S.gunPitch=+m.gp; if(m.fire) hostFire(id); } }
+        if(m.t==='ctl'){ if(p.seat==='drive'){ S.throttle=clamp(+m.throttle||0,0,1); S.brake=m.brake?1:0; if(m.horn) hostHorn(); if(m.missile) fireMissile(id); } if(p.seat==='gun'){ S.gunYaw=+m.gy; S.gunPitch=+m.gp; if(m.fire) hostFire(id); } }
         if(m.t==='crate') takeCrate(m.i,id); if(m.t==='part') takePart(m.i,id); if(m.t==='whack') whack(id);
         if(m.t==='buy') buy(m.k); if(m.t==='paint') setPaint(m.i); if(m.t==='craft') craft(m.k);
       });
@@ -312,13 +336,13 @@ function pushWorld(){ broadcast({t:'world',w:{stations:W.stations,breaks:W.break
 function hostSeat(id,k){ const p=S.players[id]; if(!p) return; if(k===null){ p.seat=null; return; }
   if(!SEATS[k]||Object.values(S.players).some(q=>q!==p&&q.seat===k)){ tell(id,'Someone is already there'); return; } p.seat=k; }
 function tell(id,text,col){ if(id===0) feed(text,col); else if(hostConns[id]) hostConns[id].conn.send({t:'msg',text,col}); }
-const gunRay=()=>{ train.updateMatrixWorld(); return {o:new THREE.Vector3(0,DECK+1.3,GUN_Z).applyMatrix4(train.matrixWorld),d:new THREE.Vector3(Math.sin(S.gunYaw)*Math.cos(S.gunPitch),Math.sin(S.gunPitch),Math.cos(S.gunYaw)*Math.cos(S.gunPitch)).transformDirection(train.matrixWorld)}; };
+const gunRay=()=>{ train.updateMatrixWorld(); return {o:new THREE.Vector3(0,DECK+1.3,gunZ()).applyMatrix4(train.matrixWorld),d:new THREE.Vector3(Math.sin(S.gunYaw)*Math.cos(S.gunPitch),Math.sin(S.gunPitch),Math.cos(S.gunYaw)*Math.cos(S.gunPitch)).transformDirection(train.matrixWorld)}; };
 const rayHit=(o,d,c,r)=>{ const oc=c.clone().sub(o), al=oc.dot(d); return al>0&&al<110&&oc.addScaledVector(d,-al).length()<r; };
 let fireCd={};
-function hostFire(id){ const now=performance.now(); if((fireCd[id]||0)>now) return; fireCd[id]=now+(130-W.upg.gun*20);
+function hostFire(id){ const now=performance.now(); if(!W.upg.gun||(fireCd[id]||0)>now) return; fireCd[id]=now+GUN_CD[W.upg.gun];
   if(W.ammo<=0){ if(!fireCd['e'+id]||fireCd['e'+id]<now){ fireCd['e'+id]=now+2500; tell(id,'🔫 OUT OF AMMO! Craft more at the workbench (workshop car)','#ff9a7a'); } return; }
   W.ammo--; S.fires.push([S.gunYaw,S.gunPitch]); spawnTracer([S.gunYaw,S.gunPitch]);
-  const {o,d}=gunRay(), dmg=8+W.upg.gun*5;
+  const {o,d}=gunRay(), dmg=GUN_DMG[W.upg.gun];
   if(W.mon.on&&rayHit(o,d,hollow.position.clone().add(new THREE.Vector3(0,2.4,0)),2.6)) damageHollow(dmg);
   if(W.rj.on&&W.rj.ph==='up'&&rayHit(o,d,RJ.head.getWorldPosition(new THREE.Vector3()),3.4)) damageRattle(dmg);
   W.gn.forEach(g=>{ if(g.alive&&rayHit(o,d,new THREE.Vector3(g.x,hgt(g.x,g.z)+.5,g.z),.9)) killGnawer(g,id); }); }
@@ -326,28 +350,34 @@ function damageHollow(d){ W.mon.hp-=d; if(W.mon.hp<=0){ W.mon.on=false; W.mon.cd
 function damageRattle(d){ if(W.boss.on){ bossDamage(d); return; } W.rj.hp-=d; fx('hit'); if(W.rj.hp<=0){ W.rj.ph='dive'; W.rj.t=0; W.scrap+=45; W.stats.rj++; announce('🐛 RATTLEJAW screams and dives underground! +45 scrap','#ffcf6a'); fx('roar'); saveGame(); pushWorld(); } }
 function fireMissile(id){ if(!W.upg.launcher){ tell(id,'You need to build the missile launcher at the Yard first'); return; } if(W.missiles<=0){ tell(id,'🚀 No missiles! Craft them at the workbench','#ff9a7a'); return; }
   const target=W.rj.on&&W.rj.ph==='up'?'rj':W.mon.on?'mon':null; if(!target){ tell(id,'No monster to aim at'); return; }
-  W.missiles--; S.mfire.push(target); launchMissileFx(target); setTimeout(()=>{ const dmg=(W.parts.chip?60:40)*(W.boss.on&&W.boss.phase===3?3:1); if(target==='rj'&&W.rj.on&&W.rj.ph==='up') damageRattle(dmg); if(target==='mon'&&W.mon.on) damageHollow(dmg); fx('boom'); },900); pushWorld(); }
+  W.missiles--; S.mfire.push(target); launchMissileFx(target); setTimeout(()=>{ const dmg=(W.upg.launcher>=3?60:40)*(W.boss.on&&W.boss.phase===3?3:1); if(target==='rj'&&W.rj.on&&W.rj.ph==='up') damageRattle(dmg); if(target==='mon'&&W.mon.on) damageHollow(dmg); fx('boom'); },900); pushWorld(); }
 function takeCrate(i,id){ if(W.crates[i]) return; W.crates[i]=true; W.scrap+=10; announce('📦 '+(S.players[id]?.name||'Someone')+' found scrap +10','#9fe'); fx('pick'); saveGame(); pushWorld(); }
 function takePart(i,id){ const pt=PARTS[i]; if(W.parts[pt.k]) return; W.parts[pt.k]=true; announce(`⭐ ${S.players[id]?.name||'Someone'} found the ${pt.name.toUpperCase()}! Take it to the Yard workshop`,'#ffd27a'); fx('win'); saveGame(); pushWorld(); }
-function buy(k){ const u=UPG[k]; if(!u||!atYard()) return; const l=W.upg[k]; if(l>=u.cost.length) return; if(u.need&&!W.parts[u.need[l]]) return; if(W.scrap<u.cost[l]) return;
-  W.scrap-=u.cost[l]; W.upg[k]++; if(k==='armor') W.hp=maxHp(); if(k==='rails') W.rails=maxRails(); announce(`🔧 ${u.name} upgraded to level ${W.upg[k]}!`,'#ffcf6a'); fx('win'); saveGame(); pushWorld(); }
-function craft(k){ if(k==='ammo'&&W.scrap>=10&&W.ammo<maxAmmo()){ W.scrap-=10; W.ammo=Math.min(maxAmmo(),W.ammo+40); fx('fix'); }
-  if(k==='missile'&&W.upg.launcher&&W.scrap>=25&&W.missiles<4){ W.scrap-=25; W.missiles++; fx('fix'); } saveGame(); pushWorld(); }
+// '' = can buy now, otherwise the reason it can't
+function canBuy(k,anywhere){ const u=UPG[k], n=(W.upg[k]||0)+1; if(n>u.max) return 'max'; if(u.need&&u.need[n]&&!W.parts[u.need[n]]) return 'part'; if(W.scrap<u.cost[n]) return 'scrap'; if(!anywhere&&!atYard()) return 'yard'; return ''; }
+function buy(k){ const u=UPG[k]; if(!u||canBuy(k)) return; const n=W.upg[k]+1; W.scrap-=u.cost[n]; W.upg[k]=n;
+  if(k==='armor') W.hp=maxHp(); if(k==='material') W.rails=maxRails(); if(k==='gun'&&n===1) W.ammo=Math.max(W.ammo,maxAmmo()); if(k==='launcher') W.missiles=Math.min(missileCap(),Math.max(W.missiles,2));
+  announce(`🔧 ${u.icon} ${u.name} level ${n}: ${u.lv[n].split(' · ')[0]}!`,'#ffcf6a'); fx('win'); applyPaint(); saveGame(); pushWorld(); if(shopOpen()) renderShop(); }
+const canCraft=()=>W.upg.workshop>=1||atYard(), ammoCost=()=>W.upg.workshop>=2?6:10;
+function craft(k){ if(!canCraft()) return; if(k==='ammo'&&W.upg.gun&&W.scrap>=ammoCost()&&W.ammo<maxAmmo()){ W.scrap-=ammoCost(); W.ammo=Math.min(maxAmmo(),W.ammo+40); fx('fix'); }
+  if(k==='missile'&&W.upg.launcher&&W.scrap>=25&&W.missiles<missileCap()){ W.scrap-=25; W.missiles++; fx('fix'); } saveGame(); pushWorld(); if(shopOpen()) renderShop(); }
+function hostHorn(){ fx('horn'); if(W.upg.horn>=1){ const n=W.gn.filter(g=>g.alive&&!g.scared).length; W.gn.forEach(g=>{ if(!g.scared) g.scared=2.5; }); if(n) announce('📯 The scare-horns sent the gnawers running!','#9fe'); } }
 function setPaint(i){ if(!atYard()) return; W.paint=i; applyPaint(); saveGame(); pushWorld(); }
-function applyPaint(){ train.userData.paintMat?.color.set(PAINTS[W.paint]?.[1]??PAINTS[0][1]); if(train.userData.launcher) train.userData.launcher.visible=!!W.upg.launcher;
+function applyPaint(){ train.userData.paintMat?.color.set(PAINTS[W.paint]?.[1]??PAINTS[0][1]); const uk=JSON.stringify(W.upg); if(uk!==lastUpg){ lastUpg=uk; relayout(); }
   if(train.userData.railStack) train.userData.railStack.forEach((r,i)=>r.visible=i<W.rails); if(train.userData.cargo) train.userData.cargo.forEach((c,i)=>c.visible=!!W.delivery&&i<2); }
 function nextBreak(){ let best=null,bd=1e9; W.breaks.forEach((b,i)=>{ if(b.fixed) return; const d=ahead(S.trainS+14,BREAKS[i]); if(d<bd){ bd=d; best=i; } }); return best==null?null:{i:best,d:bd}; }
 // gnawers
 function spawnGnawers(px,pz,n){ for(let k=0;k<n;k++){ if(W.gn.filter(g=>g.alive).length>=8) return; const a=Math.random()*6.28, r=14+Math.random()*6; W.gn.push({x:px+Math.cos(a)*r,z:pz+Math.sin(a)*r,yaw:0,alive:true,flee:0}); } }
 function killGnawer(g,id){ g.alive=false; W.scrap+=3; W.stats.gn++; fx('hit'); if(Math.random()<.3) tell(id,'Gnawer squashed! +3 scrap','#9fe'); }
-function whack(id){ const p=S.players[id]; if(!p||p.mode!=='ground') return; for(const g of W.gn){ if(!g.alive) continue; const dx=g.x-p.x, dz=g.z-p.z, d=Math.hypot(dx,dz); if(d<2.2&&Math.cos(Math.atan2(dx,dz)-p.yaw)>.4){ killGnawer(g,id); return; } } }
+function whack(id){ const p=S.players[id]; if(!p||p.mode!=='ground') return; for(const g of W.gn){ if(!g.alive) continue;
+    if(g.scared>0){ g.scared-=DT; const dx=g.x-train.position.x, dz=g.z-train.position.z, d=Math.hypot(dx,dz)||1; g.x+=dx/d*7*DT; g.z+=dz/d*7*DT; g.yaw=Math.atan2(dx,dz); if(g.scared<=0) g.alive=false; continue; } const dx=g.x-p.x, dz=g.z-p.z, d=Math.hypot(dx,dz); if(d<2.2&&Math.cos(Math.atan2(dx,dz)-p.yaw)>.4){ killGnawer(g,id); return; } } }
 function knockedDown(){ me.mode='train'; me.seat=null; me.x=-.5; me.z=1.6; shake=1.2; A.hurt(); feed('😱 A gnawer knocked you down! You scrambled back onto the train.','#ff9a7a'); }
 function hostWorldStep(){
   const ground=Object.values(S.players).filter(p=>p.mode==='ground');
   // repairs need rails from the material car
   W.breaks.forEach((b,i)=>{ if(b.fixed) return; const o=breakObjs[i]; let n=0; for(const p of ground) if(p.holdE&&Math.hypot(p.x-o.x,p.z-o.z)<2.6) n++;
     if(n){ if(W.rails<=0){ if(Math.random()<.01) announce('🪵 No rails left! Restock at any connected station','#ff9a7a'); return; }
-      b.prog+=DT*(.16+W.upg.repair*.06)*(1+.6*(n-1)); if(Math.random()<.06) fx('fix');
+      b.prog+=DT*(.18+(W.upg.workshop>=2?.08:0))*(1+.6*(n-1)); if(Math.random()<.06) fx('fix');
       if(b.prog>.2&&!b.alarm&&regionAt(BREAKS[i])>=1){ b.alarm=true; const p=ground[0]; if(p) spawnGnawers(p.x,p.z,2+regionAt(BREAKS[i])); announce('🐀 The hammering woke the GNAWERS! Squash them (click) or guard with the gun','#ff9a7a'); }
       if(b.prog>=1){ b.fixed=true; b.prog=1; W.rails--; W.scrap+=15; W.stats.fix++; announce('🛤️ Track repaired! +15 scrap','#7dffa8'); fx('win'); saveGame(); pushWorld(); } } });
   // stations: slow down to connect; also restock rails + deliveries
@@ -355,23 +385,23 @@ function hostWorldStep(){
     if(!W.stations[i]&&d<22&&S.v<4.2){ W.stations[i]=true; W.scrap+=40; lightStation(i); announce(`🏁 ${st.name} connected! +40 scrap (${W.stations.filter(Boolean).length}/25)`,'#7dffa8'); fx('win');
       if(i%5===0&&i>0) announce(`🗺️ You reached ${REGIONS[st.region].name}!`,'#ffd27a'); saveGame(); pushWorld(); }
     if(W.stations[i]&&d<22&&S.v<1){ if(W.rails<maxRails()){ W.rails=maxRails(); announce('🪵 Rails restocked at '+st.name,'#9fe'); pushWorld(); }
-      if(W.delivery&&W.delivery.to===i){ W.scrap+=35; W.stats.del++; announce(`📦 Delivery complete at ${st.name}! +35 scrap`,'#7dffa8'); fx('win'); W.delivery=null; saveGame(); pushWorld(); }
-      else if(!W.delivery&&i!==W.lastOffer){ W.lastOffer=i; const to=(i+2+Math.floor(Math.random()*3))%25; W.delivery={from:i,to}; announce(`📦 New delivery: carry crates from ${st.name} to ${STATIONS[to].name}`,'#9fe'); pushWorld(); } } });
+      if(W.delivery&&W.delivery.to===i){ const pay=35*(W.upg.cargo>=2?2:1); W.scrap+=pay; W.stats.del++; announce(`📦 Delivery complete at ${st.name}! +${pay} scrap`,'#7dffa8'); fx('win'); W.delivery=null; saveGame(); pushWorld(); }
+      else if(!W.delivery&&W.upg.cargo>=1&&i!==W.lastOffer){ W.lastOffer=i; const to=(i+2+Math.floor(Math.random()*3))%25; W.delivery={from:i,to}; announce(`📦 New delivery: carry crates from ${st.name} to ${STATIONS[to].name}`,'#9fe'); pushWorld(); } } });
   // the Hollow Engine (from station 3 on)
   const cnt=W.stations.filter(Boolean).length, M=W.mon, safe=nearAnyStation(30)&&!W.boss.on;
-  if(!M.on){ if(cnt>=3&&S.v>2&&!safe){ M.cd-=DT; if(M.cd<=0){ M.on=true; M.s=S.trainS-85; M.hp=60+cnt*6; announce('⚠️ A horn in the fog… the HOLLOW ENGINE is behind you! Man the rear gun!','#ff7a6a'); fx('ghost'); pushWorld(); } } }
+  if(!M.on){ if(cnt>=3&&(W.upg.gun>0||cnt>=6)&&S.v>2&&!safe){ M.cd-=DT; if(M.cd<=0){ M.on=true; M.s=S.trainS-85; M.hp=60+cnt*6; announce('⚠️ A horn in the fog… the HOLLOW ENGINE is behind you! Man the rear gun!','#ff7a6a'); fx('ghost'); pushWorld(); } } }
   else { const gap=(S.trainS+REAR)-M.s; M.s+=(safe?-4:Math.max(S.v+1.8,7))*DT;
     if(safe&&gap>60){ M.on=false; M.cd=40; announce('The Hollow Engine fades back into the fog. Stations are safe.','#9fb4ff'); pushWorld(); }
-    if(gap<1.5&&!safe){ W.hp-=18/(1+W.upg.armor*.35); M.s-=24; fx('ram'); announce('💥 RAMMED! The train took damage','#ff7a6a'); checkBreakdown(); pushWorld(); } }
+    if(gap<1.5&&!safe){ W.hp-=18*dmgMul(); M.s-=24; fx('ram'); announce('💥 RAMMED! The train took damage','#ff7a6a'); checkBreakdown(); pushWorld(); } }
   // FINAL BOSS: all 25 stations connected -> stop at Rattlejaw Pit -> 3-phase battle
   if(!W.boss.on&&!W.boss.done&&cnt===25&&near(S.trainS,STATIONS[24].s)<25&&S.v<1.5) startBoss();
   if(W.boss.on){ bossStep(); }
   // RATTLEJAW (from station 8 on): tremor warning -> bursts out beside the train -> lunges -> dives
   const J=W.rj; if(W.boss.on){} else
-  if(!J.on){ if(cnt>=8&&S.v>1&&!safe&&!M.on){ J.cd-=DT; if(J.cd<=0){ J.on=true; J.ph='tremor'; J.t=0; J.side=Math.random()<.5?-1:1; J.hp=110+cnt*5; J.bite=0; announce(`🌋 The ground is SHAKING… something huge is coming from the ${J.side<0?'LEFT':'RIGHT'}!`,'#ff7a6a'); fx('quake'); } } }
+  if(!J.on){ if(cnt>=8&&(W.upg.gun>0||cnt>=10)&&S.v>1&&!safe&&!M.on){ J.cd-=DT; if(J.cd<=0){ J.on=true; J.ph='tremor'; J.t=0; J.side=Math.random()<.5?-1:1; J.hp=110+cnt*5; J.bite=0; announce(`🌋 The ground is SHAKING… something huge is coming from the ${J.side<0?'LEFT':'RIGHT'}!`,'#ff7a6a'); fx('quake'); } } }
   else { J.t+=DT;
     if(J.ph==='tremor'){ if(Math.random()<.04) fx('quake'); if(J.t>4){ J.ph='up'; J.t=0; announce('🐛 RATTLEJAW! Shoot its glowing eyes!','#ff4a3a'); fx('roar'); } }
-    else if(J.ph==='up'){ J.bite+=DT; if(J.bite>5){ J.bite=0; W.hp-=24/(1+W.upg.armor*.35); fx('bite'); announce('🦷 Rattlejaw BIT the train!','#ff7a6a'); checkBreakdown(); pushWorld(); } if(J.t>22||safe){ J.ph='dive'; J.t=0; announce('Rattlejaw sinks back underground…','#9fb4ff'); } }
+    else if(J.ph==='up'){ J.bite+=DT; if(J.bite>5){ J.bite=0; W.hp-=24*dmgMul()*biteMul(); fx('bite'); if(W.upg.plough>=3) damageRattle(15); announce('🦷 Rattlejaw BIT the train!','#ff7a6a'); checkBreakdown(); pushWorld(); } if(J.t>22||safe){ J.ph='dive'; J.t=0; announce('Rattlejaw sinks back underground…','#9fb4ff'); } }
     else if(J.ph==='dive'&&J.t>2.5){ J.on=false; J.cd=80+Math.random()*50; pushWorld(); } }
   // gnawers chase people on foot; they flee if nobody is on the ground
   for(const g of W.gn){ if(!g.alive) continue; let tgt=null,td=1e9; for(const p of ground){ const d=Math.hypot(p.x-g.x,p.z-g.z); if(d<td){ td=d; tgt=p; } }
@@ -380,20 +410,21 @@ function hostWorldStep(){
     if(td<.8){ g.alive=false; if(tgt.id===0) knockedDown(); else if(hostConns[tgt.id]) hostConns[tgt.id].conn.send({t:'knock'}); tgt.mode='train'; announce(`🐀 ${tgt.name} was knocked down by a gnawer!`,'#ff9a7a'); } }
   W.gn=W.gn.filter(g=>g.alive);
   // random gnawer ambushes while people are on foot (not at the Yard, not in the farmlands)
-  if(ground.length&&!atYard()&&regionAt(S.trainS)>=1&&Math.random()<DT/12){ const p=ground[Math.floor(Math.random()*ground.length)]; spawnGnawers(p.x,p.z,1+Math.floor(regionAt(S.trainS)/2)); announce('👀 Something is moving in the grass…','#ffb08a'); }
+  if(ground.length&&!atYard()&&regionAt(S.trainS)>=1&&Math.random()<DT/(W.upg.light>=2?24:12)){ const p=ground[Math.floor(Math.random()*ground.length)]; spawnGnawers(p.x,p.z,1+Math.floor(regionAt(S.trainS)/2)); announce('👀 Something is moving in the grass…','#ffb08a'); }
   if(atYard()&&W.hp<maxHp()) W.hp=Math.min(maxHp(),W.hp+20*DT);
+  if(W.upg.workshop>=3&&W.hp<maxHp()) W.hp=Math.min(maxHp(),W.hp+1.2*DT);
 }
 function startBoss(){ const B=W.boss; B.on=true; B.phase=1; B.hp=B.max; W.mon.on=false; W.gn=[]; const J=W.rj; J.on=true; J.ph='tremor'; J.t=0; J.side=1; J.bite=0;
   announce('💀 FINAL BATTLE! RATTLEJAW AWAKENS IN ITS PIT! Keep the train moving, gun its eyes, fire missiles!','#ff4a3a'); fx('phase'); pushWorld(); }
 function bossDamage(d){ const B=W.boss; if(!B.on) return; B.hp-=d*(B.phase===3&&d<40?.7:1); fx('hit');
   if(B.phase===1&&B.hp<B.max*.66){ B.phase=2; fx('phase'); announce('💢 PHASE 2: Rattlejaw tears up the track ahead and calls the HOLLOW ENGINE! Fix the track and hold it off!','#ff7a6a');
     moveBreak(BOSSB,(S.trainS+14+45)%TL); W.breaks[BOSSB]={fixed:false,prog:0}; W.rails=Math.max(W.rails,1); W.mon.on=true; W.mon.s=S.trainS-70; W.mon.hp=90; pushWorld(); }
-  if(B.phase===2&&B.hp<B.max*.33){ B.phase=3; fx('phase'); if(W.upg.launcher) W.missiles=Math.max(W.missiles,3); announce('⚠️ PHASE 3: the GOLDEN WHISTLE is exposed on its head! Missiles do TRIPLE damage now!'+(W.upg.launcher?' (+3 missiles)':''),'#ffd27a'); pushWorld(); }
+  if(B.phase===2&&B.hp<B.max*.33){ B.phase=3; fx('phase'); if(W.upg.launcher) W.missiles=Math.max(W.missiles,Math.min(3,missileCap())); announce('⚠️ PHASE 3: the GOLDEN WHISTLE is exposed on its head! Missiles do TRIPLE damage now!'+(W.upg.launcher?' (+3 missiles)':''),'#ffd27a'); pushWorld(); }
   if(B.hp<=0){ B.hp=0; B.on=false; B.done=true; W.breaks[BOSSB]={fixed:true,prog:1}; W.rj.ph='dive'; W.rj.t=0; W.mon.on=false; W.scrap+=300; W.stats.rj++; fx('victory'); fx('phase');
     announce('🏆 RATTLEJAW IS DEFEATED! THE ISLAND IS SAVED! +300 scrap','#ffd27a'); saveGame(); pushWorld(); broadcast({t:'victory'}); showVictory(); } }
 function bossStep(){ const J=W.rj, B=W.boss; if(!J.on){ J.on=true; J.ph='tremor'; J.t=0; } J.t+=DT;
   if(J.ph==='tremor'){ if(J.t>2){ J.ph='up'; J.t=0; fx('roar'); } }
-  else if(J.ph==='up'){ J.bite+=DT; const every=B.phase===3?3.2:4; if(J.bite>every){ J.bite=0; W.hp-=(20+B.phase*4)/(1+W.upg.armor*.35); fx('bite'); announce('🦷 Rattlejaw BIT the train!','#ff7a6a'); checkBreakdown(); pushWorld(); }
+  else if(J.ph==='up'){ J.bite+=DT; const every=B.phase===3?3.2:4; if(J.bite>every){ J.bite=0; W.hp-=(20+B.phase*4)*dmgMul()*biteMul(); fx('bite'); if(W.upg.plough>=3) bossDamage(15); announce('🦷 Rattlejaw BIT the train!','#ff7a6a'); checkBreakdown(); pushWorld(); }
     if(J.t>13){ J.ph='dive'; J.t=0; } }
   else if(J.ph==='dive'&&J.t>2){ J.ph='tremor'; J.t=0; J.side*=-1; announce(`🌋 It's coming up on the ${J.side<0?'LEFT':'RIGHT'}!`,'#ff9a7a'); } }
 function showVictory(){ const st=W.stats; $('victory').style.display='flex'; document.exitPointerLock&&document.exitPointerLock();
@@ -403,7 +434,7 @@ function checkBreakdown(){ if(W.hp>0) return;
   if(W.boss.on){ W.hp=maxHp(); S.v=0; shake=1; announce('🔧 The train nearly broke! The crew patched it up. Keep fighting!','#ffcf6a'); W.boss.hp=Math.min(W.boss.max,W.boss.hp+60); pushWorld(); return; } W.hp=maxHp(); const lost=Math.floor(W.scrap*.2); W.scrap-=lost; S.trainS=STATIONS[0].s; S.v=0; S.throttle=0; W.mon.on=false; W.mon.cd=60; W.rj.on=false; W.rj.cd=90; W.gn=[];
   for(const p of Object.values(S.players)){ p.mode='train'; p.seat=null; p.x=0; p.z=2; } me.mode='train'; me.seat=null; me.x=0; me.z=2; broadcast({t:'tp'});
   announce(`🚧 The train broke down and was towed back to the Yard (lost ${lost} scrap). Upgrade your shield plates!`,'#ffcf6a'); saveGame(); }
-function spawnTracer([gy,gp]){ const t=tracers.find(t=>t.life<=0); if(!t) return; train.updateMatrixWorld(); const muzzle=new THREE.Vector3(0,DECK+1.3,GUN_Z).applyMatrix4(train.matrixWorld);
+function spawnTracer([gy,gp]){ const t=tracers.find(t=>t.life<=0); if(!t) return; train.updateMatrixWorld(); const muzzle=new THREE.Vector3(0,DECK+1.3,gunZ()).applyMatrix4(train.matrixWorld);
   const dir=new THREE.Vector3(Math.sin(gy)*Math.cos(gp),Math.sin(gp),Math.cos(gy)*Math.cos(gp)).transformDirection(train.matrixWorld);
   t.m.position.copy(muzzle).addScaledVector(dir,1.8); t.v.copy(dir).multiplyScalar(90); t.m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir); t.m.visible=true; t.life=.6; A.gun(); }
 function launchMissileFx(target){ const m=missiles.find(m=>!m.on); if(!m) return; train.updateMatrixWorld(); m.m.position.copy(new THREE.Vector3(0,DECK+3.8,6.2).applyMatrix4(train.matrixWorld)); m.on=true; m.t=0; m.target=target; m.m.visible=true; A.whoosh(); }
@@ -413,10 +444,10 @@ function launchMissileFx(target){ const m=missiles.find(m=>!m.on); if(!m) return
 // =====================================================================
 function beginGame(){ S.started=true; $('lobby').style.display='none'; $('hud').style.display='block'; $('clickToPlay').style.display='block';
   const p=S.players[myId()]; me.x=p?p.x:0; me.z=p?p.z:2; W.stations.forEach((c,i)=>{ if(c) lightStation(i); }); applyPaint();
-  feed('All aboard! Follow the MISSION at the top. Connect all 25 stations!','#ffcf6a'); A.whistle(); if(net.role==='host') pushWorld(); }
+  feed('All aboard! Follow the MISSION at the top. Connect all 25 stations!','#ffcf6a'); if(!W.upg.gun&&!W.upg.material) feed('🔧 Your train is just an engine. Press Tab / △ to open the TRAIN screen and attach your first cars!','#9fe'); A.whistle(); if(net.role==='host') pushWorld(); }
 $('clickToPlay').onclick=()=>renderer.domElement.requestPointerLock();
 renderer.domElement.addEventListener('click',()=>{ if(S.started&&!document.pointerLockElement&&$('shop').style.display!=='block') renderer.domElement.requestPointerLock(); });
-document.addEventListener('pointerlockchange',()=>{ $('clickToPlay').style.display=document.pointerLockElement||!S.started||$('shop').style.display==='block'?'none':'block'; });
+document.addEventListener('pointerlockchange',()=>{ if(0) $('clickToPlay').style.display=document.pointerLockElement||!S.started||$('shop').style.display==='block'?'none':'block'; });
 addEventListener('mousemove',e=>{ if(document.pointerLockElement){ me.yaw-=e.movementX*.0022; me.pitch=clamp(me.pitch-e.movementY*.0022,-1.3,1.3); } });
 const keys={}, tapped={}; addEventListener('keydown',e=>{ keys[e.code]=true; tapped[e.code]=true; if(e.code==='Space'||e.code==='Tab') e.preventDefault(); }); addEventListener('keyup',e=>keys[e.code]=false);
 let mouseDown=false, clicked=false; addEventListener('mousedown',e=>{ if(document.pointerLockElement&&e.button===0){ mouseDown=true; clicked=true; } }); addEventListener('mouseup',()=>mouseDown=false);
@@ -427,13 +458,21 @@ function step(){
   me.yaw-=dz(n.rx)*.045; me.pitch=clamp(me.pitch-dz(n.ry)*.035,-1.3,1.3);
   const useP=tapped.KeyE||(n.cross&&!step.pc); step.pc=n.cross; const holdE=!!(keys.KeyE||n.cross);
   const attack=clicked||(n.r2&&!step.pr2); step.pr2=n.r2; clicked=false;
+  if(gp&&(gp.buttons.some(b=>b.pressed)||Math.abs(n.lx)+Math.abs(n.ly)+Math.abs(n.rx||0)+Math.abs(n.ry||0)>.6)) padActive=true;
   if(tapped.Tab||(n.triangle&&!step.pt)) toggleShop(); step.pt=n.triangle;
+  const shopUp=shopOpen(); if(shopUp){ const e=(k,v)=>{ const r=v&&!step['s'+k]; step['s'+k]=v; return r; };
+    const upP=e('u',!!(n.dup||n.ly<-.5))||tapped.ArrowUp||tapped.KeyW, dnP=e('d',!!(n.ddown||n.ly>.5))||tapped.ArrowDown||tapped.KeyS, lfP=e('l',!!(n.dleft||n.lx<-.5))||tapped.ArrowLeft||tapped.KeyA, rtP=e('r',!!(n.dright||n.lx>.5))||tapped.ArrowRight||tapped.KeyD;
+    if(upP||dnP){ shopSel=clamp(shopSel+(dnP?1:-1),0,shopRows.length-1); renderShop(); }
+    if((lfP||rtP)&&shopRows[shopSel]?.t==='paint') shopAct(shopRows[shopSel],rtP?1:-1);
+    if(useP||tapped.Enter||tapped.NumpadEnter) shopAct(shopRows[shopSel]);
+    if((n.circle&&!step.pcir)||tapped.Escape) toggleShop(); }
   let prompt='';
   if(S.started){
-    if(me.seat){ if(useP) requestSeat(null);
+    if(shopUp){} else if(me.seat){ if(useP) requestSeat(null);
       if(me.seat==='drive'){ const th=clamp(S.throttle+((keys.KeyW||n.r2||dz(-n.ly)>.3)?.6:0)*DT-((keys.KeyS||dz(n.ly)>.3)?.6:0)*DT,0,1), br=!!(keys.Space||n.l2||n.square), hr=!!(tapped.KeyH||(n.circle&&!step.pcir)), ms=!!(tapped.KeyM||(n.dup&&!step.pdu));
-        sendCtl({throttle:th,brake:br,horn:hr,missile:ms}); if(net.role==='host'){ S.throttle=th; S.brake=br?1:0; if(hr) fx('horn'); if(ms) fireMissile(0); }
-        prompt='DRIVING · W/S throttle · Space brake · H horn'+(W.upg.launcher?` · M missile (${W.missiles})`:'')+' · E leave'; }
+        sendCtl({throttle:th,brake:br,horn:hr,missile:ms}); if(net.role==='host'){ S.throttle=th; S.brake=br?1:0; if(hr) hostHorn(); if(ms) fireMissile(0); }
+        if(tapped.KeyV||(n.l1&&!step.pl1)||(n.r3&&!step.pr3)){ me.view=me.view==='out'?'cab':'out'; me.yaw=0; me.pitch=me.view==='out'?-.1:-.05; }
+        prompt=(padActive?'DRIVING · R2 faster · L2 / □ brake · ○ horn · L1 camera':'DRIVING · W/S throttle · Space brake · H horn · V camera')+(W.upg.launcher?` · M missile (${W.missiles})`:'')+(padActive?' · ✕ leave':' · E leave'); }
       if(me.seat==='gun'){ const gy=me.yaw, gpch=clamp(me.pitch,-.3,.6), fire=mouseDown||n.r2; sendCtl({gy,gp:gpch,fire}); if(net.role==='host'){ S.gunYaw=gy; S.gunPitch=gpch; if(fire) hostFire(0); } prompt=`ON THE GUN · click / R2 fire · ammo ${W.ammo} · E leave`; }
       const st=SEATS[me.seat]; me.x=st.x; me.z=st.z;
     } else {
@@ -443,11 +482,11 @@ function step(){
         for(const k in SEATS){ const st=SEATS[k]; if(Math.hypot(me.x-st.x,me.z-st.z)<1.3){ prompt=`[E] ${SEATS[k].label}`; if(useP) requestSeat(k); } }
         const door=DOORS.find(d=>Math.hypot(me.x-d.x,me.z-d.z)<.9);
         if(door){ if(S.v>2) prompt='Too fast to jump off! Ask the driver to slow down'; else { prompt='[E] step off the train'; if(useP){ const w=new THREE.Vector3(door.x*2.1,0,door.z).applyMatrix4(train.matrixWorld); me.mode='ground'; me.gx=w.x; me.gz=w.z; me.yaw+=trainYaw(); A.step(); } } }
-        if(Math.hypot(me.x-BENCH.x,me.z-BENCH.z)<1.2){ prompt='[E] / [Tab] workbench: craft ammo & missiles'+(atYard()?' · UPGRADES (you are at the Yard)':''); if(useP) toggleShop(); }
+        if(BENCH&&Math.hypot(me.x-BENCH.x,me.z-BENCH.z)<1.2){ prompt='[E] workbench: craft ammo & missiles'+(atYard()?' · UPGRADES (you are at the Yard)':''); if(useP) toggleShop(); }
       } else {
         me.gx+=mv.x*sp; me.gz+=mv.z*sp;
         const lp=train.worldToLocal(new THREE.Vector3(me.gx,0,me.gz)); if(Math.abs(lp.x)<1.75&&lp.z>REAR&&lp.z<14.5){ lp.x=Math.sign(lp.x||1)*1.75; const w=train.localToWorld(lp); me.gx=w.x; me.gz=w.z; }
-        if(Math.abs(lp.x)<2.6&&lp.z>REAR&&lp.z<4){ if(S.v>2) prompt='The train is moving!'; else { prompt='[E] climb back aboard'; if(useP){ me.mode='train'; me.x=clamp(lp.x,-1.2,1.2); me.z=clamp(lp.z,-19.5,3.4); if(!inside(me.x,me.z)) me.x=0; me.yaw-=trainYaw(); A.step(); } } }
+        if(Math.abs(lp.x)<2.6&&lp.z>REAR&&lp.z<7.5){ if(S.v>2) prompt='The train is moving!'; else { prompt='[E] climb back aboard'; if(useP){ me.mode='train'; me.x=clamp(lp.x,-1.2,1.2); me.z=clamp(lp.z,REAR+.5,6.8); if(!inside(me.x,me.z)) me.x=0; if(!inside(me.x,me.z)){ me.x=0; me.z=5.0; } me.yaw-=trainYaw(); A.step(); } } }
         W.breaks.forEach((b,i)=>{ if(b.fixed) return; const o=breakObjs[i]; if(Math.hypot(me.gx-o.x,me.gz-o.z)<2.6) prompt=W.rails>0?`HOLD [E] to repair the track · ${Math.round(b.prog*100)}% · rails left ${W.rails}`:'No rails in the material car! Restock at a connected station'; });
         CRATES.forEach((c,i)=>{ if(W.crates[i]) return; if(Math.hypot(me.gx-c.x,me.gz-c.z)<1.8){ prompt='[E] grab the scrap crate'; if(useP){ if(net.role==='host') takeCrate(i,0); else net.conn.send({t:'crate',i}); } } });
         PARTS.forEach((pt,i)=>{ if(W.parts[pt.k]) return; if(Math.hypot(me.gx-pt.x,me.gz-pt.z)<2){ prompt=`[E] take the ${pt.name}`; if(useP){ if(net.role==='host') takePart(i,0); else net.conn.send({t:'part',i}); } } });
@@ -456,7 +495,7 @@ function step(){
       }
     }
     if(net.role==='host'){
-      const top=8+W.upg.engine*2.2, a=S.throttle*(2.0+W.upg.engine*.5)-S.brake*6-.05*S.v-.6*Math.max(0,S.v-top);
+      const top=5.5+W.upg.engine*2.4, a=S.throttle*(1.6+W.upg.engine*.45)-S.brake*6-.05*S.v-.6*Math.max(0,S.v-top);
       S.v=Math.max(0,S.v+a*DT); let ns=S.trainS+S.v*DT;
       const nb=nextBreak(); if(nb&&nb.d<S.v*DT+.5){ ns=S.trainS+Math.max(0,nb.d-.5); if(S.v>1){ announce('🛑 BROKEN TRACK! Step off and hold E at the glowing ring','#ffcf6a'); shake=.4; } S.v=0; }
       S.trainS=(ns%TL+TL)%TL;
@@ -473,9 +512,9 @@ function step(){
     for(const p of Object.values(S.players)) if(p.tx!=null){ p.x=lerp(p.x,p.tx,.25); p.z=lerp(p.z,p.tz,.25); }
   }
   $('prompt').style.display=prompt?'block':'none'; $('prompt').textContent=prompt;
-  for(const k in tapped) delete tapped[k]; step.pcir=n.circle; step.pdu=n.dup;
+  for(const k in tapped) delete tapped[k]; step.pcir=n.circle; step.pdu=n.dup; step.pl1=n.l1; step.pr3=n.r3;
 }
-let swing=0;
+let swing=0, padActive=false, shopT=0;
 let lastCtl=0; function sendCtl(c){ if(net.role!=='client') return; const now=performance.now(); if(now-lastCtl<50&&!c.fire&&!c.horn&&!c.missile) return; lastCtl=now; net.conn.send({t:'ctl',...c}); }
 function requestSeat(k){ if(k==='drive'){ me.yaw=0; me.pitch=-.05; } if(k==='gun'){ me.yaw=Math.PI; me.pitch=-.08; }
   if(net.role==='host'){ hostSeat(0,k); me.seat=S.players[0].seat; } else { net.conn.send({t:'seat',k}); if(k===null) me.seat=null; } A.dry(); }
@@ -490,32 +529,43 @@ function missionText(){
   if(nb&&nb.d<dT) main=nb.d<6?'🛠️ Step off and fix the broken track (hold E at the glowing ring)':`Drive on. Broken track ahead in ${Math.round(nb.d)} m`;
   else main=dT<70?`🏁 ${tgt.name} ahead: SLOW DOWN to connect it (${Math.round(dT)} m)`:`Drive to ${tgt.name} (${Math.round(dT)} m)`;
   if(!Object.values(S.players).some(p=>p.seat==='drive')&&S.v<.5&&!(nb&&nb.d<6)) main='Get in the cab (front) and drive · '+main;
+  if(done===1&&atYard()&&W.upg.material+W.upg.gun+W.upg.workshop===0) main='🔧 Your train is only an engine! Press Tab / △ and buy your first car';
   let side='';
   if(W.rj.on) side=W.rj.ph==='tremor'?`🌋 RATTLEJAW is coming from the ${W.rj.side<0?'LEFT':'RIGHT'}! Get on the gun!`:'🐛 Shoot RATTLEJAW\'s glowing eyes! (missiles: M in the cab)';
   else if(W.mon.on) side='⚠️ The Hollow Engine is chasing you. Man the rear gun!';
   else if(W.gn.length) side='🐀 Gnawers! Whack them (click / R2) or run back to the train';
-  else if(W.ammo<15) side='🔫 Low ammo! Craft more at the workbench in the workshop car';
+  else if(!W.upg.gun&&done>=2) side='🔫 Monsters come after station 3! Drive back to THE YARD and buy the GUN DECK (Tab / △)';
+  else if(W.upg.gun&&W.ammo<15) side='🔫 Low ammo! Craft more on the TRAIN screen (Tab / △)';
   else if(W.rails===0) side='🪵 Out of rails! Stop at any connected station to restock';
-  else if(W.delivery) side=`📦 Delivery: bring the crates to ${STATIONS[W.delivery.to].name}`;
+  else if(W.delivery&&W.upg.cargo) side=`📦 Delivery: bring the crates to ${STATIONS[W.delivery.to].name}`;
   else { const pt=PARTS.find(p=>!W.parts[p.k]&&W.stations[p.st]); if(pt) side=`⭐ A ${pt.name} is hidden behind ${STATIONS[pt.st].name} (follow the light beam)`;
-    else { const cheap=Object.keys(UPG).some(k=>{ const l=W.upg[k],u=UPG[k]; return l<u.cost.length&&W.scrap>=u.cost[l]&&(!u.need||W.parts[u.need[l]]); }); side=cheap?'🔧 You can afford an upgrade! Visit the workbench at THE YARD':`📦 Grab scrap crates beside the track (${W.crates.filter(Boolean).length}/${CRATES.length})`; } }
+    else { const cheap=UPG_ORDER.some(k=>canBuy(k,true)===''); side=cheap?'🔧 You can afford a train upgrade! Stop at THE YARD and press Tab / △':`📦 Grab scrap crates beside the track (${W.crates.filter(Boolean).length}/${CRATES.length})`; } }
   return [main,side]; }
 
 // ---------- workbench / Yard workshop ----------
-function toggleShop(){ const sh=$('shop'); if(sh.style.display==='block'){ sh.style.display='none'; return; } sh.style.display='block'; document.exitPointerLock&&document.exitPointerLock(); renderShop(); }
-function renderShop(){ $('shopScrap').textContent=W.scrap; const yard=atYard();
-  let h=`<div class="sh">CRAFT (any time)</div>
-   <div class="up"><div><b>Ammo +40</b><br><small>you have ${W.ammo}/${maxAmmo()}</small></div><button data-c="ammo" ${W.scrap<10||W.ammo>=maxAmmo()?'disabled':''}>10 scrap</button></div>
-   <div class="up"><div><b>Missile</b><br><small>${W.upg.launcher?`you have ${W.missiles}/4 · driver fires with M`:'build the launcher at the Yard first'}</small></div><button data-c="missile" ${!W.upg.launcher||W.scrap<25||W.missiles>=4?'disabled':''}>25 scrap</button></div>
-   <div class="sh">${yard?'YARD UPGRADES':'UPGRADES · only at THE YARD'}</div>`;
-  h+=Object.entries(UPG).map(([k,u])=>{ const l=W.upg[k], max=l>=u.cost.length, c=max?0:u.cost[l], part=!max&&u.need?u.need[l]:null, hasPart=!part||W.parts[part];
-    const pn=part?PARTS.find(p=>p.k===part).name:''; return `<div class="up"><div><b>${u.name}</b> <span style="color:#9a8a70">lvl ${l}/${u.cost.length}</span><br><small>${u.desc}${part?` · needs <span style="color:${hasPart?'#7dffa8':'#ff9a7a'}">${pn}</span>`:''}</small></div><button data-k="${k}" ${max||!yard||W.scrap<c||!hasPart?'disabled':''}>${max?'MAX':c+' scrap'}</button></div>`; }).join('');
-  h+=`<div class="up"><div><b>Paint</b><br><small>${yard?'pick a colour (free)':'only at the Yard'}</small></div><div>${PAINTS.map((p,i)=>`<span class="sw" data-i="${i}" title="${p[0]}" style="background:#${p[1].toString(16).padStart(6,'0')};${W.paint===i?'outline:3px solid #ffcf6a':''}"></span>`).join('')}</div></div>`;
-  $('shopList').innerHTML=h;
-  $('shopList').querySelectorAll('button[data-k]').forEach(b=>b.onclick=()=>{ if(net.role==='host') buy(b.dataset.k); else net.conn.send({t:'buy',k:b.dataset.k}); setTimeout(renderShop,300); });
-  $('shopList').querySelectorAll('button[data-c]').forEach(b=>b.onclick=()=>{ if(net.role==='host') craft(b.dataset.c); else net.conn.send({t:'craft',k:b.dataset.c}); setTimeout(renderShop,300); });
-  $('shopList').querySelectorAll('.sw').forEach(s=>s.onclick=()=>{ if(!yard) return; if(net.role==='host') setPaint(+s.dataset.i); else net.conn.send({t:'paint',i:+s.dataset.i}); setTimeout(renderShop,300); }); }
-$('shopClose').onclick=()=>{ $('shop').style.display='none'; };
+// ---------- TRAIN screen: crafting + every part's upgrade levels (controller friendly) ----------
+const shopOpen=()=>$('shop').style.display==='block'; let shopSel=0, shopRows=[];
+function toggleShop(){ const sh=$('shop'); if(shopOpen()){ sh.style.display='none'; if(!padActive) try{ renderer.domElement.requestPointerLock(); }catch(e){} return; }
+  sh.style.display='block'; document.exitPointerLock&&document.exitPointerLock(); renderShop(); }
+function shopAct(r,dir=1){ if(!r) return; const send=(m,f)=>{ if(net.role==='host') f(); else net.conn.send(m); };
+  if(r.t==='up'){ if(canBuy(r.k)){ A.dry(); return; } send({t:'buy',k:r.k},()=>buy(r.k)); }
+  if(r.t==='craft') send({t:'craft',k:r.k},()=>craft(r.k));
+  if(r.t==='paint'){ if(!atYard()){ A.dry(); return; } const i=(W.paint+dir+PAINTS.length)%PAINTS.length; send({t:'paint',i},()=>setPaint(i)); }
+  setTimeout(renderShop,250); }
+function renderShop(){ $('shopScrap').textContent=W.scrap; const yard=atYard(), cc=canCraft();
+  $('shopWhere').innerHTML=yard?'<span style="color:#7dffa8">✓ You are at THE YARD: upgrades and new cars are available</span>':'<span style="color:#ff9a7a">Upgrades only at THE YARD (station 1). Stop there to buy.</span>';
+  shopRows=[{t:'craft',k:'ammo'},{t:'craft',k:'missile'},...UPG_ORDER.map(k=>({t:'up',k})),{t:'paint'}]; shopSel=clamp(shopSel,0,shopRows.length-1);
+  $('shopList').innerHTML=shopRows.map((r,i)=>{ const sel=i===shopSel?' sel':'';
+    if(r.t==='craft'){ const am=r.k==='ammo', ok=am?(W.upg.gun&&W.scrap>=ammoCost()&&W.ammo<maxAmmo()):(W.upg.launcher&&W.scrap>=25&&W.missiles<missileCap())&&cc;
+      const info=am?(W.upg.gun?`ammo ${W.ammo}/${maxAmmo()}`:'needs the gun deck'):(W.upg.launcher?`missiles ${W.missiles}/${missileCap()}`:'needs the missile launcher');
+      return `<div class="up${sel}" data-i="${i}"><div class="ic">${am?'🧨':'🎯'}</div><div class="tx"><b>Craft ${am?'ammo +40':'a missile'}</b><br><small>${info}${cc?'':' · <span class="need">craft at the Yard, or buy the workshop car</span>'}</small></div><button ${ok&&cc?'':'disabled'}>${am?ammoCost():25} 🔩</button></div>`; }
+    if(r.t==='paint') return `<div class="up${sel}" data-i="${i}"><div class="ic">🎨</div><div class="tx"><b>Paint</b> <small>${PAINTS[W.paint][0]}</small><br><small>${yard?'free · ← → to change':'only at the Yard'}</small></div><div>${PAINTS.map((p,j)=>`<span class="sw" data-p="${j}" style="background:#${p[1].toString(16).padStart(6,'0')};${W.paint===j?'outline:3px solid #ffcf6a':''}"></span>`).join('')}</div></div>`;
+    const u=UPG[r.k], l=W.upg[r.k], why=canBuy(r.k), n=l+1, max=n>u.max, pips='●'.repeat(l-(u.min||0))+'○'.repeat(u.max-l), need=!max&&u.need&&u.need[n]?PARTS.find(p=>p.k===u.need[n]):null;
+    return `<div class="up${sel}" data-i="${i}"><div class="ic">${u.icon}</div><div class="tx"><b>${u.name}</b> <span class="pips">${pips}</span><br><small>Now: ${u.lv[l]}</small><br>${max?'<small class="nx">⭐ Fully upgraded!</small>':`<small class="nx">Next: ${u.lv[n]}</small>${need?` <small class="${W.parts[need.k]?'nx':'need'}">· needs ${need.name}${W.parts[need.k]?' ✓':` (behind ${STATIONS[need.st].name})`}</small>`:''}`}</div><button ${why?'disabled':''}>${max?'MAX':(u.car&&!l?'ATTACH ':'')+u.cost[n]+' 🔩'}</button></div>`; }).join('');
+  $('shopList').querySelectorAll('.up').forEach(d=>{ const i=+d.dataset.i; d.onmouseenter=()=>{ shopSel=i; d.parentNode.querySelectorAll('.up').forEach(x=>x.classList.toggle('sel',x===d)); }; const b=d.querySelector('button'); if(b) b.onclick=()=>{ shopSel=i; shopAct(shopRows[i]); }; });
+  $('shopList').querySelectorAll('.sw').forEach(sw=>sw.onclick=()=>{ if(!atYard()) return; const j=+sw.dataset.p; if(net.role==='host') setPaint(j); else net.conn.send({t:'paint',i:j}); setTimeout(renderShop,250); });
+  $('shopList').querySelector('.sel')?.scrollIntoView({block:'nearest'}); }
+$('shopClose').onclick=()=>toggleShop();
 
 // ---------- avatars ----------
 const avatars={};
@@ -538,7 +588,7 @@ function render(){
   const u=((S.trainS/TL)%1+1)%1, p=curve.getPointAt(u), t=curve.getTangentAt(u);
   train.position.set(p.x,.25,p.z); train.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),t); train.updateMatrixWorld();
   moon.position.copy(train.position).add(new THREE.Vector3(-30,45,15)); moon.target.position.copy(train.position);
-  const reg=REGIONS[regionAt(S.trainS)]; fogC.set(reg.fog); scene.fog.color.lerp(fogC,.02); scene.background.lerp(fogC,.02);
+  const reg=REGIONS[regionAt(S.trainS)]; fogC.set(reg.fog); scene.fog.density=lerp(scene.fog.density,[.022,.016,.012][W.upg.light]||.022,.02); scene.fog.color.lerp(fogC,.02); scene.background.lerp(fogC,.02);
   if(GUN){ GUN.rotation.y=S.gunYaw; GUN.rotation.x=-S.gunPitch; }
   W.breaks.forEach((b,i)=>{ const o=breakObjs[i]; o.bad.visible=!b.fixed; o.good.visible=b.fixed; o.ring.material.opacity=.5+Math.sin(performance.now()/200)*.3; o.ring.scale.setScalar(1+(b.prog||0)*.5); });
   crateObjs.forEach((g,i)=>{ g.visible=!W.crates[i]; });
@@ -569,17 +619,24 @@ function render(){
   let eye, look;
   if(me.mode==='train'){ eye=new THREE.Vector3(me.x,DECK+(me.seat?SEATS[me.seat].eye:EYE),me.z).applyMatrix4(train.matrixWorld); look=new THREE.Vector3(Math.sin(me.yaw)*Math.cos(me.pitch),Math.sin(me.pitch),Math.cos(me.yaw)*Math.cos(me.pitch)).transformDirection(train.matrixWorld); }
   else { eye=new THREE.Vector3(me.gx,hgt(me.gx,me.gz)+EYE,me.gz); look=new THREE.Vector3(Math.sin(me.yaw)*Math.cos(me.pitch),Math.sin(me.pitch),Math.cos(me.yaw)*Math.cos(me.pitch)); }
+  if(me.mode==='train'&&me.seat==='drive'&&me.view==='out'){ const yw=me.yaw, R=6, h=clamp(6.2-me.pitch*8,4,12);
+    eye=new THREE.Vector3(-Math.sin(yw)*R+Math.cos(yw)*1.4,h,8-Math.cos(yw)*R).applyMatrix4(train.matrixWorld); look=new THREE.Vector3(Math.sin(yw)*40,.8,8+Math.cos(yw)*40).applyMatrix4(train.matrixWorld).sub(eye).normalize(); }
   if(W.rj.on&&W.rj.ph==='tremor') shake=Math.max(shake,.25);
   if(shake>.01){ eye.add(new THREE.Vector3((Math.random()-.5)*shake*.3,(Math.random()-.5)*shake*.3,(Math.random()-.5)*shake*.3)); shake*=.9; }
+  if(shopOpen()){ const mid=(REAR+14)/2, R=(14-REAR)/2+9, a=performance.now()/9000; eye=new THREE.Vector3(Math.sin(a)*R,4.5+R*.12,mid+Math.cos(a)*R).applyMatrix4(train.matrixWorld); look=new THREE.Vector3(0,1.8,mid).applyMatrix4(train.matrixWorld).sub(eye).normalize();
+    if((shopT=(shopT+1)%30)===0) renderShop(); }
   camera.position.copy(eye); camera.up.copy(up); camera.lookAt(eye.clone().add(look)); myLamp.position.copy(eye).add(new THREE.Vector3(0,-.3,0));
-  wrench.visible=me.mode==='ground'; if(wrench.visible){ swing*=.85; wrench.position.set(.32,-.32+swing*.15,-.6); wrench.rotation.set(-.5-swing*1.4,0,-.3); }
+  wrench.visible=me.mode==='ground'&&!shopOpen(); if(wrench.visible){ swing*=.85; wrench.position.set(.32,-.32+swing*.15,-.6); wrench.rotation.set(-.5-swing*1.4,0,-.3); }
   if(S.started&&Math.random()<.25+S.throttle*.5){ const s=smoke.find(s=>s.life<=0); if(s){ s.m.position.copy(new THREE.Vector3(0,5.2,12.3).applyMatrix4(train.matrixWorld)); s.m.scale.setScalar(.5); s.m.visible=true; s.life=3; } }
   for(const s of smoke) if(s.life>0){ s.life-=1/60; s.m.position.y+=.05; s.m.scale.multiplyScalar(1.012); s.m.material.opacity=Math.max(0,s.life/3*.45); if(s.life<=0) s.m.visible=false; }
   for(const tr of tracers) if(tr.life>0){ tr.life-=1/60; tr.m.position.addScaledVector(tr.v,1/60); if(tr.life<=0) tr.m.visible=false; }
   if(S.started){ const [m1,m2]=missionText(); $('mMain').textContent=m1; $('mSide').textContent=m2; $('region').textContent=reg.name;
+    $('hud').classList.toggle('shopping',shopOpen());
+    $('clickToPlay').style.display=!document.pointerLockElement&&!shopOpen()&&!padActive&&$('victory').style.display!=='flex'?'block':'none';
+    const hl=padActive?'L-stick move · R-stick look · ✕ use · △ TRAIN screen · R2 fire / throttle · L2 brake · ○ horn':'WASD move · mouse look · E use · Tab TRAIN screen · click fire / whack · Space brake · H horn'; if($('help').textContent!==hl) $('help').textContent=hl;
     $('thrBar').style.width=(S.throttle*100)+'%'; $('spd').textContent=Math.round(S.v*3.6)+' km/h'+(S.brake?'  · BRAKE':'');
     $('hpBar').style.width=clamp(W.hp/maxHp()*100,0,100)+'%'; $('scrap').textContent=W.scrap; $('stCount').textContent=W.stations.filter(Boolean).length+'/25';
-    $('inv').innerHTML=`🔫 ${W.ammo} &nbsp; 🚀 ${W.upg.launcher?W.missiles:'–'} &nbsp; 🪵 ${W.rails}/${maxRails()} &nbsp; ⭐ ${PARTS.filter(p=>W.parts[p.k]).length}/${PARTS.length}`;
+    $('inv').innerHTML=`🔫 ${W.upg.gun?W.ammo:'–'} &nbsp; 🚀 ${W.upg.launcher?W.missiles+'/'+missileCap():'–'} &nbsp; 🪵 ${W.rails}/${maxRails()} &nbsp; ⭐ ${PARTS.filter(p=>W.parts[p.k]).length}/${PARTS.length}`;
     const gap=(S.trainS+REAR)-W.mon.s; let wtxt=''; if(W.mon.on) wtxt=`⚠️ HOLLOW ENGINE ${Math.max(0,Math.round(gap))} m behind`; if(W.rj.on) wtxt=W.rj.ph==='tremor'?`🌋 TREMORS… ${W.rj.side<0?'◀ LEFT':'RIGHT ▶'}`:W.rj.ph==='up'?`🐛 RATTLEJAW ${W.rj.side<0?'◀ LEFT SIDE':'RIGHT SIDE ▶'}`:'';
     $('warn').style.display=wtxt?'block':'none'; $('warn').textContent=wtxt;
     $('boss').style.display=W.boss.on?'block':'none'; if(W.boss.on){ $('bossBar').style.width=clamp(W.boss.hp/W.boss.max*100,0,100)+'%'; $('bossPh').textContent='PHASE '+W.boss.phase+' / 3'; }
@@ -601,5 +658,5 @@ function audioFrame(){ if(!S.started) return; const dt=1/60;
   let ten=0; if(W.mon.on) ten=Math.max(ten,clamp(1-gap/80,.35,1)); if(W.rj.on) ten=Math.max(ten,W.rj.ph==='tremor'?.7:.95); if(W.gn.length) ten=Math.max(ten,.6); if(W.boss.on) ten=1;
   A.update(dt,{tension:ten,quake:W.rj.on&&W.rj.ph==='tremor'?.8:W.rj.on&&W.rj.ph==='up'&&W.rj.t<1.5?.6:0,region:regionAt(S.trainS),boss:W.boss.on}); }
 (function loop(now=performance.now()){ acc+=Math.min(250,now-last); last=now; while(acc>=1000/60){ step(); acc-=1000/60; } render(); requestAnimationFrame(loop); })();
-window.__rails={startBoss,bossDamage,A,S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy};
+window.__rails={startBoss,bossDamage,A,S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy,WALK,SEATS,get REAR(){ return REAR; },train,relayout};
 </script></body></html>
