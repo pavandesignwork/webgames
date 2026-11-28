@@ -19,23 +19,27 @@
  .pl .r{margin-left:auto;font-size:15px} .empty{opacity:.35}
  .err{color:#ff8a7a;min-height:1.2em;margin-top:10px;text-align:center}
  .small{font-size:13px;color:#8a8070;text-align:center;margin-top:12px;line-height:1.5}
- #hud{position:fixed;inset:0;pointer-events:none;display:none}
- #cross{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#fff9}
- #prompt{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);background:#000a;padding:5px 12px;border-radius:4px;font-size:15px;display:none}
- #tl{position:absolute;left:16px;top:14px;font-size:15px;line-height:1.6;background:#0009;padding:8px 12px;border-radius:4px}
- #speed{position:absolute;right:20px;bottom:44px;background:#000a;padding:10px 14px;border-radius:4px;font-size:16px;min-width:200px}
- .bar{height:12px;background:#222;border-radius:2px;margin-top:6px;overflow:hidden} .bar i{display:block;height:100%;background:linear-gradient(90deg,#c9a24a,#ff6a2a)}
- #help{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);font-size:13px;color:#cfc6b0;background:#0008;padding:5px 12px;border-radius:4px;white-space:nowrap}
- #clickToPlay{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-size:24px;background:#000c;padding:14px 26px;border:2px solid #c9a24a;border-radius:4px;display:none;pointer-events:auto;cursor:pointer}
- #feed{position:absolute;right:16px;top:14px;text-align:right;font-size:15px;line-height:1.7}
- #feed div{background:#0009;padding:2px 10px;border-radius:3px;margin-bottom:3px}
- #feed{top:60px}
- #mission{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#0b0e16d8;border:1px solid #4a3a26;border-radius:4px;padding:8px 18px;text-align:center;min-width:420px;max-width:70vw}
- #mission .mt{font-size:11px;letter-spacing:3px;color:#c9a24a} #mMain{font-size:19px;color:#f0e8d8} #mSide{font-size:14px;color:#a8b8c8;margin-top:3px}
- #warn{position:absolute;left:50%;top:150px;transform:translateX(-50%);background:#5a0a06d8;color:#fff;padding:6px 16px;border-radius:4px;font-size:18px;display:none;animation:blink 1s infinite}
- @keyframes blink{50%{opacity:.55}}
- #boss{position:absolute;left:50%;top:92px;transform:translateX(-50%);width:min(560px,70vw);background:#1a0606d8;border:1px solid #8a2a1a;border-radius:4px;padding:6px 12px;display:none;color:#ffd0c0;font-size:15px}
- #stats{position:absolute;left:16px;bottom:44px;background:#000a;padding:10px 14px;border-radius:4px;font-size:16px;min-width:220px}
+ #hud{position:fixed;inset:0;pointer-events:none;display:none;text-shadow:0 1px 3px #000,0 0 8px #000a}
+ #cross{position:absolute;left:50%;top:50%;width:5px;height:5px;margin:-2.5px;border-radius:50%;background:#fffa;box-shadow:0 0 3px #000}
+ #ammo{position:absolute;left:50%;top:calc(50% + 18px);transform:translateX(-50%);font-size:13px;color:#ffe7b0;display:none}
+ #prompt{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);font-size:15px;color:#fff;display:none;white-space:nowrap}
+ #mission{position:absolute;left:50%;top:14px;transform:translateX(-50%);text-align:center;max-width:72vw}
+ #mMain{font-size:17px;color:#f4ecd8} #mSide{font-size:14px;color:#ffb48a;margin-top:2px}
+ #feed{position:absolute;right:18px;top:14px;text-align:right;font-size:14px;line-height:1.6;max-width:40vw}
+ #feed div{animation:fadeout 4.5s forwards}
+ @keyframes fadeout{0%{opacity:0}6%{opacity:1}80%{opacity:1}100%{opacity:0}}
+ #warn{position:absolute;left:50%;top:62px;transform:translateX(-50%);color:#ffd0c0;font-size:16px;letter-spacing:1px;display:none;animation:blink 1.2s infinite}
+ @keyframes blink{50%{opacity:.5}}
+ #boss{position:absolute;left:50%;top:92px;transform:translateX(-50%);width:min(520px,64vw);display:none;color:#ffd0c0;font-size:14px}
+ .bar{height:8px;background:#0008;border-radius:4px;margin-top:4px;overflow:hidden;box-shadow:0 0 0 1px #0006} .bar i{display:block;height:100%;background:linear-gradient(90deg,#c9a24a,#ff6a2a)}
+ #stats{position:absolute;left:18px;bottom:16px;font-size:14px;color:#f0e8d8}
+ #stats .bar{width:190px} #inv{margin-top:5px;word-spacing:2px}
+ #speed{position:absolute;right:20px;bottom:16px;text-align:right;display:none;color:#f0e8d8} #spd{font-size:28px;font-weight:bold} #speed .bar{width:150px}
+ #help{position:absolute;left:50%;bottom:100px;transform:translateX(-50%);font-size:14px;color:#e8e0cc;white-space:nowrap;transition:opacity 1s}
+ #regionTitle{position:absolute;left:50%;top:28%;transform:translateX(-50%);font-size:34px;letter-spacing:8px;color:#e8d4a0;opacity:0;white-space:nowrap}
+ #regionTitle.show{animation:regionIn 4s forwards}
+ @keyframes regionIn{0%{opacity:0;letter-spacing:14px}15%{opacity:1}75%{opacity:1}100%{opacity:0;letter-spacing:8px}}
+ #clickToPlay{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-size:22px;background:#000a;padding:12px 24px;border:1px solid #c9a24a;border-radius:4px;display:none;pointer-events:auto;cursor:pointer;text-shadow:none}
  #shop{position:absolute;right:2vw;top:50%;transform:translateY(-50%);width:min(600px,56vw);background:#0d1018ee;border:2px solid #c9a24a;border-radius:6px;padding:14px 18px;display:none;pointer-events:auto}
  #shop .up{padding:7px 8px;border-radius:4px} #shop .up.sel{background:#2e2610;outline:2px solid #ffcf6a}
  #shop .ic{font-size:26px;width:36px;text-align:center} #shop .tx{flex:1} #shop .pips{color:#ffcf6a;letter-spacing:2px;font-size:14px} #shop small{color:#b8ad94} #shop .nx{color:#9fe0b0}
@@ -64,15 +68,15 @@
   <button id="startBtn" class="alt" style="display:none">▶ START GAME</button>
   <div class="err" id="lobbyErr"></div>
 </div></div>
-<div id="hud"><div id="cross"></div><div id="prompt"></div><div id="tl"></div><div id="feed"></div>
-  <div id="mission"><div class="mt">MISSION</div><div id="mMain"></div><div id="mSide"></div></div>
+<div id="hud"><div id="cross"></div><div id="ammo"></div><div id="prompt"></div><div id="feed"></div><div id="regionTitle"></div>
+  <div id="mission"><div id="mMain"></div><div id="mSide"></div></div>
   <div id="warn"></div>
-  <div id="boss"><div style="display:flex;justify-content:space-between"><b>💀 RATTLEJAW</b><span id="bossPh"></span></div><div class="bar" style="height:16px"><i id="bossBar" style="background:linear-gradient(90deg,#8a0a06,#ff3a1a);width:100%"></i></div></div>
-  <div id="stats"><div id="region" style="color:#c9a24a;letter-spacing:2px;font-size:13px;margin-bottom:4px"></div>🛤️ Stations <b id="stCount">1/25</b> &nbsp; 🔩 Scrap <b id="scrap">0</b><div id="inv" style="margin-top:6px;font-size:15px"></div><div style="margin-top:6px">TRAIN<div class="bar"><i id="hpBar" style="background:linear-gradient(90deg,#3ac05a,#9aef6a);width:100%"></i></div></div></div>
+  <div id="boss"><div style="display:flex;justify-content:space-between"><b>💀 RATTLEJAW</b><span id="bossPh"></span></div><div class="bar" style="height:12px"><i id="bossBar" style="background:linear-gradient(90deg,#8a0a06,#ff3a1a);width:100%"></i></div></div>
+  <div id="stats"><div class="bar"><i id="hpBar" style="background:linear-gradient(90deg,#3ac05a,#9aef6a);width:100%"></i></div><div id="inv"></div></div>
   <div id="shop"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:22px;color:#d9c08a">🚂 YOUR TRAIN</b><span style="font-size:18px">🔩 <b id="shopScrap">0</b> scrap</span></div>
-    <div id="shopWhere" style="font-size:13px;margin:4px 0 6px"></div><div id="shopList"></div>
+    <div id="shopRoom" style="font-size:13px;color:#9a8a70;margin-top:2px"></div><div id="shopWhere" style="font-size:13px;margin:4px 0 6px"></div><div id="shopList"></div>
     <div id="shopHint">↑ ↓ choose · ✕ / E / Enter buy · ← → paint colour · ○ / Tab close</div><button id="shopClose" class="alt" style="margin-top:8px;padding:8px">CLOSE</button></div>
-  <div id="speed">THROTTLE<div class="bar"><i id="thrBar"></i></div><div style="margin-top:8px" id="spd">0 km/h</div></div>
+  <div id="speed"><span id="spd">0</span> km/h<div class="bar"><i id="thrBar"></i></div></div>
   <div id="help"></div>
   <div id="clickToPlay">CLICK TO PLAY</div></div>
 <div id="victory" class="screen"><div class="box" style="text-align:center">
@@ -270,7 +274,7 @@ const hostConns={}; let nextId=1;
 const myId=()=>net.role==='host'?0:net.myId;
 function lobbyList(){ return Object.values(S.players).map(p=>({id:p.id,name:p.name,color:p.color,ready:p.ready})); }
 function broadcast(m){ for(const id in hostConns) hostConns[id].conn.send(m); }
-function feed(t,col){ const d=document.createElement('div'); d.textContent=t; if(col) d.style.color=col; $('feed').appendChild(d); setTimeout(()=>d.remove(),6000); while($('feed').children.length>5) $('feed').firstChild.remove(); }
+function feed(t,col){ const d=document.createElement('div'); d.textContent=t; if(col) d.style.color=col; $('feed').appendChild(d); setTimeout(()=>d.remove(),4500); while($('feed').children.length>3) $('feed').firstChild.remove(); }
 function announce(t,col){ feed(t,col); broadcast({t:'msg',text:t,col}); }
 function fx(k){ playFx(k); broadcast({t:'fx',k}); }
 function playFx(k){ const F={ram:()=>{ shake=1; A.ram(); },horn:()=>A.whistle(),win:()=>A.fanfare(),boom:()=>{ A.boom(); shake=.6; },fix:()=>A.hammer(),quake:()=>{ shake=.5; },roar:()=>{ A.roar(); shake=1; },bite:()=>{ A.bite(); shake=1.2; },pick:()=>A.pickup(),hit:()=>A.splat(),ghost:()=>A.ghostHorn(.35),victory:()=>A.win(),phase:()=>{ A.roar(1); shake=1.5; }}; F[k]&&F[k](); }
@@ -442,7 +446,7 @@ function launchMissileFx(target){ const m=missiles.find(m=>!m.on); if(!m) return
 // =====================================================================
 //  GAME LOOP
 // =====================================================================
-function beginGame(){ S.started=true; $('lobby').style.display='none'; $('hud').style.display='block'; $('clickToPlay').style.display='block';
+function beginGame(){ S.started=true; S.helpUntil=performance.now()+12000; $('lobby').style.display='none'; $('hud').style.display='block'; $('clickToPlay').style.display='block';
   const p=S.players[myId()]; me.x=p?p.x:0; me.z=p?p.z:2; W.stations.forEach((c,i)=>{ if(c) lightStation(i); }); applyPaint();
   feed('All aboard! Follow the MISSION at the top. Connect all 25 stations!','#ffcf6a'); if(!W.upg.gun&&!W.upg.material) feed('🔧 Your train is just an engine. Press Tab / △ to open the TRAIN screen and attach your first cars!','#9fe'); A.whistle(); if(net.role==='host') pushWorld(); }
 $('clickToPlay').onclick=()=>renderer.domElement.requestPointerLock();
@@ -472,8 +476,8 @@ function step(){
       if(me.seat==='drive'){ const th=clamp(S.throttle+((keys.KeyW||n.r2||dz(-n.ly)>.3)?.6:0)*DT-((keys.KeyS||dz(n.ly)>.3)?.6:0)*DT,0,1), br=!!(keys.Space||n.l2||n.square), hr=!!(tapped.KeyH||(n.circle&&!step.pcir)), ms=!!(tapped.KeyM||(n.dup&&!step.pdu));
         sendCtl({throttle:th,brake:br,horn:hr,missile:ms}); if(net.role==='host'){ S.throttle=th; S.brake=br?1:0; if(hr) hostHorn(); if(ms) fireMissile(0); }
         if(tapped.KeyV||(n.l1&&!step.pl1)||(n.r3&&!step.pr3)){ me.view=me.view==='out'?'cab':'out'; me.yaw=0; me.pitch=me.view==='out'?-.1:-.05; }
-        prompt=(padActive?'DRIVING · R2 faster · L2 / □ brake · ○ horn · L1 camera':'DRIVING · W/S throttle · Space brake · H horn · V camera')+(W.upg.launcher?` · M missile (${W.missiles})`:'')+(padActive?' · ✕ leave':' · E leave'); }
-      if(me.seat==='gun'){ const gy=me.yaw, gpch=clamp(me.pitch,-.3,.6), fire=mouseDown||n.r2; sendCtl({gy,gp:gpch,fire}); if(net.role==='host'){ S.gunYaw=gy; S.gunPitch=gpch; if(fire) hostFire(0); } prompt=`ON THE GUN · click / R2 fire · ammo ${W.ammo} · E leave`; }
+        if(performance.now()-(me.seatT||0)<6000) prompt=(padActive?'DRIVING · R2 faster · L2 / □ brake · ○ horn · L1 camera':'DRIVING · W/S throttle · Space brake · H horn · V camera')+(W.upg.launcher?` · M missile (${W.missiles})`:'')+(padActive?' · ✕ leave':' · E leave'); }
+      if(me.seat==='gun'){ const gy=me.yaw, gpch=clamp(me.pitch,-.3,.6), fire=mouseDown||n.r2; sendCtl({gy,gp:gpch,fire}); if(net.role==='host'){ S.gunYaw=gy; S.gunPitch=gpch; if(fire) hostFire(0); } if(performance.now()-(me.seatT||0)<6000) prompt=padActive?'GUN · R2 fire · R-stick aim · ✕ leave':'GUN · click to fire · E leave'; }
       const st=SEATS[me.seat]; me.x=st.x; me.z=st.z;
     } else {
       const sp=(keys.ShiftLeft||n.l3?4.3:2.5)*DT, f=(keys.KeyW?1:0)-(keys.KeyS?1:0)-dz(n.ly), r=(keys.KeyD?1:0)-(keys.KeyA?1:0)+dz(n.lx);
@@ -491,7 +495,7 @@ function step(){
         CRATES.forEach((c,i)=>{ if(W.crates[i]) return; if(Math.hypot(me.gx-c.x,me.gz-c.z)<1.8){ prompt='[E] grab the scrap crate'; if(useP){ if(net.role==='host') takeCrate(i,0); else net.conn.send({t:'crate',i}); } } });
         PARTS.forEach((pt,i)=>{ if(W.parts[pt.k]) return; if(Math.hypot(me.gx-pt.x,me.gz-pt.z)<2){ prompt=`[E] take the ${pt.name}`; if(useP){ if(net.role==='host') takePart(i,0); else net.conn.send({t:'part',i}); } } });
         if(attack){ swing=1; A.step(); if(net.role==='host') whack(0); else net.conn.send({t:'whack'}); }
-        if(!prompt&&W.gn.length) prompt='CLICK / R2 to whack gnawers with your wrench · SHIFT to sprint';
+        if(!prompt&&W.gn.length) prompt=padActive?'R2 whack gnawers':'Click to whack gnawers';
       }
     }
     if(net.role==='host'){
@@ -516,30 +520,30 @@ function step(){
 }
 let swing=0, padActive=false, shopT=0;
 let lastCtl=0; function sendCtl(c){ if(net.role!=='client') return; const now=performance.now(); if(now-lastCtl<50&&!c.fire&&!c.horn&&!c.missile) return; lastCtl=now; net.conn.send({t:'ctl',...c}); }
-function requestSeat(k){ if(k==='drive'){ me.yaw=0; me.pitch=-.05; } if(k==='gun'){ me.yaw=Math.PI; me.pitch=-.08; }
+function requestSeat(k){ me.seatT=performance.now(); if(k==='drive'){ me.yaw=0; me.pitch=-.05; } if(k==='gun'){ me.yaw=Math.PI; me.pitch=-.08; }
   if(net.role==='host'){ hostSeat(0,k); me.seat=S.players[0].seat; } else { net.conn.send({t:'seat',k}); if(k===null) me.seat=null; } A.dry(); }
 
 // ---------- mission tracker ----------
 function missionText(){
   const done=W.stations.filter(Boolean).length;
-  if(W.boss.on){ const ph=W.boss.phase; return [`💀 FINAL BATTLE · Phase ${ph}/3 · Defeat Rattlejaw!`,ph===1?'Gunner: shoot its glowing eyes when it rises · Driver: keep moving':ph===2?'Fix the torn track (hold E) while the gunner holds off the Hollow Engine!':'Hit the GOLDEN WHISTLE with missiles (driver: M) and the gun!']; }
-  if(done===25&&!W.boss.done){ const d=ahead(S.trainS,STATIONS[24].s); return [`💀 FINAL BATTLE: drive to Rattlejaw Pit and stop there (${Math.round(d)} m)`,'Stock up first: ammo, missiles, shield plates and rails!']; }
-  if(done===25) return ['🏆 YOU SAVED THE ISLAND! Free play: hunt monsters and max your train','Rattlejaw may still stir now and then…'];
+  if(W.boss.on){ const ph=W.boss.phase; return [`💀 Defeat Rattlejaw`,ph===1?'Shoot its glowing eyes':ph===2?'Fix the torn track · hold off the Hollow Engine':'Hit the golden whistle with missiles!']; }
+  if(done===25&&!W.boss.done){ const d=ahead(S.trainS,STATIONS[24].s); return [`💀 Stop at Rattlejaw Pit · ${Math.round(d)} m`,'']; }
+  if(done===25) return ['🏆 Island saved · free play',''];
   const ti=W.stations.findIndex(c=>!c), tgt=STATIONS[ti], dT=ahead(S.trainS,tgt.s), nb=nextBreak(); let main;
-  if(nb&&nb.d<dT) main=nb.d<6?'🛠️ Step off and fix the broken track (hold E at the glowing ring)':`Drive on. Broken track ahead in ${Math.round(nb.d)} m`;
-  else main=dT<70?`🏁 ${tgt.name} ahead: SLOW DOWN to connect it (${Math.round(dT)} m)`:`Drive to ${tgt.name} (${Math.round(dT)} m)`;
-  if(!Object.values(S.players).some(p=>p.seat==='drive')&&S.v<.5&&!(nb&&nb.d<6)) main='Get in the cab (front) and drive · '+main;
-  if(done===1&&atYard()&&W.upg.material+W.upg.gun+W.upg.workshop===0) main='🔧 Your train is only an engine! Press Tab / △ and buy your first car';
+  if(nb&&nb.d<dT) main=nb.d<6?'🛠️ Fix the broken track · hold E at the ring':`Broken track · ${Math.round(nb.d)} m`;
+  else main=dT<70?`🏁 Slow down at ${tgt.name} · ${Math.round(dT)} m`:`${tgt.name} · ${Math.round(dT)} m`;
+  if(!Object.values(S.players).some(p=>p.seat==='drive')&&S.v<.5&&!(nb&&nb.d<6)) main='Get in the cab and drive';
+  if(done===1&&atYard()&&W.upg.material+W.upg.gun+W.upg.workshop===0) main='🔧 Press '+(padActive?'△':'Tab')+' to buy your first car';
   let side='';
   if(W.rj.on) side=W.rj.ph==='tremor'?`🌋 RATTLEJAW is coming from the ${W.rj.side<0?'LEFT':'RIGHT'}! Get on the gun!`:'🐛 Shoot RATTLEJAW\'s glowing eyes! (missiles: M in the cab)';
   else if(W.mon.on) side='⚠️ The Hollow Engine is chasing you. Man the rear gun!';
-  else if(W.gn.length) side='🐀 Gnawers! Whack them (click / R2) or run back to the train';
-  else if(!W.upg.gun&&done>=2) side='🔫 Monsters come after station 3! Drive back to THE YARD and buy the GUN DECK (Tab / △)';
-  else if(W.upg.gun&&W.ammo<15) side='🔫 Low ammo! Craft more on the TRAIN screen (Tab / △)';
-  else if(W.rails===0) side='🪵 Out of rails! Stop at any connected station to restock';
+  else if(W.gn.length) side='🐀 Gnawers! Whack them or get back on the train';
+  else if(!W.upg.gun&&done>=2) side='🔫 Buy the gun deck at the Yard before station 3';
+  else if(W.upg.gun&&W.ammo<15) side='🔫 Low ammo · craft more';
+  else if(W.rails===0) side='🪵 Out of rails · stop at a station';
   else if(W.delivery&&W.upg.cargo) side=`📦 Delivery: bring the crates to ${STATIONS[W.delivery.to].name}`;
   else { const pt=PARTS.find(p=>!W.parts[p.k]&&W.stations[p.st]); if(pt) side=`⭐ A ${pt.name} is hidden behind ${STATIONS[pt.st].name} (follow the light beam)`;
-    else { const cheap=UPG_ORDER.some(k=>canBuy(k,true)===''); side=cheap?'🔧 You can afford a train upgrade! Stop at THE YARD and press Tab / △':`📦 Grab scrap crates beside the track (${W.crates.filter(Boolean).length}/${CRATES.length})`; } }
+    else { const cheap=UPG_ORDER.some(k=>canBuy(k,true)===''); side=cheap?'🔧 You can afford an upgrade':`📦 Grab scrap crates beside the track (${W.crates.filter(Boolean).length}/${CRATES.length})`; } }
   return [main,side]; }
 
 // ---------- workbench / Yard workshop ----------
@@ -552,7 +556,7 @@ function shopAct(r,dir=1){ if(!r) return; const send=(m,f)=>{ if(net.role==='hos
   if(r.t==='craft') send({t:'craft',k:r.k},()=>craft(r.k));
   if(r.t==='paint'){ if(!atYard()){ A.dry(); return; } const i=(W.paint+dir+PAINTS.length)%PAINTS.length; send({t:'paint',i},()=>setPaint(i)); }
   setTimeout(renderShop,250); }
-function renderShop(){ $('shopScrap').textContent=W.scrap; const yard=atYard(), cc=canCraft();
+function renderShop(){ $('shopScrap').textContent=W.scrap; $('shopRoom').innerHTML='Room '+net.code+' · '+Object.values(S.players).map(p=>`<span style="color:${p.color}">${p.name}</span>`).join(' · '); const yard=atYard(), cc=canCraft();
   $('shopWhere').innerHTML=yard?'<span style="color:#7dffa8">✓ You are at THE YARD: upgrades and new cars are available</span>':'<span style="color:#ff9a7a">Upgrades only at THE YARD (station 1). Stop there to buy.</span>';
   shopRows=[{t:'craft',k:'ammo'},{t:'craft',k:'missile'},...UPG_ORDER.map(k=>({t:'up',k})),{t:'paint'}]; shopSel=clamp(shopSel,0,shopRows.length-1);
   $('shopList').innerHTML=shopRows.map((r,i)=>{ const sel=i===shopSel?' sel':'';
@@ -619,8 +623,8 @@ function render(){
   let eye, look;
   if(me.mode==='train'){ eye=new THREE.Vector3(me.x,DECK+(me.seat?SEATS[me.seat].eye:EYE),me.z).applyMatrix4(train.matrixWorld); look=new THREE.Vector3(Math.sin(me.yaw)*Math.cos(me.pitch),Math.sin(me.pitch),Math.cos(me.yaw)*Math.cos(me.pitch)).transformDirection(train.matrixWorld); }
   else { eye=new THREE.Vector3(me.gx,hgt(me.gx,me.gz)+EYE,me.gz); look=new THREE.Vector3(Math.sin(me.yaw)*Math.cos(me.pitch),Math.sin(me.pitch),Math.cos(me.yaw)*Math.cos(me.pitch)); }
-  if(me.mode==='train'&&me.seat==='drive'&&me.view==='out'){ const yw=me.yaw, R=6, h=clamp(6.2-me.pitch*8,4,12);
-    eye=new THREE.Vector3(-Math.sin(yw)*R+Math.cos(yw)*1.4,h,8-Math.cos(yw)*R).applyMatrix4(train.matrixWorld); look=new THREE.Vector3(Math.sin(yw)*40,.8,8+Math.cos(yw)*40).applyMatrix4(train.matrixWorld).sub(eye).normalize(); }
+  if(me.mode==='train'&&me.seat==='drive'&&me.view==='out'){ const yw=me.yaw, R=6, h=clamp(7.2-me.pitch*8,4.5,13);
+    eye=new THREE.Vector3(-Math.sin(yw)*R+Math.cos(yw)*2.3,h,8-Math.cos(yw)*R).applyMatrix4(train.matrixWorld); look=new THREE.Vector3(Math.sin(yw)*40,.8,8+Math.cos(yw)*40).applyMatrix4(train.matrixWorld).sub(eye).normalize(); }
   if(W.rj.on&&W.rj.ph==='tremor') shake=Math.max(shake,.25);
   if(shake>.01){ eye.add(new THREE.Vector3((Math.random()-.5)*shake*.3,(Math.random()-.5)*shake*.3,(Math.random()-.5)*shake*.3)); shake*=.9; }
   if(shopOpen()){ const mid=(REAR+14)/2, R=(14-REAR)/2+9, a=performance.now()/9000; eye=new THREE.Vector3(Math.sin(a)*R,4.5+R*.12,mid+Math.cos(a)*R).applyMatrix4(train.matrixWorld); look=new THREE.Vector3(0,1.8,mid).applyMatrix4(train.matrixWorld).sub(eye).normalize();
@@ -630,17 +634,24 @@ function render(){
   if(S.started&&Math.random()<.25+S.throttle*.5){ const s=smoke.find(s=>s.life<=0); if(s){ s.m.position.copy(new THREE.Vector3(0,5.2,12.3).applyMatrix4(train.matrixWorld)); s.m.scale.setScalar(.5); s.m.visible=true; s.life=3; } }
   for(const s of smoke) if(s.life>0){ s.life-=1/60; s.m.position.y+=.05; s.m.scale.multiplyScalar(1.012); s.m.material.opacity=Math.max(0,s.life/3*.45); if(s.life<=0) s.m.visible=false; }
   for(const tr of tracers) if(tr.life>0){ tr.life-=1/60; tr.m.position.addScaledVector(tr.v,1/60); if(tr.life<=0) tr.m.visible=false; }
-  if(S.started){ const [m1,m2]=missionText(); $('mMain').textContent=m1; $('mSide').textContent=m2; $('region').textContent=reg.name;
+  if(S.started){ const [m1,m2]=missionText(), now=performance.now();
+    const gap=(S.trainS+REAR)-W.mon.s; let wtxt=''; if(W.mon.on) wtxt=`⚠️ HOLLOW ENGINE ${Math.max(0,Math.round(gap))} m behind`; if(W.rj.on) wtxt=W.rj.ph==='tremor'?`🌋 TREMORS ${W.rj.side<0?'◀ LEFT':'RIGHT ▶'}`:W.rj.ph==='up'?`🐛 RATTLEJAW ${W.rj.side<0?'◀ LEFT':'RIGHT ▶'}`:'';
+    // second mission line only when it matters (and not when the red warning already says it)
+    const imp=!wtxt&&/^(🐀|🔫|🪵)/u.test(m2)||(/^🔧/u.test(m2)&&atYard());
+    if($('mMain').textContent!==m1) $('mMain').textContent=m1; const m2s=imp?m2:''; if($('mSide').textContent!==m2s) $('mSide').textContent=m2s;
+    $('warn').style.display=wtxt?'block':'none'; if($('warn').textContent!==wtxt) $('warn').textContent=wtxt;
     $('hud').classList.toggle('shopping',shopOpen());
     $('clickToPlay').style.display=!document.pointerLockElement&&!shopOpen()&&!padActive&&$('victory').style.display!=='flex'?'block':'none';
-    const hl=padActive?'L-stick move · R-stick look · ✕ use · △ TRAIN screen · R2 fire / throttle · L2 brake · ○ horn':'WASD move · mouse look · E use · Tab TRAIN screen · click fire / whack · Space brake · H horn'; if($('help').textContent!==hl) $('help').textContent=hl;
-    $('thrBar').style.width=(S.throttle*100)+'%'; $('spd').textContent=Math.round(S.v*3.6)+' km/h'+(S.brake?'  · BRAKE':'');
-    $('hpBar').style.width=clamp(W.hp/maxHp()*100,0,100)+'%'; $('scrap').textContent=W.scrap; $('stCount').textContent=W.stations.filter(Boolean).length+'/25';
-    $('inv').innerHTML=`🔫 ${W.upg.gun?W.ammo:'–'} &nbsp; 🚀 ${W.upg.launcher?W.missiles+'/'+missileCap():'–'} &nbsp; 🪵 ${W.rails}/${maxRails()} &nbsp; ⭐ ${PARTS.filter(p=>W.parts[p.k]).length}/${PARTS.length}`;
-    const gap=(S.trainS+REAR)-W.mon.s; let wtxt=''; if(W.mon.on) wtxt=`⚠️ HOLLOW ENGINE ${Math.max(0,Math.round(gap))} m behind`; if(W.rj.on) wtxt=W.rj.ph==='tremor'?`🌋 TREMORS… ${W.rj.side<0?'◀ LEFT':'RIGHT ▶'}`:W.rj.ph==='up'?`🐛 RATTLEJAW ${W.rj.side<0?'◀ LEFT SIDE':'RIGHT SIDE ▶'}`:'';
-    $('warn').style.display=wtxt?'block':'none'; $('warn').textContent=wtxt;
-    $('boss').style.display=W.boss.on?'block':'none'; if(W.boss.on){ $('bossBar').style.width=clamp(W.boss.hp/W.boss.max*100,0,100)+'%'; $('bossPh').textContent='PHASE '+W.boss.phase+' / 3'; }
-    $('tl').innerHTML='Room '+net.code+'<br>'+Object.values(S.players).map(p=>`<span style="color:${p.color}">●</span> ${p.name}${p.seat==='drive'?' 🚂':p.seat==='gun'?' 🔫':p.mode==='ground'?' 🚶':''}`).join('<br>'); }
+    const outCam=me.seat==='drive'&&me.view==='out'; $('cross').style.display=outCam?'none':'block';
+    $('ammo').style.display=me.seat==='gun'?'block':'none'; if(me.seat==='gun') $('ammo').textContent=W.ammo;
+    $('help').style.opacity=now<(S.helpUntil||0)?1:0;
+    if(now<(S.helpUntil||0)){ const hl=padActive?'L-stick move · R-stick look · ✕ use · △ train & upgrades':'WASD move · mouse look · E use · Tab train & upgrades'; if($('help').textContent!==hl) $('help').textContent=hl; }
+    const ri=regionAt(S.trainS); if(ri!==S.lastRegion){ S.lastRegion=ri; const rt=$('regionTitle'); rt.textContent=reg.name.toUpperCase(); rt.classList.remove('show'); void rt.offsetWidth; rt.classList.add('show'); }
+    $('speed').style.display=me.seat==='drive'?'block':'none'; $('thrBar').style.width=(S.throttle*100)+'%'; $('spd').textContent=Math.round(S.v*3.6);
+    $('hpBar').style.width=clamp(W.hp/maxHp()*100,0,100)+'%';
+    const inv=`🔩 ${W.scrap} &nbsp; 🛤️ ${W.stations.filter(Boolean).length}/25`+(W.upg.gun?` &nbsp; 🔫 ${W.ammo}`:'')+` &nbsp; 🪵 ${W.rails}/${maxRails()}`+(W.upg.launcher?` &nbsp; 🚀 ${W.missiles}`:'');
+    if($('inv').innerHTML!==inv) $('inv').innerHTML=inv;
+    $('boss').style.display=W.boss.on?'block':'none'; if(W.boss.on){ $('bossBar').style.width=clamp(W.boss.hp/W.boss.max*100,0,100)+'%'; $('bossPh').textContent='PHASE '+W.boss.phase+' / 3'; } }
   audioFrame();
   renderer.render(scene,camera);
 }
