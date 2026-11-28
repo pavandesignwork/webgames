@@ -72,11 +72,13 @@
       <div class="ui-err" id="lobbyErr"></div></div>
   </div>
   <div class="lb-right">
-    <div class="ui-card" id="roomCard"><label class="ui-label">ROOM CODE</label>
-      <div class="ui-code" id="roomCode" style="font-size:52px;letter-spacing:10px;margin:0;text-align:center">····</div>
-      <div style="text-align:center;margin-top:var(--sp-3)"><img id="roomQrImg" alt="" style="width:132px;height:132px;border-radius:4px;background:#fff;padding:4px"></div>
-      <div class="padInfo ui-dim" style="margin-top:var(--sp-3);text-align:center"></div>
-      <div class="ui-note">Friends on a computer: <b>JOIN GAME</b> and type the code.</div></div>
+    <div class="ui-card" id="roomCard"><label class="ui-label">📱 YOUR PHONE · SCAN TO USE IT AS YOUR CONTROLLER</label>
+      <div style="text-align:center"><img id="roomQrImg" alt="" style="width:140px;height:140px;border-radius:4px;background:#fff;padding:4px"></div>
+      <div class="padInfo" style="margin-top:var(--sp-2);text-align:center"></div>
+      <div style="border-top:1px solid var(--c-line);margin:var(--sp-3) 0 var(--sp-2)"></div>
+      <label class="ui-label" style="margin-top:0">FRIENDS JOIN WITH THIS CODE</label>
+      <div class="ui-code" id="roomCode" style="font-size:38px;letter-spacing:8px;margin:0;text-align:center">····</div>
+      <div class="ui-note">On their own screen: <b>JOIN GAME</b>, then type the code.</div></div>
     <div class="ui-note" style="text-align:left">🎤 Voice chat: the mic circle on your phone, or press V on the keyboard</div>
   </div>
   <div id="nameplates"></div>
@@ -443,13 +445,13 @@ function onHostMsg(m){
   if(m.t==='tp'){ me.mode='train'; me.seat=null; me.x=0; me.z=2; }
 }
 function showLobby(){ $('menu').style.display='none'; $('joinScreen').style.display='none'; $('lobby').style.display='flex';
-  $('lobbyHint').textContent=net.role==='host'?'25 stations · everyone presses READY, then you press START':'25 stations · waiting for the host to start';
+  $('lobbyHint').textContent=net.role==='host'?'You are the leader: when everyone is READY, press START':'25 stations · waiting for the leader to start';
   if(net.role==='host'&&localStorage.getItem(saveKey)){ try{ const d=JSON.parse(localStorage.getItem(saveKey)); $('saveInfo').textContent='off: continue your save ('+d.stations.filter(Boolean).length+'/25 stations)'; }catch(e){} $('saveRow').style.display='flex'; }
   renderLobby(); showRoomCode(); }
 function showRoomCode(){ if(!net.code) return; $('roomCode').textContent=net.code;
   const url=new URL('railpad.html',location.href).href.split('?')[0]+'?code='+net.code+'&p='+myId()+(NetLink.LOCAL?'&local':'');   // the QR on MY screen pairs the phone with ME
   try{ const q=qrcode(0,'M'); q.addData(url); q.make(); $('roomQrImg').src=q.createDataURL(5,1); }catch(e){}
-  document.querySelectorAll('.padInfo').forEach(el=>el.innerHTML=phoneConn?'<span class="ui-good">📱 Your phone is connected</span>':'📱 Phone: scan this QR or open <b class="ui-gold">'+url.replace(/^https?:\/\//,'').replace(/\?.*/,'')+'</b> and type the code'); }
+  document.querySelectorAll('.padInfo').forEach(el=>el.innerHTML=phoneConn?'<span class="ui-good">✓ Your phone is connected</span>':'<span class="ui-dim">Open your phone camera and scan. It opens straight into this lobby.</span>'); }
 function flashRoom(){ const c=$('roomCard'); c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); }
 function renderLobby(){ const ps=Object.values(S.players); voiceSync();
   const mine=S.players[myId()], host=net.role==='host', ready=!!(mine&&mine.ready), all=!!ps.length&&ps.every(p=>p.ready);
@@ -902,7 +904,7 @@ function updateNameplates(on,list){ const box=$('nameplates');
   camera.updateMatrixWorld(); const V=THREE.Vector3, proj=(lx,ly,lz)=>{ const v=yardG.localToWorld(new V(lx,ly,lz)).project(camera); return [(v.x+1)/2*innerWidth,(1-v.y)/2*innerHeight]; };
   list.forEach((pl,i)=>{ const sl=Math.min(3,i); let el=npEls[pl.id]; if(!el){ el=document.createElement('div'); el.className='ui-nameplate'; box.appendChild(el); npEls[pl.id]=el; }
     const [x,y]=proj(PAD_X[sl],PAD_Y+2.2,PAD_Z); el.style.left=x+'px'; el.style.top=y+'px';
-    const h=`<div class="n" style="color:${pl.color}">${+pl.id===0?'👑 ':''}${pl.name}${+pl.id===myId()?' (you)':''}</div><div class="s ${pl.ready?'ready':''}">${pl.ready?'READY':'Not ready'} · ${OUTFITS[pl.outfit|0].name}</div>`; if(el._h!==h){ el.innerHTML=h; el._h=h; } });
+    const h=`<div class="n" style="color:${pl.color}">${+pl.id===0?'👑 ':''}${pl.name}${+pl.id===myId()?' (you)':''}</div><div class="s ${pl.ready?'ready':''}">${+pl.id===0?'Leader · ':''}${pl.ready?'READY':'Not ready'}</div>`; if(el._h!==h){ el.innerHTML=h; el._h=h; } });
   for(const id in npEls) if(!S.players[id]){ npEls[id].remove(); delete npEls[id]; }
   for(let sl=0;sl<4;sl++){ let e=plusEls[sl]; if(!e){ const b=document.createElement('button'); b.className='ui-plus'; b.textContent='+'; b.onclick=flashRoom; const l=document.createElement('span'); l.textContent='Invite a friend'; box.append(b,l); e=plusEls[sl]={b,l}; }
     const empty=sl>=list.length; e.b.style.display=e.l.style.display=empty?'block':'none'; if(empty){ const [x,y]=proj(PAD_X[sl],PAD_Y+1.15,PAD_Z); e.b.style.left=x+'px'; e.b.style.top=y+'px'; e.l.style.left=x+'px'; e.l.style.top=(y+34)+'px'; } } }
