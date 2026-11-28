@@ -661,8 +661,10 @@ function step(){
 function updateUI(ui){ const seat=S.started&&me.seat&&!shopOpen();
   const h=seat?['x','s','o','t'].filter(k=>ui[k]).map(k=>`<span class="hi">${chip(k)}${ui[k]}</span>`).join('')+(ui.stick?`<span class="hi stk">🕹️ ${ui.stick}</span>`:''):'';
   if($('hints').innerHTML!==h) $('hints').innerHTML=h; $('hints').style.display=h?'block':'none';
-  if(phoneConn){ const key=JSON.stringify(ui); if(key!==uiSent){ uiSent=key; phoneConn.send({t:'ui',labels:{x:ui.x,o:ui.o,s:ui.s,t:ui.t},hint:ui.hint,stick:ui.stick}); } } }
-let swing=0, padActive=false, shopT=0, hornPull=0, camRoll=0, phoneConn=null;
+  if(phoneConn){ const key=JSON.stringify(ui); if(key!==uiSent){ uiSent=key; phoneConn.send({t:'ui',labels:{x:ui.x,o:ui.o,s:ui.s,t:ui.t},hint:ui.hint,stick:ui.stick}); }
+    // status line + danger warning for the phone (twice a second, or right away when a warning starts / ends)
+    if(S.started&&(++statT>=30||lastWarn!==warnSent)){ statT=0; warnSent=lastWarn; phoneConn.send({t:'stat',hp:W.hp/maxHp(),scrap:W.scrap,ammo:W.upg.gun?W.ammo:null,mis:W.upg.launcher?W.missiles:null,rails:W.rails,rmax:maxRails(),warn:lastWarn}); } } }
+let swing=0, padActive=false, shopT=0, hornPull=0, camRoll=0, phoneConn=null, lastWarn='', warnSent='', statT=0;
 let lastCtl=0; function sendCtl(c){ if(net.role!=='client') return; const now=performance.now(); if(now-lastCtl<50&&!c.fire&&!c.horn&&!c.missile) return; lastCtl=now; net.conn.send({t:'ctl',...c}); }
 function requestSeat(k){ me.seatT=performance.now(); if(k==='drive'){ me.yaw=0; me.pitch=-.05; } if(k==='gun'){ me.yaw=Math.PI; me.pitch=-.08; }
   if(net.role==='host'){ hostSeat(0,k); me.seat=S.players[0].seat; } else { net.conn.send({t:'seat',k}); if(k===null) me.seat=null; } A.dry(); }
@@ -798,7 +800,7 @@ function render(){
     // second mission line only when it matters (and not when the red warning already says it)
     const imp=!wtxt&&/^(🐀|🔫|🪵)/u.test(m2)||(/^🔧/u.test(m2)&&atYard());
     if($('mMain').textContent!==m1) $('mMain').textContent=m1; const m2s=imp?m2:''; if($('mSide').textContent!==m2s) $('mSide').textContent=m2s;
-    $('warn').style.display=wtxt?'block':'none'; if($('warn').textContent!==wtxt) $('warn').textContent=wtxt;
+    lastWarn=wtxt; $('warn').style.display=wtxt?'block':'none'; if($('warn').textContent!==wtxt) $('warn').textContent=wtxt;
     $('hud').classList.toggle('shopping',shopOpen());
     $('clickToPlay').style.display=!document.pointerLockElement&&!shopOpen()&&!padActive&&$('victory').style.display!=='flex'?'block':'none';
     $('cross').style.display=me.seat==='drive'?'none':'block';
