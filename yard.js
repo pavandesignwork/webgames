@@ -3,7 +3,7 @@
 // Local space: +z along the track, +x towards the station side, ground at y=0, main track along x=0.
 import * as THREE from 'three';
 
-export const YARD = { SIDING_X: 6.5, SLOT_Z: { workshop: 13, material: 5, cargo: -3, gun: -11 } };
+export const YARD = { SLOTS: {} };   // filled in by buildYard (where each car parks)
 
 export function buildYard(G, { mainAt }) {
   const boxes = [], circles = [];   // colliders in local space: boxes {x,z,hx,hz}, circles {x,z,r}
@@ -22,68 +22,65 @@ export function buildYard(G, { mainAt }) {
   const sign = (text, w, h, x, y, z, ry) => { const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d'); g.fillStyle = '#1d1a14'; g.fillRect(0, 0, 512, 128); g.strokeStyle = '#c9a24a'; g.lineWidth = 8; g.strokeRect(6, 6, 500, 116); g.fillStyle = '#e8dcc0'; g.font = 'bold 64px Georgia'; g.textAlign = 'center'; g.fillText(text, 256, 88);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const o = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t })); o.position.set(x, y, z); o.rotation.y = ry; G.add(o); return o; };
 
-  // ================= ENGINE SHED =================
-  const X0 = -4.6, X1 = 12.6, Z = 22, H = 7, CX0 = -3.1, CX1 = 10.1, CH = 9.8, PK = 11.6, DOOR_L = -3.4, DOOR_R = 9.9, DOOR_H = 6.1;
+  // ================= ENGINE SHED (4 tracks: the main line + 3 storage tracks) =================
+  // the main line bends a little through the shed: measure it so walls and doors stay well clear of the train
+  const Z = 22, H = 7; let mMin = 1e9, mMax = -1e9;
+  for (let d = -30; d <= 30; d += 1) { const q = mainAt(d); if (Math.abs(q.z) <= Z + 3) { mMin = Math.min(mMin, q.x); mMax = Math.max(mMax, q.x); } }
+  const SX = [mMax + 7, mMax + 12, mMax + 17];
+  const X0 = mMin - 5.4, X1 = SX[2] + 4, CX0 = X0 + 1.6, CX1 = X1 - 1.5, CH = H + 2.8, PK = CH + 2.2, DOOR_L = mMin - 3.8, DOOR_R = SX[2] + 2.6, DOOR_H = 6.4, MID = (CX0 + CX1) / 2;
+  YARD.SLOTS = { workshop: { x: SX[0], z: 9.5 }, gun: { x: SX[0], z: -9.5 }, material: { x: SX[1], z: 3 }, cargo: { x: SX[2], z: -4 } }; YARD.X0 = X0; YARD.X1 = X1;
   box(X1 - X0, .06, 2 * Z, std(0x2a2826, { roughness: 1 }), (X0 + X1) / 2, .03, 0).castShadow = false;   // dirt floor
-  // long side walls
   for (const x of [X0, X1]) { box(.3, H, 2 * Z, wallM, x, H / 2, 0); box(.4, .3, 2 * Z + .2, trimM, x, H - .15, 0); boxes.push({ x, z: 0, hx: .25, hz: Z }); }
-  // end walls: pieces beside the big doors + lintel
   for (const z of [-Z, Z]) {
     box(DOOR_L - X0, H, .3, wallM2, (X0 + DOOR_L) / 2, H / 2, z); box(X1 - DOOR_R, H, .3, wallM2, (DOOR_R + X1) / 2, H / 2, z);
     box(DOOR_R - DOOR_L, H - DOOR_H, .3, wallM2, (DOOR_L + DOOR_R) / 2, (H + DOOR_H) / 2, z);
     for (const x of [DOOR_L, DOOR_R]) box(.4, DOOR_H + .3, .5, trimM, x, (DOOR_H + .3) / 2, z);
     box(DOOR_R - DOOR_L + .4, .35, .5, trimM, (DOOR_L + DOOR_R) / 2, DOOR_H + .15, z);
     boxes.push({ x: (X0 + DOOR_L) / 2, z, hx: (DOOR_L - X0) / 2 + .1, hz: .25 }, { x: (DOOR_R + X1) / 2, z, hx: (X1 - DOOR_R) / 2 + .1, hz: .25 });
-    // clerestory gable end + side-aisle gable pieces
-    shapeAt([[CX0, H], [CX1, H], [CX1, CH], [(CX0 + CX1) / 2, PK], [CX0, CH]], wallM2.clone(), z);
+    shapeAt([[CX0, H], [CX1, H], [CX1, CH], [MID, PK], [CX0, CH]], wallM2.clone(), z);
     shapeAt([[X0, H], [CX0, H], [CX0, H + .9]], wallM2.clone(), z); shapeAt([[CX1, H], [X1, H], [CX1, H + .9]], wallM2.clone(), z);
-    sign('THE YARD', 6, 1.5, (CX0 + CX1) / 2, CH - .9, z + (z > 0 ? .2 : -.2), z > 0 ? 0 : Math.PI);
-    // lamp over the door
+    sign('THE YARD', 7, 1.75, MID, CH - .6, z + (z > 0 ? .2 : -.2), z > 0 ? 0 : Math.PI);
     const lb = new THREE.Mesh(new THREE.SphereGeometry(.18, 10, 8), bulbM); lb.position.set(DOOR_R + .6, DOOR_H - .4, z + (z > 0 ? .5 : -.5)); G.add(lb);
   }
-  // clerestory (raised middle with windows)
-  for (const x of [CX0, CX1]) {
-    box(.25, .5, 2 * Z, wallM, x, H + .25, 0); box(.25, .5, 2 * Z, wallM, x, CH - .25, 0);
+  for (const x of [CX0, CX1]) { box(.25, .5, 2 * Z, wallM, x, H + .25, 0); box(.25, .5, 2 * Z, wallM, x, CH - .25, 0);
     const win = box(.08, CH - H - 1, 2 * Z - .4, glassM, x, (H + CH) / 2, 0); win.castShadow = false;
-    for (let z = -Z; z <= Z; z += 2.2) box(.3, CH - H, .22, postM, x, (H + CH) / 2, z);
-  }
-  // roofs: side aisles slope up to the clerestory, clerestory has a gable roof
+    for (let z = -Z; z <= Z; z += 2.2) box(.3, CH - H, .22, postM, x, (H + CH) / 2, z); }
   sloped(X0 - .5, H - .25, CX0, H + .9, 2 * Z + 1, roofM); sloped(CX1, H + .9, X1 + .5, H - .25, 2 * Z + 1, roofM);
-  sloped(CX0 - .6, CH - .3, (CX0 + CX1) / 2, PK, 2 * Z + 1.2, roofM); sloped((CX0 + CX1) / 2, PK, CX1 + .6, CH - .3, 2 * Z + 1.2, roofM);
-  box(.3, .3, 2 * Z + 1.2, trimM, (CX0 + CX1) / 2, PK + .1, 0);
-  // inside: posts (clear of the main line and the siding), tie beams, hanging lamps
+  sloped(CX0 - .6, CH - .3, MID, PK, 2 * Z + 1.2, roofM); sloped(MID, PK, CX1 + .6, CH - .3, 2 * Z + 1.2, roofM);
+  box(.3, .3, 2 * Z + 1.2, trimM, MID, PK + .1, 0);
+  // posts between the tracks, tie beams, hanging lamps
+  const POSTS = [CX0, mMax + 3.8, SX[0] + 2.5, SX[1] + 2.5, CX1];
   for (let z = -Z + 5.5; z < Z; z += 5.5) {
-    for (const x of [CX0, 3.5, CX1]) { box(.3, H, .3, postM, x, H / 2, z); circles.push({ x, z, r: .3 }); }
-    box(CX1 - CX0, .3, .3, postM, (CX0 + CX1) / 2, H - .1, z);
-    for (const k of [-1, 1]) { const br = box(.18, 2.2, .18, postM, 3.5 + k * .9, H - .9, z); br.rotation.z = k * .7; }
+    for (const x of POSTS) { box(.3, H, .3, postM, x, H / 2, z); circles.push({ x, z, r: .3 }); }
+    box(CX1 - CX0, .3, .3, postM, MID, H - .1, z);
+    for (const x of POSTS.slice(1, 4)) for (const k of [-1, 1]) { const br = box(.18, 2.2, .18, postM, x + k * .9, H - .9, z); br.rotation.z = k * .7; }
   }
-  for (const z of [-16.5, -5.5, 5.5, 16.5]) {
-    box(.03, 1.0, .03, darkM, 1.8, H - .6, z); const sh = new THREE.Mesh(new THREE.ConeGeometry(.45, .35, 14, 1, true), std(0x2e3a2e, { side: THREE.DoubleSide, metalness: .5 })); sh.position.set(1.8, H - 1.2, z); G.add(sh);
-    const b = new THREE.Mesh(new THREE.SphereGeometry(.14, 10, 8), bulbM); b.position.set(1.8, H - 1.3, z); G.add(b);
+  for (const x of [mMax + 3.8, SX[1] + 2.5]) for (const z of [-16.5, -5.5, 5.5, 16.5]) {
+    box(.03, 1.0, .03, darkM, x, H - .6, z); const sh = new THREE.Mesh(new THREE.ConeGeometry(.45, .35, 14, 1, true), std(0x2e3a2e, { side: THREE.DoubleSide, metalness: .5 })); sh.position.set(x, H - 1.2, z); G.add(sh);
+    const b = new THREE.Mesh(new THREE.SphereGeometry(.14, 10, 8), bulbM); b.position.set(x, H - 1.3, z); G.add(b);
   }
-  for (const z of [-9, 9]) { const l = new THREE.PointLight(0xffc880, 30, 22, 1.4); l.position.set(3.5, H - 1.4, z); G.add(l); }
-  // work corner along the far wall: bench, tool rack, crates, oil drums
-  box(1.0, .08, 4, std(0x5a3d26), 11.6, 1.0, -6); for (const dz of [-1.8, 1.8]) for (const dx of [-.4, .4]) box(.1, 1.0, .1, postM, 11.6 + dx, .5, -6 + dz);
-  box(.1, 1.6, 4, std(0x4a3a2a), 12.35, 2.0, -6); for (let i = 0; i < 6; i++) box(.06, .5 + Math.random() * .4, .08, std(0x8a9098, { metalness: .8, roughness: .3 }), 12.25, 2.0, -7.6 + i * .6);
-  boxes.push({ x: 11.6, z: -6, hx: .6, hz: 2.1 });
-  for (const [x, z, s] of [[11.5, 2, 1], [11.6, 3.3, .8], [11.4, 2.6, .7]]) { box(s, s, s, std(0x6a4a2a), x, s / 2 + (z === 2.6 ? 1 : 0), z); }
-  boxes.push({ x: 11.5, z: 2.6, hx: .6, hz: 1.2 });
-  for (const z of [10, 11]) { const d = new THREE.Mesh(new THREE.CylinderGeometry(.35, .35, 1.0, 14), std(0x7a3a22, { metalness: .4 })); d.position.set(11.8, .5, z); d.castShadow = true; G.add(d); circles.push({ x: 11.8, z, r: .4 }); }
+  for (const z of [-9, 9]) { const l = new THREE.PointLight(0xffc880, 34, 26, 1.4); l.position.set(SX[1] - 2.5, H - 1.4, z); G.add(l); }
+  // work corner along the left wall: bench, tool rack, crates, oil drums
+  const WX = X0 + 1.0;
+  box(1.0, .08, 4, std(0x5a3d26), WX, 1.0, -6); for (const dz of [-1.8, 1.8]) for (const dx of [-.4, .4]) box(.1, 1.0, .1, postM, WX + dx, .5, -6 + dz);
+  box(.1, 1.6, 4, std(0x4a3a2a), X0 + .25, 2.0, -6); for (let i = 0; i < 6; i++) box(.06, .5 + Math.random() * .4, .08, std(0x8a9098, { metalness: .8, roughness: .3 }), X0 + .35, 2.0, -7.6 + i * .6);
+  boxes.push({ x: WX, z: -6, hx: .6, hz: 2.1 });
+  for (const [z, s, y] of [[2, 1, 0], [3.3, .8, 0], [2.6, .7, 1]]) box(s, s, s, std(0x6a4a2a), WX, s / 2 + y, z);
+  boxes.push({ x: WX, z: 2.6, hx: .6, hz: 1.2 });
+  for (const z of [10, 11]) { const d = new THREE.Mesh(new THREE.CylinderGeometry(.35, .35, 1.0, 14), std(0x7a3a22, { metalness: .4 })); d.position.set(WX, .5, z); d.castShadow = true; G.add(d); circles.push({ x: WX, z, r: .4 }); }
 
-  // ================= STORAGE SIDING (inside, then curving out to join the main line at both ends) =================
+  // ================= STORAGE TRACKS (inside, then curving out to join the main line at both ends) =================
   const sl = std(0x3a2a1c), railM = std(0x8a8f98, { metalness: .8, roughness: .35 });
   const trackAlong = (pts) => { const c = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z))), L = c.getLength(), n = Math.floor(L / 1.1);
-    for (let i = 0; i <= n; i++) { const p = c.getPointAt(i / n), t = c.getTangentAt(i / n), s = new THREE.Mesh(new THREE.BoxGeometry(3.2, .18, .45), sl); s.position.set(p.x, .09, p.z); s.rotation.y = Math.atan2(t.x, t.z); s.receiveShadow = true; G.add(s); }
+    for (let i = 0; i <= n; i++) { const p = c.getPointAt(i / n), t = c.getTangentAt(i / n), s = new THREE.Mesh(new THREE.BoxGeometry(3.2, .18, .45), sl); s.position.set(p.x, .08, p.z); s.rotation.y = Math.atan2(t.x, t.z); s.receiveShadow = true; G.add(s); }
     for (const off of [-.75, .75]) { const rp = []; for (let i = 0; i <= n; i++) { const p = c.getPointAt(i / n), t = c.getTangentAt(i / n); rp.push(new THREE.Vector3(p.x + t.z * off, .26, p.z - t.x * off)); }
       G.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rp), n * 2, .07, 5), railM)); } };
-  const SX = YARD.SIDING_X;
-  for (const k of [-1, 1]) { const a = mainAt(k * 52), b = mainAt(k * 40);
-    trackAlong([[SX, 0], [SX, k * Z], [SX - .4, k * (Z + 7)], [(SX + b.x) / 2, k * 33], [b.x, b.z], [a.x, a.z]]); }
-  // buffer-free siding: a painted "STORAGE" sign over it
-  sign('STORAGE', 3.6, .9, SX, H - .5, Z - .4, Math.PI);
+  SX.forEach((sx, k) => { for (const sgn of [-1, 1]) { const j1 = Z + 18 + k * 9, a = mainAt(sgn * j1), b = mainAt(sgn * (j1 + 8));
+    trackAlong([[sx, 0], [sx, sgn * Z], [sx - .4, sgn * (Z + 6)], [(sx + a.x) / 2 + 1, sgn * (Z + 12 + k * 4)], [a.x + .4, a.z], [b.x, b.z]]); } });
+  sign('STORAGE', 4, 1, SX[1], H - .5, Z - .4, Math.PI);
 
   // ================= YARD OFFICE (raised deck, stairs, lamps) =================
-  const OX = 21, OZ = -10;
+  const OX = X1 + 12, OZ = -10;
   for (const dx of [-4.5, 0, 4.5]) for (const dz of [-3, 3]) box(.3, 2.6, .3, postM, OX + dx, 1.3, OZ + dz);
   box(10, .25, 7, std(0x5a4030), OX, 2.7, OZ);
   box(7.5, 3.4, 5, wallM2, OX + .6, 4.5, OZ);
@@ -99,7 +96,7 @@ export function buildYard(G, { mainAt }) {
   for (const [x, y, z] of [[OX + 4.6, 4.2, OZ + 3.4], [OX - 4.6, 4.2, OZ + 3.4]]) { const b = new THREE.Mesh(new THREE.SphereGeometry(.15, 10, 8), bulbM); b.position.set(x, y, z); G.add(b); }
   const ol = new THREE.PointLight(0xffc880, 18, 16, 1.5); ol.position.set(OX - 3, 4.4, OZ + 4.2); G.add(ol);
   // ================= PARKED BOXCAR on a stub track =================
-  const BX = 17, BZ = 9;
+  const BX = X1 + 7, BZ = 12;
   trackAlong([[BX, BZ - 8], [BX, BZ + 8]]);
   const yel = std(0xd8a21a, { roughness: .6, metalness: .2 });
   box(3.0, 3.0, 9, yel, BX, 2.6, BZ); box(3.2, .2, 9.3, darkM, BX, 4.2, BZ); box(3.1, .4, 9, darkM, BX, .9, BZ);
@@ -107,7 +104,7 @@ export function buildYard(G, { mainAt }) {
     for (const z of [BZ - 3, BZ + 3]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(.45, .45, .2, 14), darkM); w.rotation.z = Math.PI / 2; w.position.set(BX + 1.0 * k, .5, z); G.add(w); } }
   boxes.push({ x: BX, z: BZ, hx: 1.7, hz: 4.7 });
   // ================= lamp posts around the yard =================
-  for (const [x, z] of [[-7.5, 26], [-7.5, -26], [15, -26], [15, 26], [14, -3]]) {
+  for (const [x, z] of [[X0 - 3, 26], [X0 - 3, -26], [X1 + 2.5, -26], [X1 + 2.5, 26], [X1 + 2, -3]]) {
     box(.18, 4.2, .18, darkM, x, 2.1, z); box(.7, .08, .08, darkM, x + .3, 4.1, z);
     const b = new THREE.Mesh(new THREE.SphereGeometry(.17, 10, 8), bulbM); b.position.set(x + .6, 3.9, z); G.add(b); circles.push({ x, z, r: .25 });
   }

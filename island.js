@@ -21,6 +21,7 @@ export function planIsland({ curve, TL, trackDist }) {
   const coastR = th => { const a = ((th * 180 / Math.PI) % 360 + 360) % 360, i = Math.floor(a), f = a - i; return lerp(coast[i], coast[(i + 1) % 360], f); };
   const plan = { coastR, lakes: [], mounts: [], pads: [], river: null, keep: [], extraCrates: [], at, st, P, T, TL };
   const keep = (x, z, r) => plan.keep.push({ x, z, r });
+  { const q = at(0, 16); keep(q.x, q.z, 52); }   // the Yard (shed, storage tracks, office)
   // lakes + central mountain
   plan.lakes.push({ x: 80, z: 90, r: 55 }, { x: -170, z: 40, r: 40 }, { x: -40, z: -205, r: 36 });
   plan.mounts.push({ x: -45, z: -45, r: 95, h: 42 }, { x: 150, z: -120, r: 60, h: 16 }, { x: -120, z: 170, r: 55, h: 14 });
