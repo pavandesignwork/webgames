@@ -68,13 +68,17 @@ cur=G.cab;
   box(2.7,.82,.62,deskM,0,DECK+.41,z0+3.6);
   const top=new THREE.Mesh(new THREE.BoxGeometry(2.7,.06,.78),topM); top.position.set(0,DECK+.86,z0+3.52); top.rotation.x=-.22; cur.add(top);
   for(const x of [-.7,.7]) box(1.25,.5,.04,std(0x2e3238,{metalness:.4}),x,DECK+.38,z0+3.27);           // cupboard doors under the desk
-  const lever=(x,col)=>{ box(.24,.16,.28,blk,x,DECK+.97,z0+3.5); const arm=new THREE.Mesh(new THREE.CylinderGeometry(.03,.035,.55,8),std(0xd8d8d0,{metalness:.3})); arm.position.set(x,DECK+1.22,z0+3.44); arm.rotation.x=-.3; cur.add(arm);
-    const knob=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.16,10),std(col,{roughness:.45})); knob.position.set(x,DECK+1.48,z0+3.36); knob.rotation.x=-.3; cur.add(knob); };
-  lever(.45,0x3ad06a); lever(.85,0xd8b020); lever(1.2,0xd03a2a);          // throttle · horn · brake
+  // levers pivot at their base so the game can move them (throttle · horn · brake)
+  const lever=(x,col)=>{ box(.24,.16,.28,blk,x,DECK+.97,z0+3.5); const pv=new THREE.Group(); pv.position.set(x,DECK+1.0,z0+3.5); pv.rotation.x=-.3; cur.add(pv);
+    const arm=new THREE.Mesh(new THREE.CylinderGeometry(.03,.035,.55,8),std(0xd8d8d0,{metalness:.3})); arm.position.y=.27; pv.add(arm);
+    const knob=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.16,10),std(col,{roughness:.45})); knob.position.y=.54; pv.add(knob); return pv; };
+  T.userData.levers=[lever(.45,0x3ad06a),lever(.85,0xd8b020),lever(1.2,0xd03a2a)];
   const lights=[0x3cff6a,0x3cff6a,0x3cff6a,0xff8a20,0xff3030,0x3cff6a];
   lights.forEach((c,i)=>{ const l=new THREE.Mesh(new THREE.SphereGeometry(.035,8,6),new THREE.MeshBasicMaterial({color:c})); l.position.set(-1.15+i*.13,DECK+.93,z0+3.3); cur.add(l); });
   const gaugeTex=canvasTex(128,128,(x,w,h)=>{ x.fillStyle='#e8e0c8'; x.beginPath(); x.arc(64,64,60,0,7); x.fill(); x.strokeStyle='#222'; x.lineWidth=3; for(let i=0;i<10;i++){ const a=Math.PI*.8+i/9*Math.PI*1.4; x.beginPath(); x.moveTo(64+Math.cos(a)*46,64+Math.sin(a)*46); x.lineTo(64+Math.cos(a)*56,64+Math.sin(a)*56); x.stroke(); } x.strokeStyle='#b01010'; x.lineWidth=4; x.beginPath(); x.moveTo(64,64); x.lineTo(64+Math.cos(-.4)*44,64+Math.sin(-.4)*44); x.stroke(); });
-  for(let i=0;i<3;i++){ const g=new THREE.Mesh(new THREE.CircleGeometry(.1,20),new THREE.MeshBasicMaterial({map:gaugeTex})); g.position.set(-1.05+i*.28,DECK+.94,z0+3.62); g.rotation.x=-Math.PI/2+.22; cur.add(g);
+  const speedTex=canvasTex(128,128,(x,w,h)=>{ x.fillStyle='#e8e0c8'; x.beginPath(); x.arc(64,64,60,0,7); x.fill(); x.strokeStyle='#222'; x.lineWidth=3; for(let i=0;i<10;i++){ const a=Math.PI*.8+i/9*Math.PI*1.4; x.beginPath(); x.moveTo(64+Math.cos(a)*46,64+Math.sin(a)*46); x.lineTo(64+Math.cos(a)*56,64+Math.sin(a)*56); x.stroke(); } x.fillStyle='#b01010'; x.font='bold 16px Georgia'; x.textAlign='center'; x.fillText('SPEED',64,96); });
+  for(let i=0;i<3;i++){ const g=new THREE.Mesh(new THREE.CircleGeometry(.1,20),new THREE.MeshBasicMaterial({map:i?gaugeTex:speedTex})); g.position.set(-1.05+i*.28,DECK+.94,z0+3.62); g.rotation.x=-Math.PI/2+.22; cur.add(g);
+    if(!i){ const pv=new THREE.Group(); pv.position.copy(g.position); pv.rotation.copy(g.rotation); cur.add(pv); const nd=new THREE.Group(); nd.position.z=.006; pv.add(nd); const ndl=new THREE.Mesh(new THREE.BoxGeometry(.012,.085,.004),new THREE.MeshBasicMaterial({color:0xb01010})); ndl.position.y=.036; nd.add(ndl); T.userData.needle=nd; }
     const r=new THREE.Mesh(new THREE.TorusGeometry(.1,.015,6,20),blk); r.position.copy(g.position); r.rotation.copy(g.rotation); cur.add(r); }
   // one work lamp in the back corner (out of the driver's view)
   const cablamp=new THREE.Mesh(new THREE.BoxGeometry(.3,.2,.12),new THREE.MeshBasicMaterial({color:0xfff2c8})); cablamp.position.set(-1.3,DECK+2.2,z0+.4); cur.add(cablamp);

@@ -19,8 +19,9 @@ const NetLink = (() => {
 
   // ---------- game (host) side ----------
   function host({ onCode, onConn, onError }) {
+    const PRE = PREFIX;   // remember the prefix, so one page can host two links (e.g. game room + phone pad)
     if (LOCAL) {
-      const code = newCode(), ch = new BroadcastChannel(PREFIX + code), conns = {};
+      const code = newCode(), ch = new BroadcastChannel(PRE + code), conns = {};
       ch.onmessage = ev => {
         const { from, t, d } = ev.data; if (!from) return;
         if (t === 'join') {
@@ -33,7 +34,7 @@ const NetLink = (() => {
     }
     if (typeof Peer === 'undefined') { onError && onError('Could not load the connection library.'); return; }
     const tryCode = () => {
-      const code = newCode(), peer = new Peer(PREFIX + code, { debug: 0 });
+      const code = newCode(), peer = new Peer(PRE + code, { debug: 0 });
       peer.on('open', () => onCode(code));
       peer.on('connection', c => c.on('open', () => onConn(wrapPeer(c))));
       peer.on('error', e => { if (e.type === 'unavailable-id') { peer.destroy(); tryCode(); } else onError && onError(e.type || String(e)); });

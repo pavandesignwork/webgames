@@ -37,6 +37,12 @@
  #stats .bar{width:190px} #inv{margin-top:5px;word-spacing:2px}
  #speed{position:absolute;right:20px;bottom:16px;text-align:right;display:none;color:#f0e8d8} #spd{font-size:28px;font-weight:bold} #speed .bar{width:150px}
  #help{position:absolute;left:50%;bottom:100px;transform:translateX(-50%);font-size:14px;color:#e8e0cc;white-space:nowrap;transition:opacity 1s}
+ #mark{position:absolute;transform:translate(-50%,-130%);background:#000b;border:1px solid #ffffff22;border-radius:18px;padding:4px 12px 4px 6px;font-size:15px;white-space:nowrap;display:none}
+ #mark span:last-child{vertical-align:middle}
+ .pb{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:2px solid;font:bold 13px system-ui,sans-serif;margin-right:6px;vertical-align:middle;background:#0008;text-shadow:none}
+ .pb.x{color:#7fb2ff;border-color:#7fb2ff} .pb.o{color:#ff6b6b;border-color:#ff6b6b} .pb.s{color:#f48fd0;border-color:#f48fd0} .pb.t{color:#5fd6a6;border-color:#5fd6a6}
+ .kk{font:bold 11px system-ui;color:#cfc6b0;margin:0 6px 0 -3px;vertical-align:middle;opacity:.8}
+ #hints{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);font-size:14px;white-space:nowrap;display:none} #hints .hi{margin:0 9px} #hints .stk{color:#cfc6b0}
  #regionTitle{position:absolute;left:50%;top:28%;transform:translateX(-50%);font-size:34px;letter-spacing:8px;color:#e8d4a0;opacity:0;white-space:nowrap}
  #regionTitle.show{animation:regionIn 4s forwards}
  @keyframes regionIn{0%{opacity:0;letter-spacing:14px}15%{opacity:1}75%{opacity:1}100%{opacity:0;letter-spacing:8px}}
@@ -59,7 +65,8 @@
   <div class="row"><input id="joinCode" inputmode="numeric" maxlength="4" placeholder="ROOM CODE"><button id="joinBtn" class="alt" style="margin-top:0">JOIN</button></div>
   <div id="saveRow" style="display:none;margin-top:10px;font-size:14px;color:#9a8a70"><label style="display:inline;letter-spacing:0;font-size:14px"><input type="checkbox" id="newSave" style="width:auto;margin-right:6px">start a NEW game (host only, erases your save)</label></div>
   <div class="err" id="menuErr"></div>
-  <div class="small">Best with keyboard + mouse or a controller · use Chrome or Edge</div>
+  <div class="small">Play with a phone, a controller, or keyboard + mouse · use Chrome or Edge</div>
+  <div class="padInfo small" style="text-align:left;margin-top:10px;overflow:hidden"></div>
 </div></div>
 <div id="lobby" class="screen"><div class="box">
   <div style="text-align:center;color:#9a8a70;letter-spacing:3px">ROOM CODE</div><div id="code">····</div>
@@ -69,8 +76,9 @@
   <button id="readyBtn">I'M READY</button>
   <button id="startBtn" class="alt" style="display:none">▶ START GAME</button>
   <div class="err" id="lobbyErr"></div>
+  <div class="padInfo small" style="text-align:left;margin-top:10px;overflow:hidden;min-height:20px"></div>
 </div></div>
-<div id="hud"><div id="cross"></div><div id="ammo"></div><div id="prompt"></div><div id="feed"></div><div id="regionTitle"></div>
+<div id="hud"><div id="cross"></div><div id="mark"></div><div id="hints"></div><div id="ammo"></div><div id="prompt"></div><div id="feed"></div><div id="regionTitle"></div>
   <div id="mission"><div id="mMain"></div><div id="mSide"></div></div>
   <div id="warn"></div>
   <div id="boss"><div style="display:flex;justify-content:space-between"><b>💀 RATTLEJAW</b><span id="bossPh"></span></div><div class="bar" style="height:12px"><i id="bossBar" style="background:linear-gradient(90deg,#8a0a06,#ff3a1a);width:100%"></i></div></div>
@@ -92,6 +100,7 @@
 <script src="sound.js"></script>
 <script src="input.js"></script>
 <script src="netlink.js"></script>
+<script src="vendor/qrcode.js"></script>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
 <script type="module">
 import * as THREE from 'three';
@@ -102,7 +111,18 @@ import {buildYard,YARD,slotSign} from './yard.js';
 import {Crew,OUTFITS} from './chars.js';
 import {planIsland,islandH,buildIsland,SEA_Y} from './island.js';
 const $=id=>document.getElementById(id);
+// ---- phone controller link: every computer gets its own phone code (railpad.html) ----
+let padCode=null;
+NetLink.setPrefix('pdw-webgames-railpad-');
+NetLink.host({ onCode:c=>{ padCode=c; showPadCode(); }, onError:()=>{},
+  onConn:c=>{ if(phoneConn) try{ phoneConn.close(); }catch(e){} phoneConn=c; uiSent=''; PH.seen={}; padActive=true; feed('📱 Phone controller connected!','#9fe'); showPadCode();
+    c.on('data',m=>{ if(m.t==='pad'){ PH.lx=+m.lx||0; PH.ly=+m.ly||0; PH.dx+=+m.dx||0; PH.dy+=+m.dy||0; PH.b=m.b||{}; PH.c=m.c||{}; PH.last=performance.now(); } });
+    c.on('close',()=>{ if(phoneConn===c){ phoneConn=null; PH.b={}; PH.lx=PH.ly=0; feed('📱 Phone controller disconnected','#ff9a7a'); showPadCode(); } }); } });
 NetLink.setPrefix('pdw-webgames-rails-');
+function showPadCode(){ if(!padCode) return; const url=new URL('railpad.html',location.href).href.split('?')[0]+'?code='+padCode+(NetLink.LOCAL?'&local':'');
+  let qr=''; try{ const q=qrcode(0,'M'); q.addData(url); q.make(); qr=q.createDataURL(4,1); }catch(e){}
+  const html=phoneConn?`<span style="color:#7dffa8">📱 Phone controller connected</span>`:`<img src="${qr}" alt="" style="width:74px;height:74px;border-radius:4px;background:#fff;padding:2px;float:left;margin-right:10px"><b>📱 Play with your phone</b><br>Scan, or open <b>${url.replace(/^https?:\/\//,'').replace(/\?.*/,'')}</b><br>phone code <b style="color:#ffcf6a;font-size:18px;letter-spacing:3px">${padCode}</b>`;
+  document.querySelectorAll('.padInfo').forEach(el=>el.innerHTML=html); }
 const COLORS=['#e8b24a','#4ab0e8','#e85a4a','#7ae84a'];
 const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t;
 Input.autoBack=false;
@@ -514,59 +534,112 @@ const keys={}, tapped={}; addEventListener('keydown',e=>{ keys[e.code]=true; tap
 let mouseDown=false, clicked=false; addEventListener('mousedown',e=>{ if(document.pointerLockElement&&e.button===0){ mouseDown=true; clicked=true; } }); addEventListener('mouseup',()=>mouseDown=false);
 const trainYaw=()=>new THREE.Euler().setFromQuaternion(train.quaternion,'YXZ').y;
 let shake=0; const DT=1/60; let netT=0, worldT=0, last=performance.now(), acc=0;
-function step(){
+// ===================== ONE UNIVERSAL CONTROLLER =====================
+// ✕ use / do   ○ back / leave   □ action (whack, fire, missile)   △ train screen   left stick move   right stick / drag / mouse look
+// keyboard: E = ✕ · Q = ○ · F or click = □ · Tab = △ · WASD move · Shift run · Space brake.  Shoulder buttons are not used.
+const PH={lx:0,ly:0,dx:0,dy:0,b:{},c:{},seen:{},last:0};   // phone controller state
+const BTN_ICON={x:'✕',o:'○',s:'□',t:'△'}, BTN_KEY={x:'E',o:'Q',s:'F',t:'Tab'};
+const kbOnly=()=>!padActive;
+const chip=k=>`<span class="pb ${k}">${BTN_ICON[k]}</span>${kbOnly()?`<small class="kk">${BTN_KEY[k]}</small>`:''}`;
+let lastTY=0, uiSent='', curTarget=null;
+function readControls(){
   const gp=[...(navigator.getGamepads?navigator.getGamepads():[])].find(g=>g&&g.connected), n=gp?Input.named(gp):{}, dz=v=>Math.abs(v||0)<.18?0:v;
-  me.yaw-=dz(n.rx)*.045; me.pitch=clamp(me.pitch-dz(n.ry)*.035,-1.3,1.3);
-  const useP=tapped.KeyE||(n.cross&&!step.pc); step.pc=n.cross; const holdE=!!(keys.KeyE||n.cross);
-  const attack=clicked||(n.r2&&!step.pr2); step.pr2=n.r2; clicked=false;
   if(gp&&(gp.buttons.some(b=>b.pressed)||Math.abs(n.lx)+Math.abs(n.ly)+Math.abs(n.rx||0)+Math.abs(n.ry||0)>.6)) padActive=true;
-  if(S.started&&(tapped.Tab||(n.triangle&&!step.pt))) toggleShop(); step.pt=n.triangle;
-  if(!S.started&&$('lobby').style.display==='flex'){ const ed=(k,v)=>{ const r=v&&!step['L'+k]; step['L'+k]=v; return r; };
-    if(ed('l',!!(n.dleft||n.lx<-.5))||tapped.ArrowLeft) changeOutfit(-1); if(ed('r',!!(n.dright||n.lx>.5))||tapped.ArrowRight) changeOutfit(1);
-    if(ed('x',!!n.cross)) $('readyBtn').click(); if(ed('o',!!n.options)&&net.role==='host'&&!$('startBtn').disabled) $('startBtn').click(); }
-  const shopUp=shopOpen(); if(shopUp){ const e=(k,v)=>{ const r=v&&!step['s'+k]; step['s'+k]=v; return r; };
-    const upP=e('u',!!(n.dup||n.ly<-.5))||tapped.ArrowUp||tapped.KeyW, dnP=e('d',!!(n.ddown||n.ly>.5))||tapped.ArrowDown||tapped.KeyS, lfP=e('l',!!(n.dleft||n.lx<-.5))||tapped.ArrowLeft||tapped.KeyA, rtP=e('r',!!(n.dright||n.lx>.5))||tapped.ArrowRight||tapped.KeyD;
-    if(upP||dnP){ shopSel=clamp(shopSel+(dnP?1:-1),0,shopRows.length-1); renderShop(); }
-    if((lfP||rtP)&&shopRows[shopSel]?.t==='paint') shopAct(shopRows[shopSel],rtP?1:-1);
-    if(useP||tapped.Enter||tapped.NumpadEnter) shopAct(shopRows[shopSel]);
-    if((tapped.KeyQ||e('q',!!n.square))&&shopRows[shopSel]?.t==='up'&&UPG[shopRows[shopSel].k].car&&W.upg[shopRows[shopSel].k]&&atYard()) shopAct({t:'store',k:shopRows[shopSel].k});
-    if((n.circle&&!step.pcir)||tapped.Escape) toggleShop(); }
-  let prompt='';
-  if(S.started){
-    if(shopUp){} else if(me.seat){ if(useP) requestSeat(null);
-      if(me.seat==='drive'){ const th=clamp(S.throttle+((keys.KeyW||n.r2||dz(-n.ly)>.3)?.6:0)*DT-((keys.KeyS||dz(n.ly)>.3)?.6:0)*DT,0,1), br=!!(keys.Space||n.l2||n.square), hr=!!(tapped.KeyH||(n.circle&&!step.pcir)), ms=!!(tapped.KeyM||(n.dup&&!step.pdu));
-        sendCtl({throttle:th,brake:br,horn:hr,missile:ms}); if(net.role==='host'){ S.throttle=th; S.brake=br?1:0; if(hr) hostHorn(); if(ms) fireMissile(0); }
-        if(tapped.KeyV||(n.l1&&!step.pl1)||(n.r3&&!step.pr3)){ me.view=me.view==='out'?'cab':'out'; me.yaw=0; me.pitch=me.view==='out'?-.1:-.05; }
-        if(performance.now()-(me.seatT||0)<6000) prompt=(padActive?'DRIVING · R2 faster · L2 / □ brake · ○ horn · L1 camera':'DRIVING · W/S throttle · Space brake · H horn · V camera')+(W.upg.launcher?` · M missile (${W.missiles})`:'')+(padActive?' · ✕ leave':' · E leave'); }
-      if(me.seat==='gun'){ const gy=me.yaw, gpch=clamp(me.pitch,-.3,.6), fire=mouseDown||n.r2; sendCtl({gy,gp:gpch,fire}); if(net.role==='host'){ S.gunYaw=gy; S.gunPitch=gpch; if(fire) hostFire(0); } if(performance.now()-(me.seatT||0)<6000) prompt=padActive?'GUN · R2 fire · R-stick aim · ✕ leave':'GUN · click to fire · E leave'; }
-      const st=SEATS[me.seat]; me.x=st.x; me.z=st.z;
-    } else {
-      const sp=(keys.ShiftLeft||n.l3?4.3:2.5)*DT, f=(keys.KeyW?1:0)-(keys.KeyS?1:0)-dz(n.ly), r=(keys.KeyD?1:0)-(keys.KeyA?1:0)+dz(n.lx);
-      const mv=new THREE.Vector3(Math.sin(me.yaw),0,Math.cos(me.yaw)).multiplyScalar(f).add(new THREE.Vector3(-Math.cos(me.yaw),0,Math.sin(me.yaw)).multiplyScalar(r)); if(mv.lengthSq()>1) mv.normalize();
-      if(me.mode==='train'){ const tx=me.x+mv.x*sp, tz=me.z+mv.z*sp; if(inside(tx,tz)){ me.x=tx; me.z=tz; } else if(inside(tx,me.z)) me.x=tx; else if(inside(me.x,tz)) me.z=tz;
-        for(const k in SEATS){ const st=SEATS[k]; if(Math.hypot(me.x-st.x,me.z-st.z)<1.3){ prompt=`[E] ${SEATS[k].label}`; if(useP) requestSeat(k); } }
-        const door=DOORS.find(d=>Math.hypot(me.x-d.x,me.z-d.z)<.9);
-        if(door){ if(S.v>2) prompt='Too fast to jump off! Ask the driver to slow down'; else { prompt='[E] step off the train'; if(useP){ const w=new THREE.Vector3(door.x*2.1,0,door.z).applyMatrix4(train.matrixWorld); me.mode='ground'; me.gx=w.x; me.gz=w.z; me.yaw+=trainYaw(); A.step(); } } }
-        if(BENCH&&Math.hypot(me.x-BENCH.x,me.z-BENCH.z)<1.2){ prompt='[E] workbench: craft ammo & missiles'+(atYard()?' · UPGRADES (you are at the Yard)':''); if(useP) toggleShop(); }
-      } else {
-        { const ox=me.gx, oz=me.gz; me.gx+=mv.x*sp; me.gz+=mv.z*sp; const q={x:me.gx,z:me.gz}; collide(q,.35); me.gx=q.x; me.gz=q.z; if(groundH(me.gx,me.gz)<-1.25){ me.gx=ox; me.gz=oz; } }
-        const lp=train.worldToLocal(new THREE.Vector3(me.gx,0,me.gz)); const hw=lp.z>7.9?2.15:1.95; if(Math.abs(lp.x)<hw&&lp.z>REAR-.3&&lp.z<15.4){ lp.x=Math.sign(lp.x||1)*hw; const w=train.localToWorld(lp); me.gx=w.x; me.gz=w.z; }
-        if(Math.abs(lp.x)<2.6&&lp.z>REAR&&lp.z<7.5){ if(S.v>2) prompt='The train is moving!'; else { prompt='[E] climb back aboard'; if(useP){ me.mode='train'; me.x=clamp(lp.x,-1.2,1.2); me.z=clamp(lp.z,REAR+.5,6.8); if(!inside(me.x,me.z)) me.x=0; if(!inside(me.x,me.z)){ me.x=0; me.z=5.0; } me.yaw-=trainYaw(); A.step(); } } }
-        W.breaks.forEach((b,i)=>{ if(b.fixed) return; const o=breakObjs[i]; if(Math.hypot(me.gx-o.x,me.gz-o.z)<2.6) prompt=W.rails>0?`HOLD [E] to repair the track · ${Math.round(b.prog*100)}% · rails left ${W.rails}`:'No rails in the material car! Restock at a connected station'; });
-        CRATES.forEach((c,i)=>{ if(W.crates[i]) return; if(Math.hypot(me.gx-c.x,me.gz-c.z)<1.8){ prompt='[E] grab the scrap crate'; if(useP){ if(net.role==='host') takeCrate(i,0); else net.conn.send({t:'crate',i}); } } });
-        PARTS.forEach((pt,i)=>{ if(W.parts[pt.k]) return; if(Math.hypot(me.gx-pt.x,me.gz-pt.z)<2){ prompt=`[E] take the ${pt.name}`; if(useP){ if(net.role==='host') takePart(i,0); else net.conn.send({t:'part',i}); } } });
-        { const lq=yardG.worldToLocal(new THREE.Vector3(me.gx,0,me.gz)); for(const c of CARS){ if(!yardShown[c]) continue; if(Math.abs(lq.x-YARD.SIDING_X)<3.3&&Math.abs(lq.z-YARD.SLOT_Z[c])<3.3){ const U=UPG[c], st=W.store[c], E=padActive?'✕':'E';
-          if(!atYard()) prompt=`Stop the train in the Yard first`;
-          else if(st){ prompt=`[${E}] Attach the ${U.name} to your train`; if(useP) sendAct('attach',c); }
-          else { const why=canBuy(c); prompt=why==='scrap'?`${U.name} · ${U.cost[1]} scrap (you have ${W.scrap})`:`[${E}] Buy the ${U.name} · ${U.cost[1]} scrap`; if(useP&&!why) sendAct('buy',c); } } } }
-        if(attack){ swing=1; A.step(); if(net.role==='host') whack(0); else net.conn.send({t:'whack'}); }
-        if(!prompt&&W.gn.length) prompt=padActive?'R2 whack gnawers':'Click to whack gnawers';
-      }
+  if(performance.now()-PH.last<1500) padActive=true;
+  // buttons: held + pressed-this-frame (phone sends a press counter so quick taps are never lost)
+  const held={x:!!(keys.KeyE||n.cross||PH.b.x),o:!!(keys.KeyQ||n.circle||PH.b.o),s:!!(mouseDown||keys.KeyF||n.square||PH.b.s),t:!!(n.triangle||PH.b.t)}, P={};
+  for(const k in held){ P[k]=(held[k]&&!step.prevB?.[k])||(PH.c[k]||0)>(PH.seen[k]||0); PH.seen[k]=PH.c[k]||0; }
+  step.prevB=held; if(clicked) P.s=true; clicked=false; if(tapped.Tab) P.t=true; if(tapped.Enter) P.x=true; if(tapped.Escape) P.o=true;
+  // movement stick (keys, left stick, d-pad, phone)
+  const mx=clamp((keys.KeyD?1:0)-(keys.KeyA?1:0)+dz(n.lx)+(n.dright?1:0)-(n.dleft?1:0)+PH.lx,-1,1), my=clamp((keys.KeyW?1:0)-(keys.KeyS?1:0)-dz(n.ly)+(n.dup?1:0)-(n.ddown?1:0)-PH.ly,-1,1);
+  // look (mouse is handled by mousemove)
+  me.yaw-=dz(n.rx)*.05+PH.dx*.0062; me.pitch=clamp(me.pitch-dz(n.ry)*.038-PH.dy*.0048,-1.3,1.3); PH.dx=PH.dy=0;
+  const flick=(k,v)=>{ const r=v&&!step['f'+k]; step['f'+k]=v; return r; };
+  const fU=flick('u',my>.55), fD=flick('d',my<-.55), fL=flick('l',mx<-.55), fR=flick('r',mx>.55);
+  let ui={x:'',o:'',s:'',t:'',hint:'',stick:'move'};
+  // ----- lobby: ◀ ▶ outfit · ✕ ready · △ start (host)
+  if(!S.started&&$('lobby').style.display==='flex'){ if(fL||tapped.ArrowLeft) changeOutfit(-1); if(fR||tapped.ArrowRight) changeOutfit(1); if(P.x) $('readyBtn').click();
+    if((P.t||(n.options&&!step.popt))&&net.role==='host'&&!$('startBtn').disabled) $('startBtn').click();
+    ui={x:'Ready',o:'',s:'',t:net.role==='host'?'Start':'',hint:'◀ ▶ change outfit',stick:'outfit'}; P.x=P.t=P.o=P.s=false; }
+  step.popt=n.options;
+  // ----- train screen
+  if(S.started&&P.t) toggleShop();
+  const shopUp=shopOpen();
+  if(shopUp){ if(fU||tapped.ArrowUp){ shopSel=clamp(shopSel-1,0,shopRows.length-1); renderShop(); } if(fD||tapped.ArrowDown){ shopSel=clamp(shopSel+1,0,shopRows.length-1); renderShop(); }
+    const row=shopRows[shopSel]; if((fL||fR||tapped.ArrowLeft||tapped.ArrowRight)&&row?.t==='paint') shopAct(row,(fR||tapped.ArrowRight)?1:-1);
+    if(P.x) shopAct(row);
+    const canStore=row?.t==='up'&&UPG[row.k].car&&W.upg[row.k]&&atYard(); if(P.s&&canStore) shopAct({t:'store',k:row.k});
+    if(P.o) toggleShop();
+    ui={x:'Select',o:'Close',s:canStore?'Store car':'',t:'Close',hint:'',stick:'choose'}; }
+  let prompt=''; curTarget=null;
+  if(S.started&&!shopUp){
+    if(me.seat==='drive'){
+      // left stick / W S = throttle lever; pull back with no throttle = brake
+      let th=S.throttle; if(my>.2) th+=.5*my*DT; if(my<-.2) th+=.9*my*DT; th=clamp(th,0,1);
+      const br=!!(keys.Space||(my<-.2&&S.throttle<.01)), hr=P.x, ms=P.s&&!!W.upg.launcher;
+      sendCtl({throttle:th,brake:br,horn:hr,missile:ms}); if(net.role==='host'){ S.throttle=th; S.brake=br?1:0; if(hr) hostHorn(); if(ms) fireMissile(0); }
+      if(hr) hornPull=1;
+      if(P.o) requestSeat(null);
+      ui={x:'Horn',o:'Leave',s:W.upg.launcher?`Missile (${W.missiles})`:'',t:'Train',hint:'',stick:'▲ faster ▼ slower'};
+    } else if(me.seat==='gun'){
+      me.yaw-=mx*1.7*DT; me.pitch=clamp(me.pitch+my*1.1*DT,-1.3,1.3); aimAssist();
+      const gy=me.yaw, gpch=clamp(me.pitch,-.3,.6), fire=held.s||held.x; sendCtl({gy,gp:gpch,fire}); if(net.role==='host'){ S.gunYaw=gy; S.gunPitch=gpch; if(fire) hostFire(0); }
+      if(P.o) requestSeat(null);
+      ui={x:'Fire',o:'Leave',s:'Fire',t:'Train',hint:W.upg.gun?'':'',stick:'aim'};
     }
+    if(me.seat){ const st=SEATS[me.seat]; if(st){ me.x=st.x; me.z=st.z; } }
+    else {
+      const run=keys.ShiftLeft||n.l3||Math.hypot(PH.lx,PH.ly)>.94, sp=(run?4.3:2.5)*DT;
+      const mv=new THREE.Vector3(Math.sin(me.yaw),0,Math.cos(me.yaw)).multiplyScalar(my).add(new THREE.Vector3(-Math.cos(me.yaw),0,Math.sin(me.yaw)).multiplyScalar(mx)); if(mv.lengthSq()>1) mv.normalize();
+      if(me.mode==='train'){ const tx=me.x+mv.x*sp, tz=me.z+mv.z*sp; if(inside(tx,tz)){ me.x=tx; me.z=tz; } else if(inside(tx,me.z)) me.x=tx; else if(inside(me.x,tz)) me.z=tz; }
+      else { const ox=me.gx, oz=me.gz; me.gx+=mv.x*sp; me.gz+=mv.z*sp; const q={x:me.gx,z:me.gz}; collide(q,.35); me.gx=q.x; me.gz=q.z; if(groundH(me.gx,me.gz)<-1.25){ me.gx=ox; me.gz=oz; }
+        const lp=train.worldToLocal(new THREE.Vector3(me.gx,0,me.gz)); const hw=lp.z>7.9?2.15:1.95; if(Math.abs(lp.x)<hw&&lp.z>REAR-.3&&lp.z<15.4){ lp.x=Math.sign(lp.x||1)*hw; const w=train.localToWorld(lp); me.gx=w.x; me.gz=w.z; } }
+      // look at something to use it: the button appears on it
+      const T=gatherTargets(); curTarget=pickTarget(T);
+      if(curTarget){ if(curTarget.act&&!curTarget.hold&&P.x) curTarget.act(); if(curTarget.msg) prompt=curTarget.msg; }
+      if(P.s&&me.mode==='ground'){ swing=1; A.step(); if(net.role==='host') whack(0); else net.conn.send({t:'whack'}); }
+      ui={x:curTarget&&curTarget.act?curTarget.short:'',o:'',s:me.mode==='ground'?'Whack':'',t:'Train',hint:curTarget?curTarget.label:'',stick:'move'};
+    }
+  }
+  var holdE=held.x;
+  return {holdE,prompt,ui};
+}
+// ---------- things you can use, and which one you are looking at ----------
+const tw=(x,y,z)=>new THREE.Vector3(x,y,z).applyMatrix4(train.matrixWorld);
+function gatherTargets(){ const T=[], add=(wp,dist,range,o)=>{ if(dist<=range) T.push({wp,dist,...o}); }, mid=myId();
+  if(me.mode==='train'){
+    for(const k in SEATS){ const st=SEATS[k], taken=Object.values(S.players).some(p=>p.seat===k&&+p.id!==mid);
+      add(tw(st.x,DECK+1.05,st.z+(k==='drive'?1.4:-.6)),Math.hypot(me.x-st.x,me.z-st.z),1.7,{label:taken?'Someone is using it':(k==='drive'?'Drive the train':'Use the gun'),short:k==='drive'?'Drive':'Gun',act:taken?null:()=>requestSeat(k)}); }
+    for(const d of DOORS) add(tw(d.x*1.15,DECK+1.1,d.z),Math.hypot(me.x-d.x,me.z-d.z),1.35,S.v>2?{label:'Too fast to step off',short:''}:{label:'Step off the train',short:'Step off',act:()=>stepOff(d)});
+    if(BENCH) add(tw(BENCH.x-.45,DECK+1.05,BENCH.z),Math.hypot(me.x-BENCH.x,me.z-BENCH.z),1.5,{label:'Workbench',short:'Workbench',act:()=>toggleShop()});
+  } else {
+    const px=me.gx, pz=me.gz;
+    for(const d of DOORS){ const w=tw(d.x*1.3,DECK+.5,d.z); add(w,Math.hypot(px-w.x,pz-w.z),2.4,S.v>2?{label:'The train is moving',short:''}:{label:'Climb aboard',short:'Board',act:()=>boardAt(d)}); }
+    W.breaks.forEach((b,i)=>{ if(b.fixed) return; const o=breakObjs[i], w=new THREE.Vector3(o.x,.8,o.z); add(w,Math.hypot(px-o.x,pz-o.z),2.6,W.rails>0?{label:`Hold to repair the track · ${Math.round(b.prog*100)}%`,short:'Hold: repair',hold:true,act:()=>{}}:{label:'No rails left! Restock at a station',short:''}); });
+    CRATES.forEach((c,i)=>{ if(W.crates[i]) return; add(new THREE.Vector3(c.x,hgt(c.x,c.z)+.7,c.z),Math.hypot(px-c.x,pz-c.z),2.2,{label:'Grab the scrap crate',short:'Grab',act:()=>{ if(net.role==='host') takeCrate(i,0); else net.conn.send({t:'crate',i}); }}); });
+    PARTS.forEach((pt,i)=>{ if(W.parts[pt.k]) return; add(new THREE.Vector3(pt.x,hgt(pt.x,pt.z)+.8,pt.z),Math.hypot(px-pt.x,pz-pt.z),2.4,{label:`Take the ${pt.name}`,short:'Take',act:()=>{ if(net.role==='host') takePart(i,0); else net.conn.send({t:'part',i}); }}); });
+    for(const c of CARS){ if(!yardShown[c]) continue; const w=yardG.localToWorld(new THREE.Vector3(YARD.SIDING_X-1.8,1.6,YARD.SLOT_Z[c])), U=UPG[c], st=W.store[c], why=canBuy(c);
+      add(w,Math.hypot(px-w.x,pz-w.z),3.4,!atYard()?{label:'Stop the train in the Yard first',short:''}:st?{label:`Attach the ${U.name}`,short:'Attach',act:()=>sendAct('attach',c)}:why==='scrap'?{label:`${U.name} · ${U.cost[1]} scrap (you have ${W.scrap})`,short:''}:{label:`Buy the ${U.name} · ${U.cost[1]} scrap`,short:'Buy',act:()=>sendAct('buy',c)}); }
+  }
+  return T; }
+function pickTarget(T){ const cdir=camera.getWorldDirection(new THREE.Vector3()), cp=camera.position; let best=null, bs=1e9;
+  for(const c of T){ const to=c.wp.clone().sub(cp), l=to.length(); to.divideScalar(l||1); const dot=to.dot(cdir); if(dot<.74&&c.dist>.7) continue; const sc=(1-dot)*5+c.dist*.3+(c.act?0:.4); if(sc<bs){ bs=sc; best=c; } }
+  return best; }
+function stepOff(d){ const w=new THREE.Vector3(d.x*2.1,0,d.z).applyMatrix4(train.matrixWorld); me.mode='ground'; me.gx=w.x; me.gz=w.z; me.yaw+=trainYaw(); A.step(); }
+function boardAt(d){ me.mode='train'; me.x=clamp(d.x*.85,-1.2,1.2); me.z=d.z; if(!inside(me.x,me.z)) me.x=0; if(!inside(me.x,me.z)){ me.x=0; me.z=5.0; } me.yaw-=trainYaw(); A.step(); }
+// gentle aim help on the gun (makes controller / phone aiming fair)
+function aimAssist(){ const o=new THREE.Vector3(0,DECK+1.3,gunZ()), tg=[]; if(W.mon.on) tg.push(hollow.position.clone().add(new THREE.Vector3(0,2.4,0))); if(W.rj.on&&W.rj.ph==='up') tg.push(RJ.head.getWorldPosition(new THREE.Vector3()));
+  for(const g of W.gn) tg.push(new THREE.Vector3(g.x,hgt(g.x,g.z)+.5,g.z));
+  let best=null, bd=.16; for(const w of tg){ const l=train.worldToLocal(w.clone()).sub(o), ty=Math.atan2(l.x,l.z), tp=Math.atan2(l.y,Math.hypot(l.x,l.z)); let dy=((ty-me.yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI, dp=tp-me.pitch, d=Math.hypot(dy,dp); if(d<bd){ bd=d; best=[dy,dp]; } }
+  if(best){ me.yaw+=best[0]*.07; me.pitch+=best[1]*.07; } }
+function step(){
+  const {holdE,prompt,ui}=readControls();
+  if(S.started){
     if(net.role==='host'){
+      if(!Object.values(S.players).some(p=>p.seat==='drive')){ S.throttle=0; S.brake=1; }
       const top=5.5+W.upg.engine*2.4, a=S.throttle*(1.6+W.upg.engine*.45)-S.brake*6-.05*S.v-.6*Math.max(0,S.v-top);
       S.v=Math.max(0,S.v+a*DT); let ns=S.trainS+S.v*DT;
-      const nb=nextBreak(); if(nb&&nb.d<S.v*DT+.5){ ns=S.trainS+Math.max(0,nb.d-.5); if(S.v>1){ announce('🛑 BROKEN TRACK! Step off and hold E at the glowing ring','#ffcf6a'); shake=.4; } S.v=0; }
+      const nb=nextBreak(); if(nb&&nb.d<S.v*DT+.5){ ns=S.trainS+Math.max(0,nb.d-.5); if(S.v>1){ announce('🛑 BROKEN TRACK! Step off and hold ✕ at the glowing ring','#ffcf6a'); shake=.4; } S.v=0; }
       S.trainS=(ns%TL+TL)%TL;
       const p0=S.players[0]; if(p0){ p0.mode=me.mode; p0.x=me.mode==='train'?me.x:me.gx; p0.z=me.mode==='train'?me.z:me.gz; p0.yaw=me.yaw; p0.pitch=me.pitch; p0.holdE=holdE; }
       hostWorldStep();
@@ -580,10 +653,16 @@ function step(){
     }
     for(const p of Object.values(S.players)) if(p.tx!=null){ p.x=lerp(p.x,p.tx,.25); p.z=lerp(p.z,p.tz,.25); }
   }
-  $('prompt').style.display=prompt?'block':'none'; $('prompt').textContent=prompt;
-  for(const k in tapped) delete tapped[k]; step.pcir=n.circle; step.pdu=n.dup; step.pl1=n.l1; step.pr3=n.r3;
+  $('prompt').style.display=prompt?'block':'none'; if($('prompt').textContent!==prompt) $('prompt').textContent=prompt;
+  updateUI(ui);
+  for(const k in tapped) delete tapped[k];
 }
-let swing=0, padActive=false, shopT=0;
+// on-screen button hints while in a seat, and the phone's button labels
+function updateUI(ui){ const seat=S.started&&me.seat&&!shopOpen();
+  const h=seat?['x','s','o','t'].filter(k=>ui[k]).map(k=>`<span class="hi">${chip(k)}${ui[k]}</span>`).join('')+(ui.stick?`<span class="hi stk">🕹️ ${ui.stick}</span>`:''):'';
+  if($('hints').innerHTML!==h) $('hints').innerHTML=h; $('hints').style.display=h?'block':'none';
+  if(phoneConn){ const key=JSON.stringify(ui); if(key!==uiSent){ uiSent=key; phoneConn.send({t:'ui',labels:{x:ui.x,o:ui.o,s:ui.s,t:ui.t},hint:ui.hint,stick:ui.stick}); } } }
+let swing=0, padActive=false, shopT=0, hornPull=0, camRoll=0, phoneConn=null;
 let lastCtl=0; function sendCtl(c){ if(net.role!=='client') return; const now=performance.now(); if(now-lastCtl<50&&!c.fire&&!c.horn&&!c.missile) return; lastCtl=now; net.conn.send({t:'ctl',...c}); }
 function requestSeat(k){ me.seatT=performance.now(); if(k==='drive'){ me.yaw=0; me.pitch=-.05; } if(k==='gun'){ me.yaw=Math.PI; me.pitch=-.08; }
   if(net.role==='host'){ hostSeat(0,k); me.seat=S.players[0].seat; } else { net.conn.send({t:'seat',k}); if(k===null) me.seat=null; } A.dry(); }
@@ -622,7 +701,7 @@ function shopAct(r,dir=1){ if(!r) return; const send=(m,f)=>{ if(net.role==='hos
   if(r.t==='craft') send({t:'craft',k:r.k},()=>craft(r.k));
   if(r.t==='paint'){ if(!atYard()){ A.dry(); return; } const i=(W.paint+dir+PAINTS.length)%PAINTS.length; send({t:'paint',i},()=>setPaint(i)); }
   setTimeout(renderShop,250); }
-function renderShop(){ $('shopScrap').textContent=W.scrap; $('shopRoom').innerHTML='Room '+net.code+' · '+Object.values(S.players).map(p=>`<span style="color:${p.color}">${p.name}</span>`).join(' · '); const yard=atYard(), cc=canCraft();
+function renderShop(){ $('shopScrap').textContent=W.scrap; $('shopHint').innerHTML=`${chip('x')} select &nbsp; ${chip('s')} store car &nbsp; ◀ ▶ paint &nbsp; ${chip('o')} close`; $('shopRoom').innerHTML='Room '+net.code+(padCode?' · 📱 '+padCode:'')+' · '+Object.values(S.players).map(p=>`<span style="color:${p.color}">${p.name}</span>`).join(' · '); const yard=atYard(), cc=canCraft();
   $('shopWhere').innerHTML=yard?'<span style="color:#7dffa8">✓ You are at THE YARD: upgrades and new cars are available</span>':'<span style="color:#ff9a7a">Upgrades only at THE YARD (station 1). Stop there to buy.</span>';
   shopRows=[{t:'craft',k:'ammo'},{t:'craft',k:'missile'},...UPG_ORDER.map(k=>({t:'up',k})),{t:'paint'}]; shopSel=clamp(shopSel,0,shopRows.length-1);
   $('shopList').innerHTML=shopRows.map((r,i)=>{ const sel=i===shopSel?' sel':'';
@@ -697,15 +776,19 @@ function render(){
   let eye, look;
   if(me.mode==='train'){ eye=new THREE.Vector3(me.x,DECK+(me.seat?SEATS[me.seat].eye:EYE),me.z).applyMatrix4(train.matrixWorld); look=new THREE.Vector3(Math.sin(me.yaw)*Math.cos(me.pitch),Math.sin(me.pitch),Math.cos(me.yaw)*Math.cos(me.pitch)).transformDirection(train.matrixWorld); }
   else { eye=new THREE.Vector3(me.gx,groundH(me.gx,me.gz)+EYE,me.gz); look=new THREE.Vector3(Math.sin(me.yaw)*Math.cos(me.pitch),Math.sin(me.pitch),Math.cos(me.yaw)*Math.cos(me.pitch)); }
-  if(me.mode==='train'&&me.seat==='drive'&&me.view==='out'){ const yw=me.yaw, R=6, h=clamp(7.2-me.pitch*8,4.5,13);
-    eye=new THREE.Vector3(-Math.sin(yw)*R+Math.cos(yw)*2.3,h,8-Math.cos(yw)*R).applyMatrix4(train.matrixWorld); look=new THREE.Vector3(Math.sin(yw)*40,.8,8+Math.cos(yw)*40).applyMatrix4(train.matrixWorld).sub(eye).normalize(); }
+  let roll=0; if(me.mode==='train'){ const ty=trainYaw(); let dy=ty-lastTY; dy=((dy+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI; lastTY=ty; roll=clamp(-dy*60*S.v*.035,-.06,.06);
+    const tt=performance.now()/1000, k=Math.min(1,S.v/10); eye.y+=Math.sin(tt*(2+S.v*1.4))*.014*k+Math.sin(tt*31)*.004*k; eye.add(new THREE.Vector3(Math.sin(tt*(1+S.v*.7))*.01*k,0,0).applyQuaternion(train.quaternion)); }
+  camRoll=lerp(camRoll,roll,.06);
   if(lobbyOn){ const V=THREE.Vector3; eye=yardG.localToWorld(new V(.2,1.45,31.6)); look=yardG.localToWorld(new V(-.1,1.0,27)).sub(eye).normalize(); }
   if(W.rj.on&&W.rj.ph==='tremor') shake=Math.max(shake,.25);
   if(shake>.01){ eye.add(new THREE.Vector3((Math.random()-.5)*shake*.3,(Math.random()-.5)*shake*.3,(Math.random()-.5)*shake*.3)); shake*=.9; }
   if(shopOpen()){ const mid=(REAR+14)/2, R=(14-REAR)/2+9, a=performance.now()/9000; eye=new THREE.Vector3(Math.sin(a)*R,4.5+R*.12,mid+Math.cos(a)*R).applyMatrix4(train.matrixWorld); look=new THREE.Vector3(0,1.8,mid).applyMatrix4(train.matrixWorld).sub(eye).normalize();
     if((shopT=(shopT+1)%30)===0) renderShop(); }
   if(window.__cam){ const [ex,ey,ez,tx,ty,tz]=window.__cam; eye=new THREE.Vector3(ex,ey,ez); look=new THREE.Vector3(tx-ex,ty-ey,tz-ez).normalize(); }   // test camera
-  camera.position.copy(eye); camera.up.copy(up); camera.lookAt(eye.clone().add(look)); myLamp.position.copy(eye).add(new THREE.Vector3(0,-.3,0));
+  camera.position.copy(eye); camera.up.copy(up); camera.lookAt(eye.clone().add(look)); if(me.mode==='train') camera.rotateZ(camRoll); myLamp.position.copy(eye).add(new THREE.Vector3(0,-.3,0));
+  { const LV=train.userData.levers; if(LV){ LV[0].rotation.x=-.45+S.throttle*.95; hornPull=Math.max(0,hornPull-1/25); LV[1].rotation.x=-.3+hornPull*.7; LV[2].rotation.x=-.4+S.brake*.8; } if(train.userData.needle) train.userData.needle.rotation.z=1.25-clamp(S.v/14,0,1)*2.5; }
+  // the button marker on whatever you are looking at
+  { const mk=$('mark'); if(curTarget&&S.started&&!shopOpen()){ const v=curTarget.wp.clone().project(camera); if(v.z<1&&Math.abs(v.x)<1.1&&Math.abs(v.y)<1.1){ mk.style.display='block'; mk.style.left=((v.x+1)/2*innerWidth)+'px'; mk.style.top=((1-v.y)/2*innerHeight)+'px'; const html=(curTarget.act?chip('x'):'')+`<span>${curTarget.label}</span>`; if(mk.innerHTML!==html) mk.innerHTML=html; } else mk.style.display='none'; } else mk.style.display='none'; }
   wrench.visible=me.mode==='ground'&&!shopOpen(); if(wrench.visible){ swing*=.85; wrench.position.set(.32,-.32+swing*.15,-.6); wrench.rotation.set(-.5-swing*1.4,0,-.3); }
   if(S.started&&Math.random()<.25+S.throttle*.5){ const s=smoke.find(s=>s.life<=0); if(s){ s.m.position.copy(new THREE.Vector3(0,5.2,12.3).applyMatrix4(train.matrixWorld)); s.m.scale.setScalar(.5); s.m.visible=true; s.life=3; } }
   for(const s of smoke) if(s.life>0){ s.life-=1/60; s.m.position.y+=.05; s.m.scale.multiplyScalar(1.012); s.m.material.opacity=Math.max(0,s.life/3*.45); if(s.life<=0) s.m.visible=false; }
@@ -718,10 +801,10 @@ function render(){
     $('warn').style.display=wtxt?'block':'none'; if($('warn').textContent!==wtxt) $('warn').textContent=wtxt;
     $('hud').classList.toggle('shopping',shopOpen());
     $('clickToPlay').style.display=!document.pointerLockElement&&!shopOpen()&&!padActive&&$('victory').style.display!=='flex'?'block':'none';
-    const outCam=me.seat==='drive'&&me.view==='out'; $('cross').style.display=outCam?'none':'block';
+    $('cross').style.display=me.seat==='drive'?'none':'block';
     $('ammo').style.display=me.seat==='gun'?'block':'none'; if(me.seat==='gun') $('ammo').textContent=W.ammo;
     $('help').style.opacity=now<(S.helpUntil||0)?1:0;
-    if(now<(S.helpUntil||0)){ const hl=padActive?'L-stick move · R-stick look · ✕ use · △ train & upgrades':'WASD move · mouse look · E use · Tab train & upgrades'; if($('help').textContent!==hl) $('help').textContent=hl; }
+    if(now<(S.helpUntil||0)){ const hl=`${chip('x')} use &nbsp; ${chip('s')} action &nbsp; ${chip('o')} back &nbsp; ${chip('t')} train`+(padActive?'':' &nbsp; · WASD move · mouse look'); if(step.hl!==hl){ step.hl=hl; $('help').innerHTML=hl; } }
     const ri=regionAt(S.trainS); if(ri!==S.lastRegion){ S.lastRegion=ri; const rt=$('regionTitle'); rt.textContent=reg.name.toUpperCase(); rt.classList.remove('show'); void rt.offsetWidth; rt.classList.add('show'); }
     $('speed').style.display=me.seat==='drive'?'block':'none'; $('thrBar').style.width=(S.throttle*100)+'%'; $('spd').textContent=Math.round(S.v*3.6);
     $('hpBar').style.width=clamp(W.hp/maxHp()*100,0,100)+'%';
@@ -746,5 +829,5 @@ function audioFrame(){ if(!S.started) return; const dt=1/60;
   let ten=0; if(W.mon.on) ten=Math.max(ten,clamp(1-gap/80,.35,1)); if(W.rj.on) ten=Math.max(ten,W.rj.ph==='tremor'?.7:.95); if(W.gn.length) ten=Math.max(ten,.6); if(W.boss.on) ten=1;
   A.update(dt,{tension:ten,quake:W.rj.on&&W.rj.ph==='tremor'?.8:W.rj.on&&W.rj.ph==='up'&&W.rj.t<1.5?.6:0,region:regionAt(S.trainS),boss:W.boss.on}); }
 (function loop(now=performance.now()){ acc+=Math.min(250,now-last); last=now; while(acc>=1000/60){ step(); acc-=1000/60; } render(); requestAnimationFrame(loop); })();
-window.__rails={startBoss,bossDamage,A,S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy,WALK,SEATS,yardG,avatars,PLAN,ISL,camera,yardShown,attachCar,storeCar,get REAR(){ return REAR; },train,relayout,inside,collide,groundH,COLL,OBOX,hgt,BLK};
+window.__rails={startBoss,bossDamage,A,S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy,WALK,SEATS,yardG,avatars,PLAN,ISL,camera,PH,get padCode(){ return padCode; },get target(){ return curTarget; },yardShown,attachCar,storeCar,get REAR(){ return REAR; },train,relayout,inside,collide,groundH,COLL,OBOX,hgt,BLK};
 </script></body></html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d14"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Rattlejaw Pad">
+<title>Rattlejaw Rails · phone controller</title>
+<style>
+ *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+ html,body{margin:0;height:100%;overflow:hidden;touch-action:none;overscroll-behavior:none;color:#e8e2d0;font-family:Georgia,'Times New Roman',serif;
+   background:radial-gradient(ellipse at 30% 20%,#1d2436 0,#0b0d14 70%)}
+ button{font:inherit;cursor:pointer}
+ /* ---------- connect screen ---------- */
+ #join{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px}
+ .card{width:min(420px,94vw);background:#11151ee8;border:2px solid #4a3a26;border-radius:10px;padding:18px 22px;text-align:center;box-shadow:0 20px 60px #000c}
+ h1{margin:0;font-size:28px;letter-spacing:3px;color:#d9c08a;text-shadow:0 0 14px #ff5a2a55}
+ .tag{color:#8a8070;font-style:italic;font-size:14px;margin:4px 0 14px}
+ #code{width:100%;font:bold 44px Georgia;letter-spacing:14px;text-align:center;color:#ffcf6a;background:#0a0c12;border:2px solid #3a3226;border-radius:6px;padding:6px;outline:none;user-select:text;-webkit-user-select:text}
+ #go{width:100%;margin-top:12px;font:bold 22px Georgia;letter-spacing:2px;padding:12px;border-radius:6px;border:2px solid #c9a24a;background:#2a1f12;color:#f0d9a0}
+ #err{color:#ff8a7a;min-height:1.3em;margin-top:8px;font-size:14px}
+ .small{font-size:12px;color:#8a8070;margin-top:8px;line-height:1.5}
+ /* ---------- controller ---------- */
+ #pad{position:fixed;inset:0;display:none}
+ #stickZone{position:absolute;left:0;top:0;bottom:0;width:46%}
+ #lookZone{position:absolute;right:0;top:0;bottom:0;width:54%}
+ #lookZone .tip{position:absolute;left:12%;top:42%;color:#ffffff22;font-size:15px;letter-spacing:2px;pointer-events:none}
+ .base{position:absolute;width:150px;height:150px;margin:-75px;border-radius:50%;border:3px solid #ffffff30;background:radial-gradient(#ffffff10,#ffffff04);pointer-events:none;transition:opacity .2s}
+ .knob{position:absolute;left:50%;top:50%;width:66px;height:66px;margin:-33px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#6a6a72,#2a2a30);border:3px solid #ffffff40;box-shadow:0 6px 14px #000a}
+ #stickHint{position:absolute;color:#ffffff40;font-size:13px;letter-spacing:1px;text-align:center;width:160px;margin-left:-80px;pointer-events:none}
+ #faces{position:absolute;right:calc(3vw + env(safe-area-inset-right));bottom:calc(6vh + 22px + env(safe-area-inset-bottom));width:240px;height:240px}
+ .fb{position:absolute;width:80px;height:80px;border-radius:50%;border:3px solid;background:radial-gradient(circle at 35% 30%,#2a2c34,#121318);display:flex;align-items:center;justify-content:center;font-size:36px;font-family:system-ui,sans-serif;box-shadow:0 6px 14px #000a,inset 0 2px 0 #ffffff14;touch-action:none}
+ .fb.on{transform:scale(.92);filter:brightness(1.6)}
+ .fb .lb{position:absolute;top:84px;left:50%;transform:translateX(-50%);font:13px Georgia;white-space:nowrap;color:#d8ceb8;text-shadow:0 1px 3px #000}
+ .fb.t{left:80px;top:0;color:#5fd6a6;border-color:#5fd6a6} .fb.o{left:160px;top:80px;color:#ff6b6b;border-color:#ff6b6b}
+ .fb.x{left:80px;top:160px;color:#7fb2ff;border-color:#7fb2ff} .fb.s{left:0;top:80px;color:#f48fd0;border-color:#f48fd0}
+ .fb.t .lb,.fb.o .lb,.fb.s .lb{top:auto;bottom:84px}
+ .fb.dim{opacity:.35}
+ #top{position:absolute;left:0;right:0;top:calc(6px + env(safe-area-inset-top));text-align:center;pointer-events:none}
+ #hint{display:inline-block;background:#000a;border:1px solid #4a3a26;border-radius:18px;padding:5px 16px;font-size:16px;min-height:1.2em}
+ #hint:empty{display:none}
+ #status{position:absolute;left:calc(12px + env(safe-area-inset-left));top:calc(8px + env(safe-area-inset-top));font-size:12px;color:#8a8070;letter-spacing:2px}
+ #status i{display:inline-block;width:9px;height:9px;border-radius:50%;background:#3ac05a;margin-right:6px;box-shadow:0 0 8px #3ac05a}
+ #rotate{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:#0b0d14;z-index:9;font-size:22px;text-align:center;padding:20px}
+ #rotate b{font-size:60px;display:block;animation:spin 2s ease-in-out infinite}
+ @keyframes spin{50%{transform:rotate(90deg)}}
+ @media (orientation:portrait){ body.playing #rotate{display:flex} }
+</style></head><body>
+<div id="join"><div class="card">
+  <h1>RATTLEJAW PAD</h1><div class="tag">use this phone as your controller</div>
+  <input id="code" inputmode="numeric" maxlength="4" placeholder="····" autocomplete="off">
+  <button id="go">CONNECT</button><div id="err"></div>
+  <div class="small">Type the <b>phone code</b> shown on the game screen (in the lobby).<br>Then turn your phone sideways.</div>
+</div></div>
+<div id="pad">
+  <div id="stickZone"><div class="base" id="base"><div class="knob" id="knob"></div></div><div id="stickHint">move</div></div>
+  <div id="lookZone"><div class="tip">drag to look</div></div>
+  <div id="faces">
+    <div class="fb t" data-k="t">△<span class="lb"></span></div>
+    <div class="fb s" data-k="s">□<span class="lb"></span></div>
+    <div class="fb o" data-k="o">○<span class="lb"></span></div>
+    <div class="fb x" data-k="x">✕<span class="lb"></span></div>
+  </div>
+  <div id="top"><span id="hint"></span></div>
+  <div id="status"><i></i>CONNECTED</div>
+</div>
+<div id="rotate"><b>📱</b>Turn your phone sideways</div>
+<script src="vendor/peerjs.min.js"></script>
+<script src="netlink.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+NetLink.setPrefix('pdw-webgames-railpad-');
+let conn=null;
+const S={lx:0,ly:0,dx:0,dy:0,b:{x:false,o:false,s:false,t:false},c:{x:0,o:0,s:0,t:0}};
+const q=new URLSearchParams(location.search); if(q.get('code')) $('code').value=q.get('code');
+function connect(){ const code=$('code').value.replace(/\D/g,''); if(code.length!==4){ $('err').textContent='Type the 4-digit phone code'; return; }
+  $('err').textContent='Connecting…'; $('go').disabled=true;
+  NetLink.join(code,{ onOpen:c=>{ conn=c; $('join').style.display='none'; $('pad').style.display='block'; document.body.classList.add('playing'); placeBase();
+      c.on('data',onMsg); c.on('close',()=>{ conn=null; $('status').innerHTML='<i style="background:#c03a2a;box-shadow:0 0 8px #c03a2a"></i>DISCONNECTED · reload to reconnect'; });
+      try{ document.documentElement.requestFullscreen?.(); screen.orientation?.lock?.('landscape').catch(()=>{}); }catch(e){} },
+    onError:e=>{ $('err').textContent=e; $('go').disabled=false; } }); }
+$('go').onclick=connect; $('code').addEventListener('keydown',e=>{ if(e.key==='Enter') connect(); });
+if(q.get('code')&&q.get('code').length===4) setTimeout(connect,300);
+// ---------- what the game says the buttons do right now ----------
+function onMsg(m){ if(m.t==='ui'){ for(const k of ['x','o','s','t']){ const el=document.querySelector('.fb.'+k); el.querySelector('.lb').textContent=m.labels[k]||''; el.classList.toggle('dim',!m.labels[k]); }
+    $('hint').textContent=m.hint||''; $('stickHint').textContent=m.stick||'move'; }
+  if(m.t==='buzz') navigator.vibrate?.(m.ms||40); }
+// ---------- touch handling: left = floating joystick, right = look, face buttons ----------
+const R=62, base=$('base'), knob=$('knob'); let stickId=null, cx=0, cy=0; const looks=new Map();
+function placeBase(){ cx=Math.min(innerWidth*.2,170); cy=innerHeight*.68; base.style.left=cx+'px'; base.style.top=cy+'px'; base.style.opacity=.5; $('stickHint').style.left=cx+'px'; $('stickHint').style.top=(cy+84)+'px'; knob.style.transform=''; }
+function btn(k,v){ if(S.b[k]===v) return; S.b[k]=v; if(v){ S.c[k]++; navigator.vibrate?.(12); } document.querySelector('.fb.'+k).classList.toggle('on',v); send(true); }
+const btnOf=new Map();
+addEventListener('pointerdown',e=>{ if($('pad').style.display!=='block') return; const fb=e.target.closest&&e.target.closest('.fb');
+  if(fb){ btnOf.set(e.pointerId,fb.dataset.k); btn(fb.dataset.k,true); e.preventDefault(); return; }
+  if(e.clientX<innerWidth*.46){ if(stickId===null){ stickId=e.pointerId; cx=e.clientX; cy=e.clientY; base.style.left=cx+'px'; base.style.top=cy+'px'; base.style.opacity=1; } }
+  else looks.set(e.pointerId,{x:e.clientX,y:e.clientY}); e.preventDefault(); },{passive:false});
+addEventListener('pointermove',e=>{ if(e.pointerId===stickId){ let dx=e.clientX-cx, dy=e.clientY-cy; const d=Math.hypot(dx,dy); if(d>R){ dx*=R/d; dy*=R/d; } knob.style.transform=`translate(${dx}px,${dy}px)`; S.lx=dx/R; S.ly=dy/R; }
+  const l=looks.get(e.pointerId); if(l){ S.dx+=e.clientX-l.x; S.dy+=e.clientY-l.y; l.x=e.clientX; l.y=e.clientY; }
+  if(btnOf.has(e.pointerId)){ const el=document.elementFromPoint(e.clientX,e.clientY), fb=el&&el.closest('.fb'), k=btnOf.get(e.pointerId); if(!fb||fb.dataset.k!==k){ btn(k,false); btnOf.delete(e.pointerId); } } e.preventDefault(); },{passive:false});
+function up(e){ if(e.pointerId===stickId){ stickId=null; S.lx=S.ly=0; placeBase(); } looks.delete(e.pointerId); if(btnOf.has(e.pointerId)){ btn(btnOf.get(e.pointerId),false); btnOf.delete(e.pointerId); } }
+addEventListener('pointerup',up); addEventListener('pointercancel',up); addEventListener('resize',()=>{ if(stickId===null) placeBase(); });
+document.addEventListener('contextmenu',e=>e.preventDefault()); document.addEventListener('gesturestart',e=>e.preventDefault());
+// ---------- send ~30 times a second (and right away when a button changes) ----------
+let lastSend=0; function send(now){ if(!conn) return; const t=performance.now(); if(!now&&t-lastSend<33) return; lastSend=t;
+  conn.send({t:'pad',lx:+S.lx.toFixed(3),ly:+S.ly.toFixed(3),dx:Math.round(S.dx),dy:Math.round(S.dy),b:{...S.b},c:{...S.c}}); S.dx=S.dy=0; }
+setInterval(()=>send(false),33);
+</script></body></html>
