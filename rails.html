@@ -43,6 +43,7 @@
  .pb.x{color:#7fb2ff;border-color:#7fb2ff} .pb.o{color:#ff6b6b;border-color:#ff6b6b} .pb.s{color:#f48fd0;border-color:#f48fd0} .pb.t{color:#5fd6a6;border-color:#5fd6a6}
  .kk{font:bold 11px system-ui;color:#cfc6b0;margin:0 6px 0 -3px;vertical-align:middle;opacity:.8}
  #hints{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);font-size:14px;white-space:nowrap;display:none} #hints .hi{margin:0 9px} #hints .stk{color:#cfc6b0}
+ #talk{position:absolute;left:18px;top:14px;font-size:14px;color:#9fe;line-height:1.5} #talk .me{color:#ffcf6a}
  #regionTitle{position:absolute;left:50%;top:28%;transform:translateX(-50%);font-size:34px;letter-spacing:8px;color:#e8d4a0;opacity:0;white-space:nowrap}
  #regionTitle.show{animation:regionIn 4s forwards}
  @keyframes regionIn{0%{opacity:0;letter-spacing:14px}15%{opacity:1}75%{opacity:1}100%{opacity:0;letter-spacing:8px}}
@@ -77,8 +78,9 @@
   <button id="startBtn" class="alt" style="display:none">▶ START GAME</button>
   <div class="err" id="lobbyErr"></div>
   <div class="padInfo small" style="text-align:left;margin-top:10px;overflow:hidden;min-height:20px"></div>
+  <div class="small">🎤 Voice chat: tap the mic circle on your phone, or press V on the keyboard</div>
 </div></div>
-<div id="hud"><div id="cross"></div><div id="mark"></div><div id="hints"></div><div id="ammo"></div><div id="prompt"></div><div id="feed"></div><div id="regionTitle"></div>
+<div id="hud"><div id="talk"></div><div id="cross"></div><div id="mark"></div><div id="hints"></div><div id="ammo"></div><div id="prompt"></div><div id="feed"></div><div id="regionTitle"></div>
   <div id="mission"><div id="mMain"></div><div id="mSide"></div></div>
   <div id="warn"></div>
   <div id="boss"><div style="display:flex;justify-content:space-between"><b>💀 RATTLEJAW</b><span id="bossPh"></span></div><div class="bar" style="height:12px"><i id="bossBar" style="background:linear-gradient(90deg,#8a0a06,#ff3a1a);width:100%"></i></div></div>
@@ -101,6 +103,7 @@
 <script src="input.js"></script>
 <script src="netlink.js"></script>
 <script src="vendor/qrcode.js"></script>
+<script src="voice.js"></script>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
 <script type="module">
 import * as THREE from 'three';
@@ -115,10 +118,24 @@ const $=id=>document.getElementById(id);
 let padCode=null;
 NetLink.setPrefix('pdw-webgames-railpad-');
 NetLink.host({ onCode:c=>{ padCode=c; showPadCode(); }, onError:()=>{},
-  onConn:c=>{ if(phoneConn) try{ phoneConn.close(); }catch(e){} phoneConn=c; uiSent=''; PH.seen={}; padActive=true; feed('📱 Phone controller connected!','#9fe'); showPadCode();
-    c.on('data',m=>{ if(m.t==='pad'){ PH.lx=+m.lx||0; PH.ly=+m.ly||0; PH.dx+=+m.dx||0; PH.dy+=+m.dy||0; PH.b=m.b||{}; PH.c=m.c||{}; PH.last=performance.now(); } });
-    c.on('close',()=>{ if(phoneConn===c){ phoneConn=null; PH.b={}; PH.lx=PH.ly=0; feed('📱 Phone controller disconnected','#ff9a7a'); showPadCode(); } }); } });
+  onConn:c=>{ if(phoneConn) try{ phoneConn.close(); }catch(e){} phoneConn=c; uiSent=''; PH.seen={}; padActive=true; feed('📱 Phone controller connected!','#9fe'); showPadCode(); voiceSync(true);
+    c.on('data',m=>{ if(m.t==='vsig') voiceSend(m.to,m.d); if(m.t==='vstate'){ vs.mic=m.mic; vs.snd=m.snd; vs.speaking=m.speaking||[]; if(m.err&&m.err!==vs.err) feed('🎤 '+m.err,'#ff9a7a'); vs.err=m.err||''; voiceHud(); }
+      if(m.t==='pad'){ PH.lx=+m.lx||0; PH.ly=+m.ly||0; PH.dx+=+m.dx||0; PH.dy+=+m.dy||0; PH.b=m.b||{}; PH.c=m.c||{}; PH.last=performance.now(); } });
+    c.on('close',()=>{ if(phoneConn===c){ phoneConn=null; PH.b={}; PH.lx=PH.ly=0; feed('📱 Phone controller disconnected','#ff9a7a'); showPadCode(); vs.mic=false; vs.speaking=[]; voiceHud(); voiceSync(true); } }); } });
 NetLink.setPrefix('pdw-webgames-rails-');
+// ---- voice chat plumbing: signalling messages travel over the game links (host in the middle) ----
+const vs={mic:false,snd:true,speaking:[],err:''}; let voiceKey='';
+function voiceSend(to,d){ if(net.role==='host'){ if(to!==0&&hostConns[to]) hostConns[to].conn.send({t:'vsig',from:0,d}); } else if(net.conn) net.conn.send({t:'vsig',to,d}); }
+function voiceDeliver(from,d){ if(phoneConn) phoneConn.send({t:'vsig',from,d}); else Voice.signal(from,d); }
+function voiceRoute(from,to,d){ if(to===0) voiceDeliver(from,d); else if(hostConns[to]) hostConns[to].conn.send({t:'vsig',from,d}); }
+function voiceHud(){ const el=document.getElementById('talk'); if(!el) return; const names=vs.speaking.map(id=>id===myId()?null:(S.players[id]?.name||'')).filter(Boolean);
+  const h=(vs.mic?'<span class="me">🎤 mic on</span>':'')+(names.length?(vs.mic?'<br>':'')+'🔊 '+names.join(', '):''); if(el.innerHTML!==h) el.innerHTML=h; }
+function voiceState(st){ vs.mic=st.mic; vs.snd=st.snd; vs.speaking=Object.keys(st.speaking).filter(k=>st.speaking[k]).map(Number); if(st.micErr&&st.micErr!==vs.err) feed('🎤 '+st.micErr,'#ff9a7a'); vs.err=st.micErr; voiceHud(); }
+function voiceSync(force){ if(!net.role||net.myId==null&&net.role!=='host') return; const me=myId(), others=Object.values(S.players).filter(p=>+p.id!==me).map(p=>({id:+p.id,name:p.name,color:p.color}));
+  const key=JSON.stringify([me,net.code,others,!!phoneConn]); if(key===voiceKey&&!force) return; voiceKey=key;
+  if(!others.length){ if(Voice.st.up) Voice.stop(); if(phoneConn) phoneConn.send({t:'voice',stop:true}); return; }
+  if(phoneConn){ if(Voice.st.up) Voice.stop(); phoneConn.send({t:'voice',me,players:others}); }
+  else { if(!Voice.st.up||Voice.st.me!==me) Voice.init({me,send:voiceSend,onState:voiceState}); Voice.setPlayers(others); } }
 function showPadCode(){ if(!padCode) return; const url=new URL('railpad.html',location.href).href.split('?')[0]+'?code='+padCode+(NetLink.LOCAL?'&local':'');
   let qr=''; try{ const q=qrcode(0,'M'); q.addData(url); q.make(); qr=q.createDataURL(4,1); }catch(e){}
   const html=phoneConn?`<span style="color:#7dffa8">📱 Phone controller connected</span>`:`<img src="${qr}" alt="" style="width:74px;height:74px;border-radius:4px;background:#fff;padding:2px;float:left;margin-right:10px"><b>📱 Play with your phone</b><br>Scan, or open <b>${url.replace(/^https?:\/\//,'').replace(/\?.*/,'')}</b><br>phone code <b style="color:#ffcf6a;font-size:18px;letter-spacing:3px">${padCode}</b>`;
@@ -366,6 +383,7 @@ $('hostBtn').onclick=()=>{ net.role='host'; $('hostBtn').disabled=true; $('menuE
           S.players[id]={id,name:String(m.name||'Engineer').slice(0,14),color:COLORS[slot],ready:false,outfit:Number.isInteger(m.outfit)?((m.outfit%OUTFITS.length)+OUTFITS.length)%OUTFITS.length:(slot*2)%OUTFITS.length,mode:'train',x:(id%2?-.6:.6),z:2,yaw:0,pitch:0,seat:null};
           hostConns[id]={conn}; conn.send({t:'welcome',id}); broadcast({t:'lobby',players:lobbyList()}); renderLobby(); Sfx.select(); }
         if(id==null) return; const p=S.players[id]; if(!p) return;
+        if(m.t==='vsig') voiceRoute(id,m.to,m.d);
         if(m.t==='outfit'){ p.outfit=(((m.i|0)%OUTFITS.length)+OUTFITS.length)%OUTFITS.length; broadcast({t:'lobby',players:lobbyList()}); renderLobby(); }
         if(m.t==='ready'){ p.ready=!!m.v; if(p.ready&&avatars[p.id]) avatars[p.id].userData.crew.wave=2.2; broadcast({t:'lobby',players:lobbyList()}); renderLobby(); }
         if(m.t==='pose'){ p.mode=m.m; [p.x,p.z,p.yaw,p.pitch]=m.p; p.holdE=!!m.e; }
@@ -389,6 +407,7 @@ function onHostMsg(m){
     for(const f of m.f||[]) spawnTracer(f); for(const t of m.mf||[]) launchMissileFx(t);
     W.mon.on=m.mon[0]; W.mon.s=m.mon[1]; W.rj.on=m.rj[0]; W.rj.ph=m.rj[1]; W.rj.t=m.rj[2]; W.rj.side=m.rj[3]; W.gn=m.gn.map(([x,z,y])=>({x,z,yaw:y,alive:true})); }
   if(m.t==='world'){ const prev=W.stations.slice(); if(m.w.bb!=null&&m.w.bb!==BREAKS[BOSSB]) moveBreak(BOSSB,m.w.bb); delete m.w.bb; Object.assign(W,m.w); W.stations.forEach((c,i)=>{ if(c&&!prev[i]) lightStation(i); }); applyPaint(); }
+  if(m.t==='vsig') voiceDeliver(m.from,m.d);
   if(m.t==='msg') feed(m.text,m.col);
   if(m.t==='fx') playFx(m.k);
   if(m.t==='knock'){ knockedDown(); }
@@ -396,7 +415,7 @@ function onHostMsg(m){
   if(m.t==='tp'){ me.mode='train'; me.seat=null; me.x=0; me.z=2; }
 }
 function showLobby(){ $('menu').style.display='none'; $('lobby').style.display='flex'; $('lobbyHint').textContent=net.role==='host'?'Friends open this page, type the code and press JOIN':'Waiting for the host to start…'; renderLobby(); }
-function renderLobby(){ const ps=Object.values(S.players);
+function renderLobby(){ const ps=Object.values(S.players); voiceSync();
   $('plist').innerHTML=[0,1,2,3].map(i=>{ const p=ps[i]; if(!p) return '<div class="pl empty" style="border-color:#333">waiting for a player…</div>';
     return `<div class="pl" style="border-color:${p.color}">${p.id===0?'👑 ':''}${p.name}${p.id===myId()?' (you)':''} <small style="color:#9a8a70;font-size:13px">${OUTFITS[p.outfit|0].name}</small><span class="r">${p.ready?'✅ READY':'⏳ not ready'}</span></div>`; }).join('');
   const mine=S.players[myId()]; if(mine) $('outfitName').textContent=OUTFITS[mine.outfit|0].name; $('readyBtn').textContent=mine&&mine.ready?'✅ READY (click to undo)':"I'M READY";
@@ -564,6 +583,7 @@ function readControls(){
     ui={x:'Ready',o:'',s:'',t:net.role==='host'?'Start':'',hint:'◀ ▶ change outfit',stick:'outfit'}; P.x=P.t=P.o=P.s=false; }
   step.popt=n.options;
   // ----- train screen
+  if(tapped.KeyV&&S.started&&!phoneConn){ if(Voice.st.up) Voice.setMic(!Voice.st.mic); else feed('🎤 Voice starts when friends join the room','#9fe'); }
   if(S.started&&P.t) toggleShop();
   const shopUp=shopOpen();
   if(shopUp){ if(fU||tapped.ArrowUp){ shopSel=clamp(shopSel-1,0,shopRows.length-1); renderShop(); } if(fD||tapped.ArrowDown){ shopSel=clamp(shopSel+1,0,shopRows.length-1); renderShop(); }
@@ -698,7 +718,8 @@ function missionText(){
 const shopOpen=()=>$('shop').style.display==='block'; let shopSel=0, shopRows=[];
 function toggleShop(){ const sh=$('shop'); if(shopOpen()){ sh.style.display='none'; if(!padActive) try{ renderer.domElement.requestPointerLock(); }catch(e){} return; }
   sh.style.display='block'; document.exitPointerLock&&document.exitPointerLock(); renderShop(); }
-function shopAct(r,dir=1){ if(!r) return; const send=(m,f)=>{ if(net.role==='host') f(); else net.conn.send(m); };
+function shopAct(r,dir=1){ if(!r) return;
+  if(r.t&&r.t[0]==='v'&&r.t!=='vinfo'){ if(r.t==='vmic') Voice.setMic(!Voice.st.mic); if(r.t==='vsnd') Voice.setSnd(!Voice.st.snd); if(r.t==='vply') Voice.setHear(r.id,Voice.st.hear[r.id]===false); if(r.t==='vtalk') Voice.setTalk(r.id,Voice.st.talk[r.id]===false); setTimeout(renderShop,120); return; } const send=(m,f)=>{ if(net.role==='host') f(); else net.conn.send(m); };
   if(r.t==='up'){ if(W.store[r.k]){ if(atYard()) sendAct('attach',r.k); else A.dry(); } else if(canBuy(r.k)){ A.dry(); return; } else sendAct('buy',r.k); }
   if(r.t==='store'){ sendAct('store',r.k); }
   if(r.t==='craft') send({t:'craft',k:r.k},()=>craft(r.k));
@@ -706,18 +727,22 @@ function shopAct(r,dir=1){ if(!r) return; const send=(m,f)=>{ if(net.role==='hos
   setTimeout(renderShop,250); }
 function renderShop(){ $('shopScrap').textContent=W.scrap; $('shopHint').innerHTML=`${chip('x')} select &nbsp; ${chip('s')} store car &nbsp; ◀ ▶ paint &nbsp; ${chip('o')} close`; $('shopRoom').innerHTML='Room '+net.code+(padCode?' · 📱 '+padCode:'')+' · '+Object.values(S.players).map(p=>`<span style="color:${p.color}">${p.name}</span>`).join(' · '); const yard=atYard(), cc=canCraft();
   $('shopWhere').innerHTML=yard?'<span style="color:#7dffa8">✓ You are at THE YARD: upgrades and new cars are available</span>':'<span style="color:#ff9a7a">Upgrades only at THE YARD (station 1). Stop there to buy.</span>';
-  shopRows=[{t:'craft',k:'ammo'},{t:'craft',k:'missile'},...UPG_ORDER.map(k=>({t:'up',k})),{t:'paint'}]; shopSel=clamp(shopSel,0,shopRows.length-1);
+  shopRows=[{t:'craft',k:'ammo'},{t:'craft',k:'missile'},...UPG_ORDER.map(k=>({t:'up',k})),{t:'paint'},...(phoneConn?[{t:'vinfo'}]:Voice.st.up?[{t:'vmic'},{t:'vsnd'},...Voice.st.players.map(p=>({t:'vply',id:p.id,name:p.name,color:p.color}))]:[])]; shopSel=clamp(shopSel,0,shopRows.length-1);
   $('shopList').innerHTML=shopRows.map((r,i)=>{ const sel=i===shopSel?' sel':'';
     if(r.t==='craft'){ const am=r.k==='ammo', ok=am?(W.upg.gun&&W.scrap>=ammoCost()&&W.ammo<maxAmmo()):(W.upg.launcher&&W.scrap>=25&&W.missiles<missileCap())&&cc;
       const info=am?(W.upg.gun?`ammo ${W.ammo}/${maxAmmo()}`:'needs the gun deck'):(W.upg.launcher?`missiles ${W.missiles}/${missileCap()}`:'needs the missile launcher');
       return `<div class="up${sel}" data-i="${i}"><div class="ic">${am?'🧨':'🎯'}</div><div class="tx"><b>Craft ${am?'ammo +40':'a missile'}</b><br><small>${info}${cc?'':' · <span class="need">craft at the Yard, or buy the workshop car</span>'}</small></div><button ${ok&&cc?'':'disabled'}>${am?ammoCost():25} 🔩</button></div>`; }
+    if(r.t==='vinfo') return `<div class="up${sel}" data-i="${i}"><div class="ic">📱</div><div class="tx"><b>Voice chat</b><br><small>Use the 🎤 🔊 👥 circles on your phone</small></div></div>`;
+    if(r.t==='vmic') return `<div class="up${sel}" data-i="${i}"><div class="ic">🎤</div><div class="tx"><b>Your microphone</b><br><small>${Voice.st.mic?'friends can hear you':'off · friends cannot hear you'} · key V</small></div><button>${Voice.st.mic?'ON':'OFF'}</button></div>`;
+    if(r.t==='vsnd') return `<div class="up${sel}" data-i="${i}"><div class="ic">🔊</div><div class="tx"><b>Voice sound</b><br><small>${Voice.st.snd?'you can hear friends':'muted · you cannot hear anyone'}</small></div><button>${Voice.st.snd?'ON':'OFF'}</button></div>`;
+    if(r.t==='vply'){ const h=Voice.st.hear[r.id]!==false, t=Voice.st.talk[r.id]!==false; return `<div class="up${sel}" data-i="${i}"><div class="ic" style="color:${r.color}">●</div><div class="tx"><b>${r.name}</b>${Voice.st.speaking[r.id]?' <span style="color:#7dffa8">talking…</span>':''}<br><small>Hear = you listen to them · Talk = they hear you</small></div><button class="vt" style="margin-right:6px">${t?'🎤 TALK':'🎤 off'}</button><button>${h?'🔊 HEAR':'🔊 off'}</button></div>`; }
     if(r.t==='paint') return `<div class="up${sel}" data-i="${i}"><div class="ic">🎨</div><div class="tx"><b>Paint</b> <small>${PAINTS[W.paint][0]}</small><br><small>${yard?'free · ← → to change':'only at the Yard'}</small></div><div>${PAINTS.map((p,j)=>`<span class="sw" data-p="${j}" style="background:#${p[1].toString(16).padStart(6,'0')};${W.paint===j?'outline:3px solid #ffcf6a':''}"></span>`).join('')}</div></div>`;
     const u=UPG[r.k], l=W.upg[r.k], why=canBuy(r.k), n=l+1, max=n>u.max, pips='●'.repeat(l-(u.min||0))+'○'.repeat(u.max-l), need=!max&&u.need&&u.need[n]?PARTS.find(p=>p.k===u.need[n]):null;
     const stored=u.car&&W.store[r.k];
     if(stored) return `<div class="up${sel}" data-i="${i}"><div class="ic">${u.icon}</div><div class="tx"><b>${u.name}</b> <span class="pips">${'●'.repeat(stored)+'○'.repeat(u.max-stored)}</span><br><small>🅿️ Parked in the Yard (level ${stored})</small></div><button ${yard?'':'disabled'}>ATTACH</button></div>`;
     const stBtn=u.car&&l>0&&yard?`<button class="stb" style="margin-right:6px;border-color:#5a6a7a;background:#141a24;color:#c8d4e0">STORE</button>`:'';
     return `<div class="up${sel}" data-i="${i}"><div class="ic">${u.icon}</div><div class="tx"><b>${u.name}</b> <span class="pips">${pips}</span><br><small>Now: ${u.lv[l]}</small><br>${max?'<small class="nx">⭐ Fully upgraded!</small>':`<small class="nx">Next: ${u.lv[n]}</small>${need?` <small class="${W.parts[need.k]?'nx':'need'}">· needs ${need.name}${W.parts[need.k]?' ✓':` (behind ${STATIONS[need.st].name})`}</small>`:''}`}</div>${stBtn}<button class="bb" ${why?'disabled':''}>${max?'MAX':(u.car&&!l?'ATTACH ':'')+u.cost[n]+' 🔩'}</button></div>`; }).join('');
-  $('shopList').querySelectorAll('.up').forEach(d=>{ const i=+d.dataset.i; d.onmouseenter=()=>{ shopSel=i; d.parentNode.querySelectorAll('.up').forEach(x=>x.classList.toggle('sel',x===d)); }; const bs=d.querySelectorAll('button'); bs.forEach(b=>b.onclick=()=>{ shopSel=i; shopAct(b.classList.contains('stb')?{t:'store',k:shopRows[i].k}:shopRows[i]); }); });
+  $('shopList').querySelectorAll('.up').forEach(d=>{ const i=+d.dataset.i; d.onmouseenter=()=>{ shopSel=i; d.parentNode.querySelectorAll('.up').forEach(x=>x.classList.toggle('sel',x===d)); }; const bs=d.querySelectorAll('button'); bs.forEach(b=>b.onclick=()=>{ shopSel=i; shopAct(b.classList.contains('stb')?{t:'store',k:shopRows[i].k}:b.classList.contains('vt')?{t:'vtalk',id:shopRows[i].id}:shopRows[i]); }); });
   $('shopList').querySelectorAll('.sw').forEach(sw=>sw.onclick=()=>{ if(!atYard()) return; const j=+sw.dataset.p; if(net.role==='host') setPaint(j); else net.conn.send({t:'paint',i:j}); setTimeout(renderShop,250); });
   $('shopList').querySelector('.sel')?.scrollIntoView({block:'nearest'}); }
 $('shopClose').onclick=()=>toggleShop();
@@ -832,5 +857,5 @@ function audioFrame(){ if(!S.started) return; const dt=1/60;
   let ten=0; if(W.mon.on) ten=Math.max(ten,clamp(1-gap/80,.35,1)); if(W.rj.on) ten=Math.max(ten,W.rj.ph==='tremor'?.7:.95); if(W.gn.length) ten=Math.max(ten,.6); if(W.boss.on) ten=1;
   A.update(dt,{tension:ten,quake:W.rj.on&&W.rj.ph==='tremor'?.8:W.rj.on&&W.rj.ph==='up'&&W.rj.t<1.5?.6:0,region:regionAt(S.trainS),boss:W.boss.on}); }
 (function loop(now=performance.now()){ acc+=Math.min(250,now-last); last=now; while(acc>=1000/60){ step(); acc-=1000/60; } render(); requestAnimationFrame(loop); })();
-window.__rails={startBoss,bossDamage,A,S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy,WALK,SEATS,yardG,avatars,PLAN,ISL,camera,PH,get padCode(){ return padCode; },get target(){ return curTarget; },yardShown,attachCar,storeCar,get REAR(){ return REAR; },train,relayout,inside,collide,groundH,COLL,OBOX,hgt,BLK};
+window.__rails={startBoss,bossDamage,A,S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy,WALK,SEATS,yardG,avatars,vs,PLAN,ISL,camera,PH,get padCode(){ return padCode; },get target(){ return curTarget; },yardShown,attachCar,storeCar,get REAR(){ return REAR; },train,relayout,inside,collide,groundH,COLL,OBOX,hgt,BLK};
 </script></body></html>

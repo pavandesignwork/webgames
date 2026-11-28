@@ -39,6 +39,18 @@
  #hint:empty{display:none}
  #status{position:absolute;left:calc(12px + env(safe-area-inset-left));top:calc(8px + env(safe-area-inset-top));font-size:12px;color:#8a8070;letter-spacing:2px}
  #status i{display:inline-block;width:9px;height:9px;border-radius:50%;background:#3ac05a;margin-right:6px;box-shadow:0 0 8px #3ac05a}
+ /* voice: three circles above the joystick (top-left) */
+ #vdock{position:absolute;left:calc(12px + env(safe-area-inset-left));top:calc(30px + env(safe-area-inset-top));display:flex;gap:10px;z-index:3}
+ .vb{width:46px;height:46px;border-radius:50%;background:#000b;border:2px solid #ffffff30;font-size:20px;color:#e8e2d0;padding:0;position:relative;touch-action:manipulation}
+ .vb.on{border-color:#3ac05a;box-shadow:0 0 12px #3ac05a88} .vb.off{border-color:#c03a2a} .vb.off::after{content:'';position:absolute;left:9px;right:9px;top:50%;height:3px;background:#ff5a4a;transform:rotate(-42deg);border-radius:2px}
+ .vb.talk{animation:pulse .8s infinite} @keyframes pulse{50%{box-shadow:0 0 18px 4px #7dffa8aa}}
+ .vb i{position:absolute;right:-4px;top:-4px;min-width:18px;height:18px;border-radius:9px;background:#c9a24a;color:#1a1208;font:bold 11px system-ui;line-height:18px;font-style:normal;padding:0 4px} .vb i:empty{display:none}
+ body.left #vdock{left:auto;right:calc(12px + env(safe-area-inset-right));top:calc(62px + env(safe-area-inset-top))}
+ #vp{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000c;z-index:6}
+ .pr{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:17px}
+ .pr .nm{display:flex;align-items:center;gap:8px;min-width:0} .pr .dot{width:12px;height:12px;border-radius:50%;flex:none} .pr .sp{color:#7dffa8;opacity:0;font-size:12px} .pr .sp.on{opacity:1;animation:bl .6s infinite}
+ .tg{display:inline-block;padding:7px 11px;border-radius:16px;border:2px solid #4a3a26;font-size:14px;color:#c8bca0;background:#1a1d26;margin-left:6px} .tg.on{border-color:#3ac05a;color:#fff;background:#173a22} .tg:not(.on){border-color:#7a3a2a;color:#ffb09a;background:#2a1512}
+ .vnote{font-size:12px;color:#8a8070;margin:8px 0 0;text-align:center} .verr{color:#ff9a8a;font-size:13px;text-align:center;min-height:1em;margin-top:6px}
  /* status bar, danger glow, settings, left-handed */
  #stat{display:inline-flex;align-items:center;gap:10px;background:#000b;border:1px solid #ffffff1a;border-radius:14px;padding:3px 12px;font:13px system-ui,sans-serif;color:#e8e2d0;margin-bottom:5px}
  #stat:empty{display:none} .hp{display:inline-block;width:86px;height:8px;background:#222;border-radius:4px;overflow:hidden;vertical-align:middle} .hp i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#3ac05a,#9aef6a);transition:width .3s}
@@ -74,6 +86,7 @@
     <div class="fb o" data-k="o">○<span class="lb"></span></div>
     <div class="fb x" data-k="x">✕<span class="lb"></span></div>
   </div>
+  <div id="vdock"><button class="vb off" id="vMic" aria-label="microphone">🎤</button><button class="vb on" id="vSnd" aria-label="sound">🔊</button><button class="vb" id="vPpl" aria-label="players">👥<i id="vCnt"></i></button></div>
   <div id="glow"></div>
   <div id="top"><div id="stat"></div><div><span id="hint"></span></div><div id="warnP"></div></div>
   <button id="gear" aria-label="settings">⚙️</button>
@@ -87,9 +100,16 @@
   <div class="row"><span>Tilt the phone to aim the gun</span><div class="tog" data-k="tilt"></div></div>
   <div class="btns"><button id="setDone">DONE</button><button id="disc" class="alt">DISCONNECT</button></div>
 </div></div>
+<div id="vp"><div class="card set">
+  <h2>VOICE CHAT</h2>
+  <div id="vlist"></div>
+  <div class="vnote">🔊 Hear = you listen to them &nbsp;·&nbsp; 🎤 Talk = they hear you</div><div class="verr" id="verr"></div>
+  <div class="btns"><button id="vpDone">DONE</button></div>
+</div></div>
 <div id="rotate"><b>📱</b>Turn your phone sideways</div>
 <script src="vendor/peerjs.min.js"></script>
 <script src="netlink.js"></script>
+<script src="voice.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 NetLink.setPrefix('pdw-webgames-railpad-');
@@ -103,7 +123,7 @@ document.querySelectorAll('.seg b').forEach(b=>b.onclick=()=>{ SET.look=+b.datas
 document.querySelectorAll('.tog').forEach(t=>t.onclick=async()=>{ const k=t.dataset.k; SET[k]=!SET[k];
   if(k==='tilt'&&SET.tilt&&typeof DeviceMotionEvent!=='undefined'&&DeviceMotionEvent.requestPermission){ try{ if(await DeviceMotionEvent.requestPermission()!=='granted') SET.tilt=false; }catch(e){ SET.tilt=false; } } applySet(); });
 $('gear').onclick=()=>{ $('set').style.display='flex'; }; $('setDone').onclick=()=>{ $('set').style.display='none'; };
-$('disc').onclick=()=>{ wantConn=false; try{ conn&&conn.close(); }catch(e){} conn=null; $('set').style.display='none'; $('pad').style.display='none'; $('join').style.display='flex'; document.body.classList.remove('playing','danger'); $('go').disabled=false; $('err').textContent=''; };
+$('disc').onclick=()=>{ wantConn=false; Voice.stop(); try{ conn&&conn.close(); }catch(e){} conn=null; $('set').style.display='none'; $('pad').style.display='none'; $('join').style.display='flex'; document.body.classList.remove('playing','danger'); $('go').disabled=false; $('err').textContent=''; };
 // keep the screen awake while playing
 let wake=null; async function keepAwake(){ try{ if(!wake&&navigator.wakeLock) { wake=await navigator.wakeLock.request('screen'); wake.addEventListener('release',()=>{ wake=null; }); } }catch(e){} }
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ if(conn) keepAwake(); else if(wantConn) retry(); } });
@@ -116,22 +136,39 @@ function connect(){ const code=$('code').value.replace(/\D/g,''); if(code.length
   NetLink.join(code,{ onOpen:c=>{ opened(c); try{ document.documentElement.requestFullscreen?.(); screen.orientation?.lock?.('landscape').catch(()=>{}); }catch(e){} },
     onError:e=>{ $('err').textContent=e; $('go').disabled=false; wantConn=false; } }); }
 function opened(c){ conn=c; $('join').style.display='none'; $('pad').style.display='block'; document.body.classList.add('playing'); placeBase(); applySet(); setStatus(true,'CONNECTED'); keepAwake();
-  c.on('data',onMsg); c.on('close',()=>{ if(conn!==c) return; conn=null; document.body.classList.remove('danger'); if(wantConn){ setStatus(false,'RECONNECTING…'); retryT=setTimeout(retry,1500); } }); }
+  c.on('data',onMsg); c.on('close',()=>{ if(conn!==c) return; conn=null; Voice.stop(); renderVoice(Voice.st); document.body.classList.remove('danger'); if(wantConn){ setStatus(false,'RECONNECTING…'); retryT=setTimeout(retry,1500); } }); }
 $('go').onclick=connect; $('code').addEventListener('keydown',e=>{ if(e.key==='Enter') connect(); });
 if(q.get('code')&&q.get('code').length===4) setTimeout(connect,300);
 // ---------- what the game says the buttons do right now ----------
-let mode='move';
-function onMsg(m){ if(m.t==='stat'){ $('stat').innerHTML=`<span class="hp"><i style="width:${Math.round(Math.max(0,Math.min(1,m.hp))*100)}%"></i></span><span>🔩 ${m.scrap}</span>`+(m.ammo!=null?`<span>🔫 ${m.ammo}</span>`:'')+(m.mis!=null?`<span>🚀 ${m.mis}</span>`:'')+`<span>🪵 ${m.rails}/${m.rmax}</span>`;
+let mode='move', vPlayers=[];
+function onMsg(m){
+  if(m.t==='voice'){ if(m.stop){ Voice.stop(); vPlayers=[]; renderVoice(Voice.st); return; } vPlayers=m.players||[];
+    Voice.init({me:m.me,send:(to,d)=>conn&&conn.send({t:'vsig',to,d}),onState:renderVoice}); Voice.setPlayers(vPlayers); }
+  if(m.t==='vsig') Voice.signal(m.from,m.d); if(m.t==='stat'){ $('stat').innerHTML=`<span class="hp"><i style="width:${Math.round(Math.max(0,Math.min(1,m.hp))*100)}%"></i></span><span>🔩 ${m.scrap}</span>`+(m.ammo!=null?`<span>🔫 ${m.ammo}</span>`:'')+(m.mis!=null?`<span>🚀 ${m.mis}</span>`:'')+`<span>🪵 ${m.rails}/${m.rmax}</span>`;
     $('warnP').textContent=m.warn||''; document.body.classList.toggle('danger',!!m.warn); }
   if(m.t==='ui'){ mode=m.stick||'move'; for(const k of ['x','o','s','t']){ const el=document.querySelector('.fb.'+k); el.querySelector('.lb').textContent=m.labels[k]||''; el.classList.toggle('dim',!m.labels[k]); }
     $('hint').textContent=m.hint||''; $('stickHint').textContent=m.stick||'move'; }
   if(m.t==='buzz') navigator.vibrate?.(m.ms||40); }
+// ---------- voice circles + player list ----------
+let lastSp='';
+function renderVoice(st){
+  const talking=Object.keys(st.speaking).some(k=>st.speaking[k]&&+k!==st.me), mine=st.speaking[st.me];
+  $('vMic').className='vb '+(st.mic?'on':'off')+(mine?' talk':''); $('vSnd').className='vb '+(st.snd?'on':'off')+(talking&&st.snd?' talk':'');
+  $('vPpl').className='vb'+(talking?' talk':''); $('vCnt').textContent=vPlayers.length||'';
+  $('verr').textContent=st.micErr||'';
+  if($('vp').style.display==='flex') $('vlist').innerHTML=vPlayers.length?vPlayers.map(p=>`<div class="pr"><span class="nm"><span class="dot" style="background:${p.color}"></span><span style="overflow:hidden;text-overflow:ellipsis">${p.name}</span><span class="sp ${st.speaking[p.id]?'on':''}">● talking</span></span><span><span class="tg ${st.hear[p.id]!==false?'on':''}" data-id="${p.id}" data-k="hear">🔊 Hear</span><span class="tg ${st.talk[p.id]!==false?'on':''}" data-id="${p.id}" data-k="talk">🎤 Talk</span></span></div>`).join(''):'<div class="vnote" style="font-size:15px;margin:14px 0">No other players yet. Voice starts when friends join the room.</div>';
+  const sp=JSON.stringify([st.mic,st.snd,Object.keys(st.speaking).filter(k=>st.speaking[k])]); if(conn&&sp!==lastSp){ lastSp=sp; conn.send({t:'vstate',mic:st.mic,snd:st.snd,speaking:Object.keys(st.speaking).filter(k=>st.speaking[k]).map(Number),err:st.micErr}); } }
+$('vMic').onclick=()=>{ if(!Voice.st.up){ $('verr').textContent=''; renderVoice(Voice.st); $('vp').style.display='flex'; renderVoice(Voice.st); return; } Voice.setMic(!Voice.st.mic); };
+$('vSnd').onclick=()=>Voice.setSnd(!Voice.st.snd);
+$('vPpl').onclick=()=>{ $('vp').style.display='flex'; renderVoice(Voice.st); };
+$('vpDone').onclick=()=>{ $('vp').style.display='none'; };
+$('vlist').addEventListener('click',e=>{ const t=e.target.closest('.tg'); if(!t) return; const id=+t.dataset.id; if(t.dataset.k==='hear') Voice.setHear(id,Voice.st.hear[id]===false); else Voice.setTalk(id,Voice.st.talk[id]===false); });
 // ---------- touch handling: left = floating joystick, right = look, face buttons ----------
 const R=62, base=$('base'), knob=$('knob'); let stickId=null, cx=0, cy=0; const looks=new Map();
 function placeBase(){ cx=SET.left?innerWidth-Math.min(innerWidth*.2,170):Math.min(innerWidth*.2,170); cy=innerHeight*.68; base.style.left=cx+'px'; base.style.top=cy+'px'; base.style.opacity=.5; $('stickHint').style.left=cx+'px'; $('stickHint').style.top=(cy+84)+'px'; knob.style.transform=''; }
 function btn(k,v){ if(S.b[k]===v) return; S.b[k]=v; if(v){ S.c[k]++; navigator.vibrate?.(12); } document.querySelector('.fb.'+k).classList.toggle('on',v); send(true); }
 const btnOf=new Map();
-addEventListener('pointerdown',e=>{ if($('pad').style.display!=='block'||$('set').style.display==='flex'||(e.target.closest&&e.target.closest('#gear'))) return; const fb=e.target.closest&&e.target.closest('.fb');
+addEventListener('pointerdown',e=>{ if($('pad').style.display!=='block'||$('set').style.display==='flex'||$('vp').style.display==='flex'||(e.target.closest&&(e.target.closest('#gear')||e.target.closest('.vb')))) return; const fb=e.target.closest&&e.target.closest('.fb');
   if(fb){ btnOf.set(e.pointerId,fb.dataset.k); btn(fb.dataset.k,true); e.preventDefault(); return; }
   if(SET.left?e.clientX>innerWidth*.54:e.clientX<innerWidth*.46){ if(stickId===null){ stickId=e.pointerId; cx=e.clientX; cy=e.clientY; base.style.left=cx+'px'; base.style.top=cy+'px'; base.style.opacity=1; } }
   else looks.set(e.pointerId,{x:e.clientX,y:e.clientY}); e.preventDefault(); },{passive:false});
