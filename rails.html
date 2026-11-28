@@ -1,102 +1,104 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rattlejaw Rails (co-op)</title>
+<link rel="stylesheet" href="ui.css">
 <style>
- html,body{margin:0;height:100%;overflow:hidden;background:#07090f;color:#e8e2d0;font-family:Georgia,'Times New Roman',serif}
- canvas{display:block}
- .screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,#1b2233cc,#05070bf2 75%)}
- .box{width:min(560px,92vw);background:#11151ee8;border:2px solid #4a3a26;border-radius:6px;padding:26px 30px;box-shadow:0 20px 60px #000c}
- h1{margin:0 0 4px;font-size:46px;letter-spacing:3px;color:#d9c08a;text-shadow:0 0 18px #ff5a2a55;text-align:center}
- .tag{text-align:center;color:#8a8070;margin-bottom:22px;font-style:italic}
- label{display:block;font-size:13px;letter-spacing:2px;color:#9a8a70;margin:14px 0 6px}
- input{width:100%;box-sizing:border-box;font:22px Georgia;color:#f0e8d8;background:#0a0c12;border:2px solid #3a3226;border-radius:4px;padding:10px 12px;outline:none}
- input:focus{border-color:#c9a24a}
- button{font:bold 20px Georgia;letter-spacing:2px;cursor:pointer;border-radius:4px;padding:13px 16px;border:2px solid #c9a24a;background:#2a1f12;color:#f0d9a0;width:100%;margin-top:14px}
- button:hover{background:#3a2a16} button.alt{border-color:#5a6a7a;background:#141a24;color:#c8d4e0} button:disabled{opacity:.4;cursor:default}
- .row{display:flex;gap:12px} .row>*{flex:1}
- #code{font:bold 64px Georgia;letter-spacing:12px;text-align:center;color:#ffcf6a;margin:6px 0 2px;text-shadow:0 0 20px #ff8a2a66}
- .plist{margin-top:16px} .pl{display:flex;align-items:center;gap:12px;padding:9px 12px;margin-bottom:6px;background:#0a0c12;border-left:6px solid;border-radius:3px;font-size:19px}
- .pl .r{margin-left:auto;font-size:15px} .empty{opacity:.35}
- .err{color:#ff8a7a;min-height:1.2em;margin-top:10px;text-align:center}
- .small{font-size:13px;color:#8a8070;text-align:center;margin-top:12px;line-height:1.5}
- #lobby{justify-content:flex-end;padding-right:4vw;box-sizing:border-box;background:linear-gradient(90deg,#05070b00 25%,#05070bd8 62%)} #lobby .box{width:min(460px,46vw)}
- #hud{position:fixed;inset:0;pointer-events:none;display:none;text-shadow:0 1px 3px #000,0 0 8px #000a}
+ /* LAYOUT ONLY: where things go. How things look lives in ui.css (the design system). */
+ /* title + join: logo and menu on the left, the 3D Yard scene shows on the right */
+ #menu,#joinScreen{justify-content:flex-start;background:linear-gradient(90deg,#05070bf2 0,#05070bd6 30%,#05070b66 52%,#05070b00 72%)}
+ .fe-side{width:min(500px,94vw);height:100%;box-sizing:border-box;padding:6vh 3.5vw 4vh;display:flex;flex-direction:column;justify-content:center;overflow:auto}
+ .fe-side .ui-field{margin-top:var(--sp-5)} .fe-foot{margin-top:auto;text-align:left}
+ #code4{display:flex;gap:var(--sp-2)}
+ /* lobby: crew stands on pads in the middle; cards left and right; hints at the bottom */
+ #lobby{background:linear-gradient(90deg,#05070b99 0,#05070b00 30%,#05070b00 70%,#05070b99 100%),linear-gradient(0deg,#05070bb0 0,#05070b00 18%)}
+ .lb-top{position:absolute;left:3vw;right:3vw;top:2.5vh;display:flex;align-items:center;gap:var(--sp-4)} .lb-top .sp{flex:1}
+ .lb-left{position:absolute;left:3vw;top:14vh;width:min(300px,25vw);display:flex;flex-direction:column;gap:var(--sp-3);max-height:78vh;overflow:auto}
+ .lb-right{position:absolute;right:3vw;top:14vh;width:min(262px,22vw);display:flex;flex-direction:column;gap:var(--sp-3);max-height:78vh;overflow:auto}
+ #roomQr{display:flex;align-items:center;gap:var(--sp-3)} #roomQr img{width:96px;height:96px;border-radius:var(--r-sm);background:#fff;padding:3px;flex:none}
+ #nameplates{position:absolute;inset:0;pointer-events:none} #nameplates .ui-plus{pointer-events:auto}
+ .lb-left .ui-row,.lb-right .ui-row{padding:6px 0} .padInfo{text-align:left;overflow:hidden;font-size:var(--fs-sm);line-height:1.4;color:var(--c-text-dim)}
+ #hud{position:fixed;inset:0;pointer-events:none;display:none}
  #cross{position:absolute;left:50%;top:50%;width:5px;height:5px;margin:-2.5px;border-radius:50%;background:#fffa;box-shadow:0 0 3px #000}
- #ammo{position:absolute;left:50%;top:calc(50% + 18px);transform:translateX(-50%);font-size:13px;color:#ffe7b0;display:none}
- #prompt{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);font-size:15px;color:#fff;display:none;white-space:nowrap}
+ #ammo{position:absolute;left:50%;top:calc(50% + 18px);transform:translateX(-50%);font-size:var(--fs-xs);color:#ffe7b0;display:none}
+ #prompt{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);font-size:var(--fs-md);color:#fff;display:none;white-space:nowrap}
  #mission{position:absolute;left:50%;top:14px;transform:translateX(-50%);text-align:center;max-width:72vw}
- #mMain{font-size:17px;color:#f4ecd8} #mSide{font-size:14px;color:#ffb48a;margin-top:2px}
- #feed{position:absolute;right:18px;top:14px;text-align:right;font-size:14px;line-height:1.6;max-width:40vw}
- #feed div{animation:fadeout 4.5s forwards}
- @keyframes fadeout{0%{opacity:0}6%{opacity:1}80%{opacity:1}100%{opacity:0}}
- #warn{position:absolute;left:50%;top:62px;transform:translateX(-50%);color:#ffd0c0;font-size:16px;letter-spacing:1px;display:none;animation:blink 1.2s infinite}
- @keyframes blink{50%{opacity:.5}}
- #boss{position:absolute;left:50%;top:92px;transform:translateX(-50%);width:min(520px,64vw);display:none;color:#ffd0c0;font-size:14px}
- .bar{height:8px;background:#0008;border-radius:4px;margin-top:4px;overflow:hidden;box-shadow:0 0 0 1px #0006} .bar i{display:block;height:100%;background:linear-gradient(90deg,#c9a24a,#ff6a2a)}
- #stats{position:absolute;left:18px;bottom:16px;font-size:14px;color:#f0e8d8}
- #stats .bar{width:190px} #inv{margin-top:5px;word-spacing:2px}
- #speed{position:absolute;right:20px;bottom:16px;text-align:right;display:none;color:#f0e8d8} #spd{font-size:28px;font-weight:bold} #speed .bar{width:150px}
- #help{position:absolute;left:50%;bottom:100px;transform:translateX(-50%);font-size:14px;color:#e8e0cc;white-space:nowrap;transition:opacity 1s}
- #mark{position:absolute;transform:translate(-50%,-130%);background:#000b;border:1px solid #ffffff22;border-radius:18px;padding:4px 12px 4px 6px;font-size:15px;white-space:nowrap;display:none}
- #mark span:last-child{vertical-align:middle}
- .pb{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:2px solid;font:bold 13px system-ui,sans-serif;margin-right:6px;vertical-align:middle;background:#0008;text-shadow:none}
- .pb.x{color:#7fb2ff;border-color:#7fb2ff} .pb.o{color:#ff6b6b;border-color:#ff6b6b} .pb.s{color:#f48fd0;border-color:#f48fd0} .pb.t{color:#5fd6a6;border-color:#5fd6a6}
- .kk{font:bold 11px system-ui;color:#cfc6b0;margin:0 6px 0 -3px;vertical-align:middle;opacity:.8}
- #hints{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);font-size:14px;white-space:nowrap;display:none} #hints .hi{margin:0 9px} #hints .stk{color:#cfc6b0}
- #talk{position:absolute;left:18px;top:14px;font-size:14px;color:#9fe;line-height:1.5} #talk .me{color:#ffcf6a}
+ #mMain{font-size:17px;color:var(--c-text-strong)} #mSide{font-size:var(--fs-sm);color:var(--c-warn);margin-top:2px}
+ #feed{position:absolute;right:18px;top:14px;text-align:right;font-size:var(--fs-sm);line-height:1.6;max-width:40vw}
+ #feed div{animation:ui-fadeout 4.5s forwards}
+ #warn{position:absolute;left:50%;top:62px;transform:translateX(-50%);color:#ffd0c0;font-size:var(--fs-md);letter-spacing:1px;display:none;animation:ui-blink 1.2s infinite}
+ #boss{position:absolute;left:50%;top:92px;transform:translateX(-50%);width:min(520px,64vw);display:none;color:#ffd0c0;font-size:var(--fs-sm)}
+ #stats{position:absolute;left:18px;bottom:16px;font-size:var(--fs-sm);color:var(--c-text-strong)} #stats .ui-bar{width:190px} #inv{margin-top:5px;word-spacing:2px}
+ #speed{position:absolute;right:20px;bottom:16px;text-align:right;display:none;color:var(--c-text-strong)} #spd{font-size:var(--fs-xl);font-weight:bold} #speed .ui-bar{width:150px}
+ #help{position:absolute;left:50%;bottom:100px;transform:translateX(-50%);font-size:var(--fs-sm);color:var(--c-text);white-space:nowrap;transition:opacity 1s}
+ #mark{position:absolute;transform:translate(-50%,-130%);display:none;padding-left:6px}
+ #hints{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);font-size:var(--fs-sm);white-space:nowrap;display:none} #hints .hi{margin:0 9px} #hints .stk{color:#cfc6b0}
+ #talk{position:absolute;left:18px;top:14px;font-size:var(--fs-sm);color:#9fe;line-height:1.5} #talk .me{color:var(--c-gold-hi)}
  #regionTitle{position:absolute;left:50%;top:28%;transform:translateX(-50%);font-size:34px;letter-spacing:8px;color:#e8d4a0;opacity:0;white-space:nowrap}
  #regionTitle.show{animation:regionIn 4s forwards}
  @keyframes regionIn{0%{opacity:0;letter-spacing:14px}15%{opacity:1}75%{opacity:1}100%{opacity:0;letter-spacing:8px}}
- #clickToPlay{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-size:22px;background:#000a;padding:12px 24px;border:1px solid #c9a24a;border-radius:4px;display:none;pointer-events:auto;cursor:pointer;text-shadow:none}
- #shop{position:absolute;right:2vw;top:50%;transform:translateY(-50%);width:min(600px,56vw);background:#0d1018ee;border:2px solid #c9a24a;border-radius:6px;padding:14px 18px;display:none;pointer-events:auto}
- #shop .up{padding:7px 8px;border-radius:4px} #shop .up.sel{background:#2e2610;outline:2px solid #ffcf6a}
- #shop .ic{font-size:26px;width:36px;text-align:center} #shop .tx{flex:1} #shop .pips{color:#ffcf6a;letter-spacing:2px;font-size:14px} #shop small{color:#b8ad94} #shop .nx{color:#9fe0b0}
- #shop .need{color:#ff9a7a}
- #hud.shopping>*:not(#shop):not(#feed){display:none!important} #shopHint{font-size:12px;color:#8a8070;margin-top:8px;text-align:center}
- .up{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid #2a2a2a} .up button{width:auto;margin:0;padding:8px 14px;font-size:16px;white-space:nowrap}
- .sh{margin-top:14px;font-size:12px;letter-spacing:3px;color:#c9a24a}
- #shopList{max-height:62vh;overflow:auto}
- .sw{display:inline-block;width:28px;height:28px;border-radius:50%;margin-left:6px;cursor:pointer;border:2px solid #000}
+ #clickToPlay{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-size:22px;padding:12px 24px;display:none;pointer-events:auto;cursor:pointer;text-shadow:none}
+ #shop{position:absolute;right:2vw;top:50%;transform:translateY(-50%);width:min(600px,56vw);display:none}
+ #shopHint{margin-top:var(--sp-2)} #shopList{max-height:62vh;overflow:auto}
+ #hud.shopping>*:not(#shop):not(#feed){display:none!important}
 </style></head><body>
-<div id="menu" class="screen" style="display:flex"><div class="box">
-  <h1>RATTLEJAW RAILS</h1><div class="tag">co-op · 1 to 4 players · each on their own computer</div>
-  <label>YOUR NAME</label><input id="name" maxlength="14" placeholder="Engineer">
-  <button id="hostBtn">🚂 HOST A GAME</button>
-  <label>OR JOIN A FRIEND'S GAME</label>
-  <div class="row"><input id="joinCode" inputmode="numeric" maxlength="4" placeholder="ROOM CODE"><button id="joinBtn" class="alt" style="margin-top:0">JOIN</button></div>
-  <div id="saveRow" style="display:none;margin-top:10px;font-size:14px;color:#9a8a70"><label style="display:inline;letter-spacing:0;font-size:14px"><input type="checkbox" id="newSave" style="width:auto;margin-right:6px">start a NEW game (host only, erases your save)</label></div>
-  <div class="err" id="menuErr"></div>
-  <div class="small">Play with a phone, a controller, or keyboard + mouse · use Chrome or Edge</div>
-  <div class="padInfo small" style="text-align:left;margin-top:10px;overflow:hidden"></div>
+<div id="menu" class="ui-screen" style="display:flex"><div class="fe-side">
+  <div class="ui-logo"><div class="l1">RATTLEJAW</div><div class="l2">RAILS</div><div class="l3">CO-OP TRAIN ADVENTURE · 1 TO 4</div></div>
+  <div class="ui-field"><label class="ui-label">YOUR NAME</label><input class="ui-input" id="name" maxlength="14" placeholder="Engineer" style="max-width:300px"></div>
+  <nav class="ui-menu" id="mainMenu">
+    <button class="ui-menu-item sel" id="hostBtn">HOST GAME<small>open a room for your friends</small></button>
+    <button class="ui-menu-item" id="joinOpen">JOIN GAME<small>enter a friend's room code</small></button>
+  </nav>
+  <div class="ui-err" id="menuErr" style="text-align:left"></div>
+  <div class="fe-foot ui-note" style="text-align:left">Play with a phone, a controller, or keyboard + mouse · use Chrome or Edge</div>
 </div></div>
-<div id="lobby" class="screen"><div class="box">
-  <div style="text-align:center;color:#9a8a70;letter-spacing:3px">ROOM CODE</div><div id="code">····</div>
-  <div class="small" id="lobbyHint" style="margin-top:0">Friends open this page, type the code and press JOIN</div>
-  <div class="plist" id="plist"></div>
-  <div id="outfitRow" style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px"><button class="alt ob" data-d="-1" style="width:auto;margin:0;padding:8px 16px">◀</button><div style="text-align:center;min-width:180px"><div style="font-size:11px;letter-spacing:3px;color:#9a8a70">YOUR OUTFIT</div><b id="outfitName" style="font-size:20px">…</b></div><button class="alt ob" data-d="1" style="width:auto;margin:0;padding:8px 16px">▶</button></div>
-  <button id="readyBtn">I'M READY</button>
-  <button id="startBtn" class="alt" style="display:none">▶ START GAME</button>
-  <div class="err" id="lobbyErr"></div>
-  <div class="padInfo small" style="text-align:left;margin-top:10px;overflow:hidden;min-height:20px"></div>
-  <div class="small">🎤 Voice chat: tap the mic circle on your phone, or press V on the keyboard</div>
+<div id="joinScreen" class="ui-screen"><div class="fe-side">
+  <div class="ui-logo sm"><div class="l1">RATTLEJAW</div><div class="l2">RAILS</div></div>
+  <h2 class="ui-h2" style="text-align:left;margin-top:var(--sp-6)">JOIN GAME</h2>
+  <label class="ui-label">ROOM CODE</label>
+  <input class="ui-input code" id="joinCode" inputmode="numeric" maxlength="4" placeholder="····" autocomplete="off" style="max-width:300px;text-align:left">
+  <div class="ui-note" style="text-align:left">Ask the host for the 4-digit room code. It is shown in their lobby.</div>
+  <div class="ui-err" id="joinErr" style="text-align:left"></div>
+  <div class="ui-hrow" style="max-width:300px;margin-top:var(--sp-3)"><button class="ui-btn" id="joinBtn">JOIN</button><button class="ui-btn alt" id="joinBack">BACK</button></div>
+  <div class="fe-foot ui-note" style="text-align:left"><span class="ui-glyph ui-x">✕</span>join &nbsp; <span class="ui-glyph ui-o">○</span>back</div>
 </div></div>
-<div id="hud"><div id="talk"></div><div id="cross"></div><div id="mark"></div><div id="hints"></div><div id="ammo"></div><div id="prompt"></div><div id="feed"></div><div id="regionTitle"></div>
+<div id="lobby" class="ui-screen">
+  <div class="lb-top"><div class="ui-logo sm"><div class="l1">RATTLEJAW</div><div class="l2">RAILS</div></div><div class="sp"></div><span id="code" hidden>····</span><button class="ui-btn alt sm" id="leaveBtn">‹ LEAVE</button></div>
+  <div class="lb-left">
+    <div class="ui-card"><label class="ui-label">CO-OP RUN</label><div class="ui-card-title">CONNECT THE ISLAND</div><div class="ui-note" style="text-align:left;margin-top:0" id="lobbyHint">25 stations · bring everyone home</div>
+      <div id="saveRow" class="ui-row" style="display:none;margin-top:var(--sp-3)"><div class="tx" style="font-size:var(--fs-sm)"><b>New game</b><br><small id="saveInfo">erases your saved game</small></div><input type="checkbox" id="newSave" class="ui-check"></div>
+      <div id="outfitRow" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:var(--sp-4) 0 var(--sp-2)"><button class="ui-btn alt sm ob" data-d="-1">◀</button><div style="text-align:center;flex:1"><div class="ui-label" style="margin:0">YOUR OUTFIT</div><b id="outfitName" style="font-size:20px">…</b></div><button class="ui-btn alt sm ob" data-d="1">▶</button></div>
+      <button class="ui-btn go big block" id="readyBtn">READY</button>
+      <button id="startBtn" class="ui-btn alt block" style="display:none">▶ START GAME</button>
+      <div class="ui-err" id="lobbyErr"></div></div>
+  </div>
+  <div class="lb-right">
+    <div class="ui-card" id="roomCard"><label class="ui-label">ROOM CODE</label>
+      <div class="ui-code" id="roomCode" style="font-size:52px;letter-spacing:10px;margin:0;text-align:center">····</div>
+      <div style="text-align:center;margin-top:var(--sp-3)"><img id="roomQrImg" alt="" style="width:132px;height:132px;border-radius:4px;background:#fff;padding:4px"></div>
+      <div class="padInfo ui-dim" style="margin-top:var(--sp-3);text-align:center"></div>
+      <div class="ui-note">Friends on a computer: <b>JOIN GAME</b> and type the code.</div></div>
+    <div class="ui-note" style="text-align:left">🎤 Voice chat: the mic circle on your phone, or press V on the keyboard</div>
+  </div>
+  <div id="nameplates"></div>
+  <div class="ui-hintbar" id="lobbyKeys"></div>
+</div>
+<div id="hud" class="ui-hud"><div id="talk"></div><div id="cross"></div><div id="mark" class="ui-pill"></div><div id="hints"></div><div id="ammo"></div><div id="prompt"></div><div id="feed"></div><div id="regionTitle"></div>
   <div id="mission"><div id="mMain"></div><div id="mSide"></div></div>
   <div id="warn"></div>
-  <div id="boss"><div style="display:flex;justify-content:space-between"><b>💀 RATTLEJAW</b><span id="bossPh"></span></div><div class="bar" style="height:12px"><i id="bossBar" style="background:linear-gradient(90deg,#8a0a06,#ff3a1a);width:100%"></i></div></div>
-  <div id="stats"><div class="bar"><i id="hpBar" style="background:linear-gradient(90deg,#3ac05a,#9aef6a);width:100%"></i></div><div id="inv"></div></div>
-  <div id="shop"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:22px;color:#d9c08a">🚂 YOUR TRAIN</b><span style="font-size:18px">🔩 <b id="shopScrap">0</b> scrap</span></div>
-    <div id="shopRoom" style="font-size:13px;color:#9a8a70;margin-top:2px"></div><div id="shopWhere" style="font-size:13px;margin:4px 0 6px"></div><div id="shopList"></div>
-    <div id="shopHint">↑ ↓ choose · ✕ / E buy · □ / Q store a car in the Yard · ← → paint · ○ / Tab close</div><button id="shopClose" class="alt" style="margin-top:8px;padding:8px">CLOSE</button></div>
-  <div id="speed"><span id="spd">0</span> km/h<div class="bar"><i id="thrBar"></i></div></div>
+  <div id="boss"><div style="display:flex;justify-content:space-between"><b>💀 RATTLEJAW</b><span id="bossPh"></span></div><div class="ui-bar boss"><i id="bossBar" style="width:100%"></i></div></div>
+  <div id="stats"><div class="ui-bar good"><i id="hpBar" style="width:100%"></i></div><div id="inv"></div></div>
+  <div id="shop" class="ui-panel hud"><div style="display:flex;justify-content:space-between;align-items:center"><b class="ui-gold" style="font-size:22px">🚂 YOUR TRAIN</b><span style="font-size:18px">🔩 <b id="shopScrap">0</b> team scrap</span></div>
+    <div id="shopRoom" class="ui-faint" style="font-size:var(--fs-xs);margin-top:2px"></div><div id="shopWho" class="ui-dim" style="font-size:var(--fs-xs);margin-top:2px"></div><div id="shopWhere" style="font-size:var(--fs-xs);margin:4px 0 6px"></div><div id="shopList" class="ui-list"></div>
+    <div id="shopHint" class="ui-note"></div><button id="shopClose" class="ui-btn alt sm" style="width:100%;margin-top:8px">CLOSE</button></div>
+  <div id="speed"><span id="spd">0</span> km/h<div class="ui-bar"><i id="thrBar"></i></div></div>
   <div id="help"></div>
-  <div id="clickToPlay">CLICK TO PLAY</div></div>
-<div id="victory" class="screen"><div class="box" style="text-align:center">
-  <h1 style="font-size:40px">THE ISLAND IS SAVED</h1><div class="tag">Rattlejaw has been defeated and all 25 stations are connected.</div>
+  <div id="clickToPlay" class="ui-pill gold">CLICK TO PLAY</div></div>
+<div id="victory" class="ui-screen"><div class="ui-panel" style="text-align:center">
+  <h1 class="ui-title md">THE ISLAND IS SAVED</h1><div class="ui-tag">Rattlejaw has been defeated and all 25 stations are connected.</div>
   <div id="vStats" style="font-size:19px;line-height:1.8;text-align:left;display:inline-block"></div>
   <div style="margin-top:18px;color:#9a8a70;letter-spacing:3px;font-size:12px">YOUR CREW</div><div id="vCrew" style="font-size:22px;margin:6px 0 4px"></div>
-  <div class="small">A game made for a brave young engineer 🚂</div>
-  <button onclick="document.getElementById('victory').style.display='none'">KEEP PLAYING (free play)</button></div></div>
+  <div class="ui-note">A game made for a brave young engineer 🚂</div>
+  <button class="ui-btn block" onclick="document.getElementById('victory').style.display='none'">KEEP PLAYING (free play)</button></div></div>
 <script src="vendor/peerjs.min.js"></script>
 <script>window.SFX_NO_HINT=true;</script>
 <script src="sound.js"></script>
@@ -114,15 +116,23 @@ import {buildYard,YARD,slotSign} from './yard.js';
 import {Crew,OUTFITS} from './chars.js';
 import {planIsland,islandH,buildIsland,SEA_Y} from './island.js';
 const $=id=>document.getElementById(id);
-// ---- phone controller link: every computer gets its own phone code (railpad.html) ----
-let padCode=null;
-NetLink.setPrefix('pdw-webgames-railpad-');
-NetLink.host({ onCode:c=>{ padCode=c; showPadCode(); }, onError:()=>{},
-  onConn:c=>{ if(phoneConn) try{ phoneConn.close(); }catch(e){} phoneConn=c; uiSent=''; PH.seen={}; padActive=true; feed('📱 Phone controller connected!','#9fe'); showPadCode(); voiceSync(true);
-    c.on('data',m=>{ if(m.t==='vsig') voiceSend(m.to,m.d); if(m.t==='vstate'){ vs.mic=m.mic; vs.snd=m.snd; vs.speaking=m.speaking||[]; if(m.err&&m.err!==vs.err) feed('🎤 '+m.err,'#ff9a7a'); vs.err=m.err||''; voiceHud(); }
-      if(m.t==='pad'){ PH.lx=+m.lx||0; PH.ly=+m.ly||0; PH.dx+=+m.dx||0; PH.dy+=+m.dy||0; PH.b=m.b||{}; PH.c=m.c||{}; PH.last=performance.now(); } });
-    c.on('close',()=>{ if(phoneConn===c){ phoneConn=null; PH.b={}; PH.lx=PH.ly=0; feed('📱 Phone controller disconnected','#ff9a7a'); showPadCode(); vs.mic=false; vs.speaking=[]; voiceHud(); voiceSync(true); } }); } });
+// ---- phone controller: ONE code. A phone joins the room (same code as the lobby), says which player it is, and becomes that player's controller.
+//      The host relays: phone <-> host <-> the player's computer. (A host's own phone is direct.) ----
 NetLink.setPrefix('pdw-webgames-rails-');
+const padOwner={};   // host only: player id -> that player's phone connection
+function onPadData(m){ if(m.t==='vsig') voiceSend(m.to,m.d); if(m.t==='vstate'){ vs.mic=m.mic; vs.snd=m.snd; vs.speaking=m.speaking||[]; if(m.err&&m.err!==vs.err) feed('🎤 '+m.err,'#ff9a7a'); vs.err=m.err||''; voiceHud(); }
+  if(m.t==='pad'){ PH.lx=+m.lx||0; PH.ly=+m.ly||0; PH.dx+=+m.dx||0; PH.dy+=+m.dy||0; PH.b=m.b||{}; PH.c=m.c||{}; PH.last=performance.now(); } }
+function padAttach(c){ if(phoneConn&&phoneConn!==c&&!phoneConn.virtual) try{ phoneConn.close(); }catch(e){} phoneConn=c; uiSent=''; PH.seen={}; padActive=true; feed('📱 Phone controller connected!','#9fe'); showRoomCode(); voiceSync(true); if(S.players) sendPlist(); }
+function padDetach(c){ if(phoneConn===c){ phoneConn=null; PH.b={}; PH.lx=PH.ly=0; feed('📱 Phone controller disconnected','#ff9a7a'); showRoomCode(); vs.mic=false; vs.speaking=[]; voiceHud(); voiceSync(true); } }
+function sendPlist(){ if(!phoneConn) return; phoneConn.send({t:'plist',started:S.started,code:net.code,players:Object.values(S.players).map(p=>({n:p.name,c:p.color,r:!!p.ready,me:+p.id===myId()}))}); }
+// host: messages from a phone that has joined the room
+function hostPadMsg(conn,m){
+  if(m.t==='padhello'){ conn.send({t:'padlist',players:Object.values(S.players).map(p=>({id:+p.id,name:p.name,color:p.color,taken:!!padOwner[p.id]&&padOwner[p.id]!==conn}))}); return; }
+  if(m.t==='padpick'){ const id=+m.id, p=S.players[id]; if(!p){ conn.send({t:'padno',why:'That player is not in the room'}); return; } if(padOwner[id]&&padOwner[id]!==conn){ conn.send({t:'padno',why:'That player already has a phone'}); return; }
+    if(conn._padId!=null&&conn._padId!==id) delete padOwner[conn._padId]; conn._padId=id; padOwner[id]=conn; conn.send({t:'padok',id,name:p.name});
+    if(id===0) padAttach(conn); else if(hostConns[id]) hostConns[id].conn.send({t:'padon'}); return; }
+  if(conn._padId===0) onPadData(m); else if(conn._padId!=null&&hostConns[conn._padId]) hostConns[conn._padId].conn.send({t:'padin',m}); }
+function hostPadClose(conn){ const id=conn._padId; if(id==null) return; if(padOwner[id]===conn){ delete padOwner[id]; if(id===0) padDetach(conn); else if(hostConns[id]) hostConns[id].conn.send({t:'padoff'}); } }
 // ---- voice chat plumbing: signalling messages travel over the game links (host in the middle) ----
 const vs={mic:false,snd:true,speaking:[],err:''}; let voiceKey='';
 function voiceSend(to,d){ if(net.role==='host'){ if(to!==0&&hostConns[to]) hostConns[to].conn.send({t:'vsig',from:0,d}); } else if(net.conn) net.conn.send({t:'vsig',to,d}); }
@@ -136,10 +146,6 @@ function voiceSync(force){ if(!net.role||net.myId==null&&net.role!=='host') retu
   if(!others.length){ if(Voice.st.up) Voice.stop(); if(phoneConn) phoneConn.send({t:'voice',stop:true}); return; }
   if(phoneConn){ if(Voice.st.up) Voice.stop(); phoneConn.send({t:'voice',me,players:others}); }
   else { if(!Voice.st.up||Voice.st.me!==me) Voice.init({me,send:voiceSend,onState:voiceState}); Voice.setPlayers(others); } }
-function showPadCode(){ if(!padCode) return; const url=new URL('railpad.html',location.href).href.split('?')[0]+'?code='+padCode+(NetLink.LOCAL?'&local':'');
-  let qr=''; try{ const q=qrcode(0,'M'); q.addData(url); q.make(); qr=q.createDataURL(4,1); }catch(e){}
-  const html=phoneConn?`<span style="color:#7dffa8">📱 Phone controller connected</span>`:`<img src="${qr}" alt="" style="width:74px;height:74px;border-radius:4px;background:#fff;padding:2px;float:left;margin-right:10px"><b>📱 Play with your phone</b><br>Scan, or open <b>${url.replace(/^https?:\/\//,'').replace(/\?.*/,'')}</b><br>phone code <b style="color:#ffcf6a;font-size:18px;letter-spacing:3px">${padCode}</b>`;
-  document.querySelectorAll('.padInfo').forEach(el=>el.innerHTML=html); }
 const COLORS=['#e8b24a','#4ab0e8','#e85a4a','#7ae84a'];
 const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t;
 Input.autoBack=false;
@@ -243,11 +249,13 @@ const UPG={
  launcher:{icon:'🚀',name:'Missile launcher',max:3,cost:{1:80,2:120,3:180},need:{1:'rocket',3:'chip'},lv:['Not built','1 tube · carry 2 missiles','2 tubes · carry 4 missiles','4 tubes + guidance · carry 6, more damage']}};
 const UPG_ORDER=['engine','armor','plough','light','horn','workshop','material','cargo','gun','launcher'];
 const PAINTS=[['Hazard yellow',0xf2c21a],['Rust red',0xc0442a],['Ice blue',0x4a8ad0],['Coal black',0x3a3c44],['Toxic green',0x7ac83a]];
-const W={stations:STATIONS.map((x,i)=>i===0),breaks:BREAKS.map(()=>({fixed:false,prog:0})),crates:CRATES.map(()=>false),parts:{},scrap:60,hp:100,ammo:120,missiles:0,rails:1,
+const W={contrib:{},stations:STATIONS.map((x,i)=>i===0),breaks:BREAKS.map(()=>({fixed:false,prog:0})),crates:CRATES.map(()=>false),parts:{},scrap:60,hp:100,ammo:120,missiles:0,rails:1,
   upg:{engine:1,armor:0,plough:0,light:0,horn:0,workshop:0,material:0,cargo:0,gun:0,launcher:0},store:{workshop:0,material:0,cargo:0,gun:0},paint:0,delivery:null,
   mon:{on:false,s:0,hp:0,cd:60},rj:{on:false,ph:'',t:0,side:1,hp:0,cd:90,bite:0},gn:[],
   boss:{on:false,phase:0,hp:0,max:900,done:false},stats:{hollow:0,rj:0,gn:0,fix:0,del:0,t:0}};
 W.breaks[BOSSB].fixed=true;
+// ONE team purse: everything anyone collects goes into W.scrap, and anyone can spend it. W.contrib only remembers who collected how much.
+function earn(n,id){ n=Math.round(n); W.scrap+=n; const key=(id==null||!S.players[id])?'team':id, c=W.contrib[key]||(W.contrib[key]={n:0}); c.n+=n; if(key!=='team'){ c.name=S.players[id].name; c.color=S.players[id].color; } }
 const maxHp=()=>100+W.upg.armor*45, maxRails=()=>[1,3,5,7][W.upg.material], maxAmmo=()=>120+Math.max(0,W.upg.gun-1)*40, missileCap=()=>[0,2,4,6][W.upg.launcher];
 const dmgMul=()=>1/(1+W.upg.armor*.3), biteMul=()=>1-.15*W.upg.plough;
 const GUN_DMG=[0,8,9,14,40], GUN_CD=[0,150,100,95,240];
@@ -277,8 +285,17 @@ const yardG=new THREE.Group(); { const a=trackPos(-22).p, b=trackPos(22).p; yard
   const Y=buildYard(yardG,{mainAt}), gx=yardG.position.x, gz=yardG.position.z, th=yardG.rotation.y, c=Math.cos(th), sn=Math.sin(th);
   for(const b of Y.boxes) addBox(gx,gz,th,b.x,b.z,b.hx,b.hz); for(const k of Y.circles) addColl(gx+k.x*c+k.z*sn,gz-k.x*sn+k.z*c,k.r); }
 // a second copy of the train's cars, parked on the siding (no lights, no engine)
-{ const l=new THREE.PointLight(0xffd8a0,22,12,1.6); l.position.set(-2.2,3.4,29.6); yardG.add(l); const b=new THREE.Mesh(new THREE.SphereGeometry(.16,10,8),new THREE.MeshBasicMaterial({color:0xffd890})); b.position.copy(l.position); yardG.add(b);
-  const post=new THREE.Mesh(new THREE.BoxGeometry(.16,3.5,.16),new THREE.MeshStandardMaterial({color:0x1e1a16})); post.position.set(-4.6,1.75,29.6); yardG.add(post); const arm=new THREE.Mesh(new THREE.BoxGeometry(1.1,.08,.08),post.material); arm.position.set(-4.1,3.5,29.6); yardG.add(arm); }
+// ---- front-end scene: the crew stands on glowing pads outside the Yard shed; the title screen shows the engine at the shed door ----
+const PAD_X=[-2.85,-.95,.95,2.85], PAD_Z=29.8, PAD_Y=.5, LOBBY_S=8, TITLE_S=8;
+const lobbyPads=new THREE.Group(); yardG.add(lobbyPads); lobbyPads.visible=false;
+{ const plaza=new THREE.Mesh(new THREE.BoxGeometry(17,.5,12),std(0x2a2d33,{roughness:.8,metalness:.2})); plaza.position.set(0,.25,PAD_Z+1.5); plaza.receiveShadow=true; lobbyPads.add(plaza);
+  const edge=new THREE.Mesh(new THREE.BoxGeometry(17.2,.08,.25),std(0xb8a040,{roughness:.6})); edge.position.set(0,.52,PAD_Z+7.4); lobbyPads.add(edge); }   // yellow safety edge
+PAD_X.forEach(x=>{ const pad=new THREE.Group(); pad.position.set(x,PAD_Y,PAD_Z); lobbyPads.add(pad);
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(.84,.88,.12,32),std(0x1b1f27,{metalness:.6,roughness:.4})); base.position.y=.06; base.receiveShadow=true; pad.add(base);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(.8,.04,8,48),new THREE.MeshBasicMaterial({color:0x444a55})); ring.rotation.x=Math.PI/2; ring.position.y=.13; pad.add(ring);
+  const glow=new THREE.Mesh(new THREE.CircleGeometry(1.25,32),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending})); glow.rotation.x=-Math.PI/2; glow.position.y=.14; pad.add(glow);
+  pad.userData={ring,glow}; });
+const lobbyLight=new THREE.SpotLight(0xfff0d8,160,24,.85,.6,1.3); lobbyLight.position.set(0,7,37); lobbyLight.target.position.set(0,1.6,PAD_Z); yardG.add(lobbyLight,lobbyLight.target); lobbyLight.visible=false;
 const yardTrain=buildTrain(); { const rm=[]; yardTrain.traverse(o=>{ if(o.isLight) rm.push(o); }); rm.forEach(o=>o.parent.remove(o)); }
 yardTrain.position.set(0,.25,0); yardG.add(yardTrain); yardTrain.children.find(o=>o.name==='cab').visible=false;
 const yardCars={}, yardSigns={}, yardShown={}, CAR_MID={workshop:.7,material:-5.3,cargo:-11.3,gun:-17.4};
@@ -369,20 +386,28 @@ function announce(t,col){ feed(t,col); broadcast({t:'msg',text:t,col}); }
 function fx(k){ playFx(k); broadcast({t:'fx',k}); }
 function playFx(k){ const F={ram:()=>{ shake=1; A.ram(); },horn:()=>A.whistle(),win:()=>A.fanfare(),boom:()=>{ A.boom(); shake=.6; },fix:()=>A.hammer(),quake:()=>{ shake=.5; },roar:()=>{ A.roar(); shake=1; },bite:()=>{ A.bite(); shake=1.2; },pick:()=>A.pickup(),hit:()=>A.splat(),ghost:()=>A.ghostHorn(.35),victory:()=>A.win(),phase:()=>{ A.roar(1); shake=1.5; }}; F[k]&&F[k](); }
 $('name').value=localStorage.getItem('rails-name')||'';
-if(localStorage.getItem(saveKey)) $('saveRow').style.display='block';
+let menuSel=0;
+function setMenuSel(i){ menuSel=i; document.querySelectorAll('#mainMenu .ui-menu-item').forEach((b,j)=>b.classList.toggle('sel',j===i)); }
+document.querySelectorAll('#mainMenu .ui-menu-item').forEach((b,j)=>b.onmouseenter=()=>setMenuSel(j));
+function showJoin(){ $('menu').style.display='none'; $('joinScreen').style.display='flex'; $('joinErr').textContent=''; setTimeout(()=>$('joinCode').focus(),60); }
+function showTitle(){ $('joinScreen').style.display='none'; $('menu').style.display='flex'; $('joinBtn').disabled=false; }
+$('joinOpen').onclick=showJoin; $('joinBack').onclick=showTitle; $('leaveBtn').onclick=()=>location.reload();
+$('joinCode').addEventListener('keydown',e=>{ if(e.key==='Enter') $('joinBtn').click(); if(e.key==='Escape') showTitle(); });
+{ const jq=new URLSearchParams(location.search).get('join'); if(/^\d{4}$/.test(jq||'')){ $('joinCode').value=jq; showJoin(); setTimeout(()=>$('joinBtn').click(),700); } }   // invite QR: opens the game and joins by itself
 const myName=()=>{ const n=($('name').value.trim()||'Engineer').slice(0,14); localStorage.setItem('rails-name',n); return n; };
 $('hostBtn').onclick=()=>{ net.role='host'; $('hostBtn').disabled=true; $('menuErr').textContent='Opening a room…';
-  if($('newSave').checked) localStorage.removeItem(saveKey); else if(loadGame()) feed('Save loaded: '+W.stations.filter(Boolean).length+'/25 stations, '+W.scrap+' scrap');
   S.players[0]={id:0,name:myName(),color:COLORS[0],ready:false,outfit:myOutfit(),mode:'train',x:0,z:5.3,yaw:0,pitch:0,seat:null};
   NetLink.host({ onCode:c=>{ net.code=c; $('code').textContent=c; showLobby(); },
     onError:e=>{ $('menuErr').textContent='Could not open a room: '+e; $('hostBtn').disabled=false; },
     onConn:conn=>{ let id=null;
       conn.on('data',m=>{
+        if(conn._pad||m.t==='padhello'||m.t==='padpick'){ conn._pad=true; hostPadMsg(conn,m); return; }
         if(m.t==='hello'){ if(S.started||Object.keys(S.players).length>=4){ conn.send({t:'full',why:S.started?'Game already started':'Room is full (4 players)'}); return; }
           id=nextId++; const slot=[0,1,2,3].find(i=>!Object.values(S.players).some(p=>p.color===COLORS[i]));
           S.players[id]={id,name:String(m.name||'Engineer').slice(0,14),color:COLORS[slot],ready:false,outfit:Number.isInteger(m.outfit)?((m.outfit%OUTFITS.length)+OUTFITS.length)%OUTFITS.length:(slot*2)%OUTFITS.length,mode:'train',x:(id%2?-.6:.6),z:2,yaw:0,pitch:0,seat:null};
           hostConns[id]={conn}; conn.send({t:'welcome',id}); broadcast({t:'lobby',players:lobbyList()}); renderLobby(); Sfx.select(); }
         if(id==null) return; const p=S.players[id]; if(!p) return;
+        if(m.t==='padout'){ if(padOwner[id]) padOwner[id].send(m.m); return; }
         if(m.t==='vsig') voiceRoute(id,m.to,m.d);
         if(m.t==='outfit'){ p.outfit=(((m.i|0)%OUTFITS.length)+OUTFITS.length)%OUTFITS.length; broadcast({t:'lobby',players:lobbyList()}); renderLobby(); }
         if(m.t==='ready'){ p.ready=!!m.v; if(p.ready&&avatars[p.id]) avatars[p.id].userData.crew.wave=2.2; broadcast({t:'lobby',players:lobbyList()}); renderLobby(); }
@@ -392,36 +417,51 @@ $('hostBtn').onclick=()=>{ net.role='host'; $('hostBtn').disabled=true; $('menuE
         if(m.t==='crate') takeCrate(m.i,id); if(m.t==='part') takePart(m.i,id); if(m.t==='whack') whack(id);
         if(m.t==='buy') buy(m.k); if(m.t==='attach') attachCar(m.k); if(m.t==='store') storeCar(m.k); if(m.t==='paint') setPaint(m.i); if(m.t==='craft') craft(m.k);
       });
-      conn.on('close',()=>{ if(id==null) return; const p=S.players[id]; delete S.players[id]; delete hostConns[id]; broadcast({t:'lobby',players:lobbyList()}); renderLobby(); if(p) announce(p.name+' left'); }); } }); };
-$('joinBtn').onclick=()=>{ const code=$('joinCode').value.replace(/\D/g,''); if(code.length!==4){ $('menuErr').textContent='Type the 4-digit room code.'; return; }
-  net.role='client'; $('joinBtn').disabled=true; $('menuErr').textContent='Connecting…';
+      conn.on('close',()=>{ if(conn._pad){ hostPadClose(conn); return; } if(id==null) return; const p=S.players[id]; if(padOwner[id]){ try{ padOwner[id].send({t:'padgone'}); }catch(e){} delete padOwner[id]; } delete S.players[id]; delete hostConns[id]; broadcast({t:'lobby',players:lobbyList()}); renderLobby(); if(p) announce(p.name+' left'); }); } }); };
+$('joinBtn').onclick=()=>{ const code=$('joinCode').value.replace(/\D/g,''); if(code.length!==4){ $('joinErr').textContent='Type the 4-digit room code.'; return; }
+  net.role='client'; $('joinBtn').disabled=true; $('joinErr').textContent='Connecting…';
   NetLink.join(code,{ onOpen:c=>{ net.conn=c; net.code=code; c.send({t:'hello',name:myName(),outfit:myOutfit()}); c.on('data',onHostMsg); c.on('close',()=>{ alert('Lost connection to the host.'); location.reload(); }); },
-    onError:e=>{ $('menuErr').textContent=e; $('joinBtn').disabled=false; } }); };
+    onError:e=>{ $('joinErr').textContent=e; $('joinBtn').disabled=false; net.role=null; } }); };
 function onHostMsg(m){
-  if(m.t==='full'){ $('menuErr').textContent=m.why; $('joinBtn').disabled=false; return; }
+  if(m.t==='full'){ $('joinErr').textContent=m.why; $('joinBtn').disabled=false; net.role=null; return; }
   if(m.t==='welcome'){ net.myId=m.id; $('code').textContent=net.code; showLobby(); }
   if(m.t==='lobby'){ const old=S.players; S.players={}; for(const p of m.players){ if(p.ready&&old[p.id]&&!old[p.id].ready&&avatars[p.id]) avatars[p.id].userData.crew.wave=2.2; S.players[p.id]={...(old[p.id]||{mode:'train',x:0,z:2,yaw:0,pitch:0,seat:null}),...p}; } renderLobby(); }
-  if(m.t==='start') beginGame();
-  if(m.t==='state'){ S.trainSnap=m.s; S.v=m.v; S.throttle=m.th; S.brake=m.br; S.gunYaw=m.gy; S.gunPitch=m.gp;
+  if(m.t==='start'){ S.trainS=0; S.trainSnap=null; beginGame(); }
+  if(m.t==='state'){ if(S.trainSnap==null) S.trainS=m.s; S.trainSnap=m.s; S.v=m.v; S.throttle=m.th; S.brake=m.br; S.gunYaw=m.gy; S.gunPitch=m.gp;
     for(const [id,mode,x,z,yaw,pitch,seat] of m.p){ const p=S.players[id]; if(!p) continue; if(id!==net.myId){ if(p.mode!==mode){ p.x=x; p.z=z; } p.mode=mode; p.tx=x; p.tz=z; p.yaw=yaw; p.pitch=pitch; } p.seat=seat; if(id===net.myId) me.seat=seat; }
     for(const f of m.f||[]) spawnTracer(f); for(const t of m.mf||[]) launchMissileFx(t);
     W.mon.on=m.mon[0]; W.mon.s=m.mon[1]; W.rj.on=m.rj[0]; W.rj.ph=m.rj[1]; W.rj.t=m.rj[2]; W.rj.side=m.rj[3]; W.gn=m.gn.map(([x,z,y])=>({x,z,yaw:y,alive:true})); }
   if(m.t==='world'){ const prev=W.stations.slice(); if(m.w.bb!=null&&m.w.bb!==BREAKS[BOSSB]) moveBreak(BOSSB,m.w.bb); delete m.w.bb; Object.assign(W,m.w); W.stations.forEach((c,i)=>{ if(c&&!prev[i]) lightStation(i); }); applyPaint(); }
   if(m.t==='vsig') voiceDeliver(m.from,m.d);
+  if(m.t==='padon') padAttach({virtual:true,send:x=>net.conn.send({t:'padout',m:x}),close(){}});
+  if(m.t==='padin') onPadData(m.m);
+  if(m.t==='padoff') padDetach(phoneConn);
   if(m.t==='msg') feed(m.text,m.col);
   if(m.t==='fx') playFx(m.k);
   if(m.t==='knock'){ knockedDown(); }
   if(m.t==='victory') showVictory();
   if(m.t==='tp'){ me.mode='train'; me.seat=null; me.x=0; me.z=2; }
 }
-function showLobby(){ $('menu').style.display='none'; $('lobby').style.display='flex'; $('lobbyHint').textContent=net.role==='host'?'Friends open this page, type the code and press JOIN':'Waiting for the host to start…'; renderLobby(); }
+function showLobby(){ $('menu').style.display='none'; $('joinScreen').style.display='none'; $('lobby').style.display='flex';
+  $('lobbyHint').textContent=net.role==='host'?'25 stations · everyone presses READY, then you press START':'25 stations · waiting for the host to start';
+  if(net.role==='host'&&localStorage.getItem(saveKey)){ try{ const d=JSON.parse(localStorage.getItem(saveKey)); $('saveInfo').textContent='off: continue your save ('+d.stations.filter(Boolean).length+'/25 stations)'; }catch(e){} $('saveRow').style.display='flex'; }
+  renderLobby(); showRoomCode(); }
+function showRoomCode(){ if(!net.code) return; $('roomCode').textContent=net.code;
+  const url=new URL('railpad.html',location.href).href.split('?')[0]+'?code='+net.code+(NetLink.LOCAL?'&local':'');
+  try{ const q=qrcode(0,'M'); q.addData(url); q.make(); $('roomQrImg').src=q.createDataURL(5,1); }catch(e){}
+  document.querySelectorAll('.padInfo').forEach(el=>el.innerHTML=phoneConn?'<span class="ui-good">📱 Your phone is connected</span>':'📱 Phone: scan this QR or open <b class="ui-gold">'+url.replace(/^https?:\/\//,'').replace(/\?.*/,'')+'</b> and type the code'); }
+function flashRoom(){ const c=$('roomCard'); c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); }
 function renderLobby(){ const ps=Object.values(S.players); voiceSync();
-  $('plist').innerHTML=[0,1,2,3].map(i=>{ const p=ps[i]; if(!p) return '<div class="pl empty" style="border-color:#333">waiting for a player…</div>';
-    return `<div class="pl" style="border-color:${p.color}">${p.id===0?'👑 ':''}${p.name}${p.id===myId()?' (you)':''} <small style="color:#9a8a70;font-size:13px">${OUTFITS[p.outfit|0].name}</small><span class="r">${p.ready?'✅ READY':'⏳ not ready'}</span></div>`; }).join('');
-  const mine=S.players[myId()]; if(mine) $('outfitName').textContent=OUTFITS[mine.outfit|0].name; $('readyBtn').textContent=mine&&mine.ready?'✅ READY (click to undo)':"I'M READY";
-  const all=ps.length&&ps.every(p=>p.ready); $('startBtn').style.display=net.role==='host'?'block':'none'; $('startBtn').disabled=!all; $('lobbyErr').textContent=net.role==='host'&&!all?'Everyone must be ready to start':''; }
+  const mine=S.players[myId()], host=net.role==='host', ready=!!(mine&&mine.ready), all=!!ps.length&&ps.every(p=>p.ready);
+  if(mine) $('outfitName').textContent=OUTFITS[mine.outfit|0].name;
+  $('readyBtn').textContent=ready?'✓ READY':'READY'; $('readyBtn').className='ui-btn big block '+(ready?'alt':'go');
+  $('startBtn').style.display=host?'block':'none'; $('startBtn').disabled=!all; $('startBtn').className='ui-btn block '+(all?'go big':'alt');
+  $('lobbyErr').textContent=host&&!all?'Waiting for everyone to press READY':'';
+  sendPlist(); $('lobbyKeys').innerHTML=`<span>${chip('x')}Ready</span><span class="ui-dim">◀ ▶ Outfit</span>`+(host?`<span>${chip('t')}Start</span>`:'')+`<span class="ui-dim">${padActive?'':'WASD / arrows · '}🎤 V voice</span>`; }
 $('readyBtn').onclick=()=>{ if(net.role==='host'){ S.players[0].ready=!S.players[0].ready; if(S.players[0].ready&&avatars[0]) avatars[0].userData.crew.wave=2.2; broadcast({t:'lobby',players:lobbyList()}); renderLobby(); } else { const p=S.players[net.myId]; net.conn.send({t:'ready',v:!(p&&p.ready)}); } };
-$('startBtn').onclick=()=>{ if(net.role!=='host') return; broadcast({t:'start'}); beginGame(); };
+$('startBtn').onclick=()=>{ if(net.role!=='host') return; S.trainS=0; S.v=0;
+  if($('newSave').checked) localStorage.removeItem(saveKey); else if(loadGame()) feed('Save loaded: '+W.stations.filter(Boolean).length+'/25 stations, '+W.scrap+' scrap');
+  broadcast({t:'start'}); beginGame(); };
 
 // =====================================================================
 //  HOST RULES
@@ -429,7 +469,7 @@ $('startBtn').onclick=()=>{ if(net.role!=='host') return; broadcast({t:'start'})
 const atStation=i=>near(S.trainS,STATIONS[i].s)<22&&S.v<1;
 const atYard=()=>atStation(0);
 const nearAnyStation=r=>STATIONS.some(st=>near(S.trainS,st.s)<r);
-function pushWorld(){ broadcast({t:'world',w:{stations:W.stations,breaks:W.breaks,crates:W.crates,parts:W.parts,scrap:W.scrap,hp:W.hp,ammo:W.ammo,missiles:W.missiles,rails:W.rails,upg:W.upg,store:W.store,paint:W.paint,delivery:W.delivery,rjHp:W.rj.hp,monHp:W.mon.hp,boss:W.boss,stats:W.stats,bb:BREAKS[BOSSB]}}); }
+function pushWorld(){ broadcast({t:'world',w:{contrib:W.contrib,stations:W.stations,breaks:W.breaks,crates:W.crates,parts:W.parts,scrap:W.scrap,hp:W.hp,ammo:W.ammo,missiles:W.missiles,rails:W.rails,upg:W.upg,store:W.store,paint:W.paint,delivery:W.delivery,rjHp:W.rj.hp,monHp:W.mon.hp,boss:W.boss,stats:W.stats,bb:BREAKS[BOSSB]}}); }
 function hostSeat(id,k){ const p=S.players[id]; if(!p) return; if(k===null){ p.seat=null; return; }
   if(!SEATS[k]||Object.values(S.players).some(q=>q!==p&&q.seat===k)){ tell(id,'Someone is already there'); return; } p.seat=k; }
 function tell(id,text,col){ if(id===0) feed(text,col); else if(hostConns[id]) hostConns[id].conn.send({t:'msg',text,col}); }
@@ -443,12 +483,12 @@ function hostFire(id){ const now=performance.now(); if(!W.upg.gun||(fireCd[id]||
   if(W.mon.on&&rayHit(o,d,hollow.position.clone().add(new THREE.Vector3(0,2.4,0)),2.6)) damageHollow(dmg);
   if(W.rj.on&&W.rj.ph==='up'&&rayHit(o,d,RJ.head.getWorldPosition(new THREE.Vector3()),3.4)) damageRattle(dmg);
   W.gn.forEach(g=>{ if(g.alive&&rayHit(o,d,new THREE.Vector3(g.x,hgt(g.x,g.z)+.5,g.z),.9)) killGnawer(g,id); }); }
-function damageHollow(d){ W.mon.hp-=d; if(W.mon.hp<=0){ W.mon.on=false; W.mon.cd=60+Math.random()*40; W.scrap+=25; W.stats.hollow++; announce('💥 The Hollow Engine is beaten back! +25 scrap','#ffcf6a'); fx('boom'); saveGame(); pushWorld(); } }
-function damageRattle(d){ if(W.boss.on){ bossDamage(d); return; } W.rj.hp-=d; fx('hit'); if(W.rj.hp<=0){ W.rj.ph='dive'; W.rj.t=0; W.scrap+=45; W.stats.rj++; announce('🐛 RATTLEJAW screams and dives underground! +45 scrap','#ffcf6a'); fx('roar'); saveGame(); pushWorld(); } }
+function damageHollow(d){ W.mon.hp-=d; if(W.mon.hp<=0){ W.mon.on=false; W.mon.cd=60+Math.random()*40; earn(25); W.stats.hollow++; announce('💥 The Hollow Engine is beaten back! +25 scrap','#ffcf6a'); fx('boom'); saveGame(); pushWorld(); } }
+function damageRattle(d){ if(W.boss.on){ bossDamage(d); return; } W.rj.hp-=d; fx('hit'); if(W.rj.hp<=0){ W.rj.ph='dive'; W.rj.t=0; earn(45); W.stats.rj++; announce('🐛 RATTLEJAW screams and dives underground! +45 scrap','#ffcf6a'); fx('roar'); saveGame(); pushWorld(); } }
 function fireMissile(id){ if(!W.upg.launcher){ tell(id,'You need to build the missile launcher at the Yard first'); return; } if(W.missiles<=0){ tell(id,'🚀 No missiles! Craft them at the workbench','#ff9a7a'); return; }
   const target=W.rj.on&&W.rj.ph==='up'?'rj':W.mon.on?'mon':null; if(!target){ tell(id,'No monster to aim at'); return; }
   W.missiles--; S.mfire.push(target); launchMissileFx(target); setTimeout(()=>{ const dmg=(W.upg.launcher>=3?60:40)*(W.boss.on&&W.boss.phase===3?3:1); if(target==='rj'&&W.rj.on&&W.rj.ph==='up') damageRattle(dmg); if(target==='mon'&&W.mon.on) damageHollow(dmg); fx('boom'); },900); pushWorld(); }
-function takeCrate(i,id){ if(W.crates[i]) return; W.crates[i]=true; W.scrap+=10; announce('📦 '+(S.players[id]?.name||'Someone')+' found scrap +10','#9fe'); fx('pick'); saveGame(); pushWorld(); }
+function takeCrate(i,id){ if(W.crates[i]) return; W.crates[i]=true; earn(10,id); announce('📦 '+(S.players[id]?.name||'Someone')+' found +10 scrap · team has '+W.scrap,'#9fe'); fx('pick'); saveGame(); pushWorld(); }
 function takePart(i,id){ const pt=PARTS[i]; if(W.parts[pt.k]) return; W.parts[pt.k]=true; announce(`⭐ ${S.players[id]?.name||'Someone'} found the ${pt.name.toUpperCase()}! Take it to the Yard workshop`,'#ffd27a'); fx('win'); saveGame(); pushWorld(); }
 // '' = can buy now, otherwise the reason it can't
 function canBuy(k,anywhere){ const u=UPG[k], n=(W.upg[k]||0)+1; if(u.car&&W.store[k]) return 'stored'; if(n>u.max) return 'max'; if(u.need&&u.need[n]&&!W.parts[u.need[n]]) return 'part'; if(W.scrap<u.cost[n]) return 'scrap'; if(!anywhere&&!atYard()) return 'yard'; return ''; }
@@ -469,7 +509,7 @@ function applyPaint(){ train.userData.paintMat?.color.set(PAINTS[W.paint]?.[1]??
 function nextBreak(){ let best=null,bd=1e9; W.breaks.forEach((b,i)=>{ if(b.fixed) return; const d=ahead(S.trainS+14,BREAKS[i]); if(d<bd){ bd=d; best=i; } }); return best==null?null:{i:best,d:bd}; }
 // gnawers
 function spawnGnawers(px,pz,n){ for(let k=0;k<n;k++){ if(W.gn.filter(g=>g.alive).length>=8) return; const a=Math.random()*6.28, r=14+Math.random()*6; W.gn.push({x:px+Math.cos(a)*r,z:pz+Math.sin(a)*r,yaw:0,alive:true,flee:0}); } }
-function killGnawer(g,id){ g.alive=false; W.scrap+=3; W.stats.gn++; fx('hit'); if(Math.random()<.3) tell(id,'Gnawer squashed! +3 scrap','#9fe'); }
+function killGnawer(g,id){ g.alive=false; earn(3,id); W.stats.gn++; fx('hit'); if(Math.random()<.3) tell(id,'Gnawer squashed! +3 scrap','#9fe'); }
 function whack(id){ const p=S.players[id]; if(!p||p.mode!=='ground') return; for(const g of W.gn){ if(!g.alive) continue;
     if(g.scared>0){ g.scared-=DT; const dx=g.x-train.position.x, dz=g.z-train.position.z, d=Math.hypot(dx,dz)||1; g.x+=dx/d*7*DT; g.z+=dz/d*7*DT; g.yaw=Math.atan2(dx,dz); if(g.scared<=0) g.alive=false; continue; } const dx=g.x-p.x, dz=g.z-p.z, d=Math.hypot(dx,dz); if(d<2.2&&Math.cos(Math.atan2(dx,dz)-p.yaw)>.4){ killGnawer(g,id); return; } } }
 function knockedDown(){ me.mode='train'; me.seat=null; me.x=-.5; me.z=1.6; shake=1.2; A.hurt(); feed('😱 A gnawer knocked you down! You scrambled back onto the train.','#ff9a7a'); }
@@ -480,13 +520,13 @@ function hostWorldStep(){
     if(n){ if(W.rails<=0){ if(Math.random()<.01) announce('🪵 No rails left! Restock at any connected station','#ff9a7a'); return; }
       b.prog+=DT*(.18+(W.upg.workshop>=2?.08:0))*(1+.6*(n-1)); if(Math.random()<.06) fx('fix');
       if(b.prog>.2&&!b.alarm&&regionAt(BREAKS[i])>=1){ b.alarm=true; const p=ground[0]; if(p) spawnGnawers(p.x,p.z,2+regionAt(BREAKS[i])); announce('🐀 The hammering woke the GNAWERS! Squash them (click) or guard with the gun','#ff9a7a'); }
-      if(b.prog>=1){ b.fixed=true; b.prog=1; W.rails--; W.scrap+=15; W.stats.fix++; announce('🛤️ Track repaired! +15 scrap','#7dffa8'); fx('win'); saveGame(); pushWorld(); } } });
+      if(b.prog>=1){ b.fixed=true; b.prog=1; W.rails--; { const rp=ground.filter(p=>p.holdE&&Math.hypot(p.x-o.x,p.z-o.z)<2.6); if(rp.length) rp.forEach(p=>earn(15/rp.length,p.id)); else earn(15); } W.stats.fix++; announce('🛤️ Track repaired! +15 scrap','#7dffa8'); fx('win'); saveGame(); pushWorld(); } } });
   // stations: slow down to connect; also restock rails + deliveries
   STATIONS.forEach((st,i)=>{ const d=near(S.trainS,st.s);
-    if(!W.stations[i]&&d<22&&S.v<4.2){ W.stations[i]=true; W.scrap+=40; lightStation(i); announce(`🏁 ${st.name} connected! +40 scrap (${W.stations.filter(Boolean).length}/25)`,'#7dffa8'); fx('win');
+    if(!W.stations[i]&&d<22&&S.v<4.2){ W.stations[i]=true; earn(40); lightStation(i); announce(`🏁 ${st.name} connected! +40 scrap (${W.stations.filter(Boolean).length}/25)`,'#7dffa8'); fx('win');
       if(i%5===0&&i>0) announce(`🗺️ You reached ${REGIONS[st.region].name}!`,'#ffd27a'); saveGame(); pushWorld(); }
     if(W.stations[i]&&d<22&&S.v<1){ if(W.rails<maxRails()){ W.rails=maxRails(); announce('🪵 Rails restocked at '+st.name,'#9fe'); pushWorld(); }
-      if(W.delivery&&W.delivery.to===i){ const pay=35*(W.upg.cargo>=2?2:1); W.scrap+=pay; W.stats.del++; announce(`📦 Delivery complete at ${st.name}! +${pay} scrap`,'#7dffa8'); fx('win'); W.delivery=null; saveGame(); pushWorld(); }
+      if(W.delivery&&W.delivery.to===i){ const pay=35*(W.upg.cargo>=2?2:1); earn(pay); W.stats.del++; announce(`📦 Delivery complete at ${st.name}! +${pay} scrap`,'#7dffa8'); fx('win'); W.delivery=null; saveGame(); pushWorld(); }
       else if(!W.delivery&&W.upg.cargo>=1&&i!==W.lastOffer){ W.lastOffer=i; const to=(i+2+Math.floor(Math.random()*3))%25; W.delivery={from:i,to}; announce(`📦 New delivery: carry crates from ${st.name} to ${STATIONS[to].name}`,'#9fe'); pushWorld(); } } });
   // the Hollow Engine (from station 3 on)
   const cnt=W.stations.filter(Boolean).length, M=W.mon, safe=nearAnyStation(30)&&!W.boss.on;
@@ -521,7 +561,7 @@ function bossDamage(d){ const B=W.boss; if(!B.on) return; B.hp-=d*(B.phase===3&&
   if(B.phase===1&&B.hp<B.max*.66){ B.phase=2; fx('phase'); announce('💢 PHASE 2: Rattlejaw tears up the track ahead and calls the HOLLOW ENGINE! Fix the track and hold it off!','#ff7a6a');
     moveBreak(BOSSB,(S.trainS+14+45)%TL); W.breaks[BOSSB]={fixed:false,prog:0}; W.rails=Math.max(W.rails,1); W.mon.on=true; W.mon.s=S.trainS-70; W.mon.hp=90; pushWorld(); }
   if(B.phase===2&&B.hp<B.max*.33){ B.phase=3; fx('phase'); if(W.upg.launcher) W.missiles=Math.max(W.missiles,Math.min(3,missileCap())); announce('⚠️ PHASE 3: the GOLDEN WHISTLE is exposed on its head! Missiles do TRIPLE damage now!'+(W.upg.launcher?' (+3 missiles)':''),'#ffd27a'); pushWorld(); }
-  if(B.hp<=0){ B.hp=0; B.on=false; B.done=true; W.breaks[BOSSB]={fixed:true,prog:1}; W.rj.ph='dive'; W.rj.t=0; W.mon.on=false; W.scrap+=300; W.stats.rj++; fx('victory'); fx('phase');
+  if(B.hp<=0){ B.hp=0; B.on=false; B.done=true; W.breaks[BOSSB]={fixed:true,prog:1}; W.rj.ph='dive'; W.rj.t=0; W.mon.on=false; earn(300); W.stats.rj++; fx('victory'); fx('phase');
     announce('🏆 RATTLEJAW IS DEFEATED! THE ISLAND IS SAVED! +300 scrap','#ffd27a'); saveGame(); pushWorld(); broadcast({t:'victory'}); showVictory(); } }
 function bossStep(){ const J=W.rj, B=W.boss; if(!J.on){ J.on=true; J.ph='tremor'; J.t=0; } J.t+=DT;
   if(J.ph==='tremor'){ if(J.t>2){ J.ph='up'; J.t=0; fx('roar'); } }
@@ -543,7 +583,7 @@ function launchMissileFx(target){ const m=missiles.find(m=>!m.on); if(!m) return
 // =====================================================================
 //  GAME LOOP
 // =====================================================================
-function beginGame(){ S.started=true; S.helpUntil=performance.now()+12000; $('lobby').style.display='none'; $('hud').style.display='block'; $('clickToPlay').style.display='block';
+function beginGame(){ S.started=true; sendPlist(); S.helpUntil=performance.now()+12000; $('lobby').style.display='none'; $('hud').style.display='block'; $('clickToPlay').style.display='block';
   const p=S.players[myId()]; me.x=p?p.x:0; me.z=p?p.z:2; W.stations.forEach((c,i)=>{ if(c) lightStation(i); }); applyPaint();
   feed('All aboard! Follow the MISSION at the top. Connect all 25 stations!','#ffcf6a'); if(!W.upg.gun&&!W.upg.material) feed('🔧 Your train is just an engine. Press Tab / △ to open the TRAIN screen and attach your first cars!','#9fe'); A.whistle(); if(net.role==='host') pushWorld(); }
 $('clickToPlay').onclick=()=>renderer.domElement.requestPointerLock();
@@ -560,18 +600,20 @@ let shake=0; const DT=1/60; let netT=0, worldT=0, last=performance.now(), acc=0;
 const PH={lx:0,ly:0,dx:0,dy:0,b:{},c:{},seen:{},last:0};   // phone controller state
 const BTN_ICON={x:'✕',o:'○',s:'□',t:'△'}, BTN_KEY={x:'E',o:'Q',s:'F',t:'Tab'};
 const kbOnly=()=>!padActive;
-const chip=k=>`<span class="pb ${k}">${BTN_ICON[k]}</span>${kbOnly()?`<small class="kk">${BTN_KEY[k]}</small>`:''}`;
+const chip=k=>`<span class="ui-glyph ui-${k}">${BTN_ICON[k]}</span>${kbOnly()?`<small class="ui-key">${BTN_KEY[k]}</small>`:''}`;
 let lastTY=0, uiSent='', curTarget=null;
 function readControls(){
+  const typing=document.activeElement&&document.activeElement.tagName==='INPUT'&&document.activeElement.type!=='checkbox'; if(typing){ for(const k in tapped) delete tapped[k]; }
+  const K=typing?{}:keys;
   const gp=[...(navigator.getGamepads?navigator.getGamepads():[])].find(g=>g&&g.connected), n=gp?Input.named(gp):{}, dz=v=>Math.abs(v||0)<.18?0:v;
   if(gp&&(gp.buttons.some(b=>b.pressed)||Math.abs(n.lx)+Math.abs(n.ly)+Math.abs(n.rx||0)+Math.abs(n.ry||0)>.6)) padActive=true;
   if(performance.now()-PH.last<1500) padActive=true;
   // buttons: held + pressed-this-frame (phone sends a press counter so quick taps are never lost)
-  const held={x:!!(keys.KeyE||n.cross||PH.b.x),o:!!(keys.KeyQ||n.circle||PH.b.o),s:!!(mouseDown||keys.KeyF||n.square||PH.b.s),t:!!(n.triangle||PH.b.t)}, P={};
+  const held={x:!!(K.KeyE||n.cross||PH.b.x),o:!!(K.KeyQ||n.circle||PH.b.o),s:!!(mouseDown||K.KeyF||n.square||PH.b.s),t:!!(n.triangle||PH.b.t)}, P={};
   for(const k in held){ P[k]=(held[k]&&!step.prevB?.[k])||(PH.c[k]||0)>(PH.seen[k]||0); PH.seen[k]=PH.c[k]||0; }
   step.prevB=held; if(clicked) P.s=true; clicked=false; if(tapped.Tab) P.t=true; if(tapped.Enter) P.x=true; if(tapped.Escape) P.o=true;
   // movement stick (keys, left stick, d-pad, phone)
-  const mx=clamp((keys.KeyD?1:0)-(keys.KeyA?1:0)+dz(n.lx)+(n.dright?1:0)-(n.dleft?1:0)+PH.lx,-1,1), my=clamp((keys.KeyW?1:0)-(keys.KeyS?1:0)-dz(n.ly)+(n.dup?1:0)-(n.ddown?1:0)-PH.ly,-1,1);
+  const mx=clamp((K.KeyD?1:0)-(K.KeyA?1:0)+dz(n.lx)+(n.dright?1:0)-(n.dleft?1:0)+PH.lx,-1,1), my=clamp((K.KeyW?1:0)-(K.KeyS?1:0)-dz(n.ly)+(n.dup?1:0)-(n.ddown?1:0)-PH.ly,-1,1);
   // look (mouse is handled by mousemove)
   me.yaw-=dz(n.rx)*.05+PH.dx*.0062; me.pitch=clamp(me.pitch-dz(n.ry)*.038-PH.dy*.0048,-1.3,1.3); PH.dx=PH.dy=0;
   const flick=(k,v)=>{ const r=v&&!step['f'+k]; step['f'+k]=v; return r; };
@@ -582,6 +624,10 @@ function readControls(){
     if((P.t||(n.options&&!step.popt))&&net.role==='host'&&!$('startBtn').disabled) $('startBtn').click();
     ui={x:'Ready',o:'',s:'',t:net.role==='host'?'Start':'',hint:'◀ ▶ change outfit',stick:'outfit'}; P.x=P.t=P.o=P.s=false; }
   step.popt=n.options;
+  // ----- title screen: ▲ ▼ choose · ✕ select      join screen: ✕ join · ○ back
+  if(!S.started&&$('menu').style.display==='flex'){ if(fU||tapped.ArrowUp) setMenuSel(0); if(fD||tapped.ArrowDown) setMenuSel(1); if((P.x||tapped.Enter)&&!typing) $('mainMenu').children[menuSel].click();
+    ui={x:'Select',o:'',s:'',t:'',hint:'',stick:'choose'}; P.x=P.t=P.o=P.s=false; }
+  if(!S.started&&$('joinScreen').style.display==='flex'){ if(P.o||tapped.Escape) showTitle(); if(P.x&&!typing) $('joinBtn').click(); ui={x:'Join',o:'Back',s:'',t:'',hint:'',stick:''}; P.x=P.t=P.o=P.s=false; }
   // ----- train screen
   if(tapped.KeyV&&S.started&&!phoneConn){ if(Voice.st.up) Voice.setMic(!Voice.st.mic); else feed('🎤 Voice starts when friends join the room','#9fe'); }
   if(S.started&&P.t) toggleShop();
@@ -597,7 +643,7 @@ function readControls(){
     if(me.seat==='drive'){
       // left stick / W S = throttle lever; pull back with no throttle = brake
       let th=S.throttle; if(my>.2) th+=.5*my*DT; if(my<-.2) th+=.9*my*DT; th=clamp(th,0,1);
-      const br=!!(keys.Space||(my<-.2&&S.throttle<.01)), hr=P.x, ms=P.s&&!!W.upg.launcher;
+      const br=!!(K.Space||(my<-.2&&S.throttle<.01)), hr=P.x, ms=P.s&&!!W.upg.launcher;
       sendCtl({throttle:th,brake:br,horn:hr,missile:ms}); if(net.role==='host'){ S.throttle=th; S.brake=br?1:0; if(hr) hostHorn(); if(ms) fireMissile(0); }
       if(hr) hornPull=1;
       if(P.o) requestSeat(null);
@@ -610,7 +656,7 @@ function readControls(){
     }
     if(me.seat){ const st=SEATS[me.seat]; if(st){ me.x=st.x; me.z=st.z; } }
     else {
-      const run=keys.ShiftLeft||n.l3||Math.hypot(PH.lx,PH.ly)>.94, sp=(run?4.3:2.5)*DT;
+      const run=K.ShiftLeft||n.l3||Math.hypot(PH.lx,PH.ly)>.94, sp=(run?4.3:2.5)*DT;
       const mv=new THREE.Vector3(Math.sin(me.yaw),0,Math.cos(me.yaw)).multiplyScalar(my).add(new THREE.Vector3(-Math.cos(me.yaw),0,Math.sin(me.yaw)).multiplyScalar(mx)); if(mv.lengthSq()>1) mv.normalize();
       if(me.mode==='train'){ const tx=me.x+mv.x*sp, tz=me.z+mv.z*sp; if(inside(tx,tz)){ me.x=tx; me.z=tz; } else if(inside(tx,me.z)) me.x=tx; else if(inside(me.x,tz)) me.z=tz; }
       else { const ox=me.gx, oz=me.gz; me.gx+=mv.x*sp; me.gz+=mv.z*sp; const q={x:me.gx,z:me.gz}; collide(q,.35); me.gx=q.x; me.gz=q.z; if(groundH(me.gx,me.gz)<-1.25){ me.gx=ox; me.gz=oz; }
@@ -684,7 +730,7 @@ function updateUI(ui){ const seat=S.started&&me.seat&&!shopOpen();
   if($('hints').innerHTML!==h) $('hints').innerHTML=h; $('hints').style.display=h?'block':'none';
   if(phoneConn){ const key=JSON.stringify(ui); if(key!==uiSent){ uiSent=key; phoneConn.send({t:'ui',labels:{x:ui.x,o:ui.o,s:ui.s,t:ui.t},hint:ui.hint,stick:ui.stick}); }
     // status line + danger warning for the phone (twice a second, or right away when a warning starts / ends)
-    if(S.started&&(++statT>=30||lastWarn!==warnSent)){ statT=0; warnSent=lastWarn; phoneConn.send({t:'stat',hp:W.hp/maxHp(),scrap:W.scrap,ammo:W.upg.gun?W.ammo:null,mis:W.upg.launcher?W.missiles:null,rails:W.rails,rmax:maxRails(),warn:lastWarn}); } } }
+    if(S.started&&(++statT>=30||lastWarn!==warnSent)){ statT=0; warnSent=lastWarn; phoneConn.send({t:'stat',hp:W.hp/maxHp(),scrap:Math.floor(W.scrap),ammo:W.upg.gun?W.ammo:null,mis:W.upg.launcher?W.missiles:null,rails:W.rails,rmax:maxRails(),warn:lastWarn}); } } }
 let swing=0, padActive=false, shopT=0, hornPull=0, camRoll=0, phoneConn=null, lastWarn='', warnSent='', statT=0;
 let lastCtl=0; function sendCtl(c){ if(net.role!=='client') return; const now=performance.now(); if(now-lastCtl<50&&!c.fire&&!c.horn&&!c.missile) return; lastCtl=now; net.conn.send({t:'ctl',...c}); }
 function requestSeat(k){ me.seatT=performance.now(); if(k==='drive'){ me.yaw=0; me.pitch=-.05; } if(k==='gun'){ me.yaw=Math.PI; me.pitch=-.08; }
@@ -725,25 +771,25 @@ function shopAct(r,dir=1){ if(!r) return;
   if(r.t==='craft') send({t:'craft',k:r.k},()=>craft(r.k));
   if(r.t==='paint'){ if(!atYard()){ A.dry(); return; } const i=(W.paint+dir+PAINTS.length)%PAINTS.length; send({t:'paint',i},()=>setPaint(i)); }
   setTimeout(renderShop,250); }
-function renderShop(){ $('shopScrap').textContent=W.scrap; $('shopHint').innerHTML=`${chip('x')} select &nbsp; ${chip('s')} store car &nbsp; ◀ ▶ paint &nbsp; ${chip('o')} close`; $('shopRoom').innerHTML='Room '+net.code+(padCode?' · 📱 '+padCode:'')+' · '+Object.values(S.players).map(p=>`<span style="color:${p.color}">${p.name}</span>`).join(' · '); const yard=atYard(), cc=canCraft();
+function renderShop(){ $('shopScrap').textContent=Math.floor(W.scrap); $('shopWho').innerHTML='Collected together: '+(Object.entries(W.contrib).filter(([k,c])=>c.n>0).map(([k,c])=>k==='team'?`<span>team bonuses 🔩${Math.round(c.n)}</span>`:`<span style="color:${c.color}">${c.name} 🔩${Math.round(c.n)}</span>`).join(' · ')||'nothing yet'); $('shopHint').innerHTML=`${chip('x')} select &nbsp; ${chip('s')} store car &nbsp; ◀ ▶ paint &nbsp; ${chip('o')} close`; $('shopRoom').innerHTML='Room '+net.code+(phoneConn?' · 📱 phone connected':'')+' · '+Object.values(S.players).map(p=>`<span style="color:${p.color}">${p.name}</span>`).join(' · '); const yard=atYard(), cc=canCraft();
   $('shopWhere').innerHTML=yard?'<span style="color:#7dffa8">✓ You are at THE YARD: upgrades and new cars are available</span>':'<span style="color:#ff9a7a">Upgrades only at THE YARD (station 1). Stop there to buy.</span>';
   shopRows=[{t:'craft',k:'ammo'},{t:'craft',k:'missile'},...UPG_ORDER.map(k=>({t:'up',k})),{t:'paint'},...(phoneConn?[{t:'vinfo'}]:Voice.st.up?[{t:'vmic'},{t:'vsnd'},...Voice.st.players.map(p=>({t:'vply',id:p.id,name:p.name,color:p.color}))]:[])]; shopSel=clamp(shopSel,0,shopRows.length-1);
   $('shopList').innerHTML=shopRows.map((r,i)=>{ const sel=i===shopSel?' sel':'';
     if(r.t==='craft'){ const am=r.k==='ammo', ok=am?(W.upg.gun&&W.scrap>=ammoCost()&&W.ammo<maxAmmo()):(W.upg.launcher&&W.scrap>=25&&W.missiles<missileCap())&&cc;
       const info=am?(W.upg.gun?`ammo ${W.ammo}/${maxAmmo()}`:'needs the gun deck'):(W.upg.launcher?`missiles ${W.missiles}/${missileCap()}`:'needs the missile launcher');
-      return `<div class="up${sel}" data-i="${i}"><div class="ic">${am?'🧨':'🎯'}</div><div class="tx"><b>Craft ${am?'ammo +40':'a missile'}</b><br><small>${info}${cc?'':' · <span class="need">craft at the Yard, or buy the workshop car</span>'}</small></div><button ${ok&&cc?'':'disabled'}>${am?ammoCost():25} 🔩</button></div>`; }
-    if(r.t==='vinfo') return `<div class="up${sel}" data-i="${i}"><div class="ic">📱</div><div class="tx"><b>Voice chat</b><br><small>Use the 🎤 🔊 👥 circles on your phone</small></div></div>`;
-    if(r.t==='vmic') return `<div class="up${sel}" data-i="${i}"><div class="ic">🎤</div><div class="tx"><b>Your microphone</b><br><small>${Voice.st.mic?'friends can hear you':'off · friends cannot hear you'} · key V</small></div><button>${Voice.st.mic?'ON':'OFF'}</button></div>`;
-    if(r.t==='vsnd') return `<div class="up${sel}" data-i="${i}"><div class="ic">🔊</div><div class="tx"><b>Voice sound</b><br><small>${Voice.st.snd?'you can hear friends':'muted · you cannot hear anyone'}</small></div><button>${Voice.st.snd?'ON':'OFF'}</button></div>`;
-    if(r.t==='vply'){ const h=Voice.st.hear[r.id]!==false, t=Voice.st.talk[r.id]!==false; return `<div class="up${sel}" data-i="${i}"><div class="ic" style="color:${r.color}">●</div><div class="tx"><b>${r.name}</b>${Voice.st.speaking[r.id]?' <span style="color:#7dffa8">talking…</span>':''}<br><small>Hear = you listen to them · Talk = they hear you</small></div><button class="vt" style="margin-right:6px">${t?'🎤 TALK':'🎤 off'}</button><button>${h?'🔊 HEAR':'🔊 off'}</button></div>`; }
-    if(r.t==='paint') return `<div class="up${sel}" data-i="${i}"><div class="ic">🎨</div><div class="tx"><b>Paint</b> <small>${PAINTS[W.paint][0]}</small><br><small>${yard?'free · ← → to change':'only at the Yard'}</small></div><div>${PAINTS.map((p,j)=>`<span class="sw" data-p="${j}" style="background:#${p[1].toString(16).padStart(6,'0')};${W.paint===j?'outline:3px solid #ffcf6a':''}"></span>`).join('')}</div></div>`;
+      return `<div class="ui-row${sel}" data-i="${i}"><div class="ic">${am?'🧨':'🎯'}</div><div class="tx"><b>Craft ${am?'ammo +40':'a missile'}</b><br><small>${info}${cc?'':' · <span class="ui-bad">craft at the Yard, or buy the workshop car</span>'}</small></div><button class="ui-btn sm" ${ok&&cc?'':'disabled'}>${am?ammoCost():25} 🔩</button></div>`; }
+    if(r.t==='vinfo') return `<div class="ui-row${sel}" data-i="${i}"><div class="ic">📱</div><div class="tx"><b>Voice chat</b><br><small>Use the 🎤 🔊 👥 circles on your phone</small></div></div>`;
+    if(r.t==='vmic') return `<div class="ui-row${sel}" data-i="${i}"><div class="ic">🎤</div><div class="tx"><b>Your microphone</b><br><small>${Voice.st.mic?'friends can hear you':'off · friends cannot hear you'} · key V</small></div><button class="ui-btn sm">${Voice.st.mic?'ON':'OFF'}</button></div>`;
+    if(r.t==='vsnd') return `<div class="ui-row${sel}" data-i="${i}"><div class="ic">🔊</div><div class="tx"><b>Voice sound</b><br><small>${Voice.st.snd?'you can hear friends':'muted · you cannot hear anyone'}</small></div><button class="ui-btn sm">${Voice.st.snd?'ON':'OFF'}</button></div>`;
+    if(r.t==='vply'){ const h=Voice.st.hear[r.id]!==false, t=Voice.st.talk[r.id]!==false; return `<div class="ui-row${sel}" data-i="${i}"><div class="ic" style="color:${r.color}">●</div><div class="tx"><b>${r.name}</b>${Voice.st.speaking[r.id]?' <span style="color:#7dffa8">talking…</span>':''}<br><small>Hear = you listen to them · Talk = they hear you</small></div><div class="acts"><button class="ui-btn sm vt">${t?'🎤 TALK':'🎤 off'}</button><button class="ui-btn sm">${h?'🔊 HEAR':'🔊 off'}</button></div></div>`; }
+    if(r.t==='paint') return `<div class="ui-row${sel}" data-i="${i}"><div class="ic">🎨</div><div class="tx"><b>Paint</b> <small>${PAINTS[W.paint][0]}</small><br><small>${yard?'free · ← → to change':'only at the Yard'}</small></div><div>${PAINTS.map((p,j)=>`<span class="ui-swatch${W.paint===j?' on':''}" data-p="${j}" style="background:#${p[1].toString(16).padStart(6,'0')}"></span>`).join('')}</div></div>`;
     const u=UPG[r.k], l=W.upg[r.k], why=canBuy(r.k), n=l+1, max=n>u.max, pips='●'.repeat(l-(u.min||0))+'○'.repeat(u.max-l), need=!max&&u.need&&u.need[n]?PARTS.find(p=>p.k===u.need[n]):null;
     const stored=u.car&&W.store[r.k];
-    if(stored) return `<div class="up${sel}" data-i="${i}"><div class="ic">${u.icon}</div><div class="tx"><b>${u.name}</b> <span class="pips">${'●'.repeat(stored)+'○'.repeat(u.max-stored)}</span><br><small>🅿️ Parked in the Yard (level ${stored})</small></div><button ${yard?'':'disabled'}>ATTACH</button></div>`;
-    const stBtn=u.car&&l>0&&yard?`<button class="stb" style="margin-right:6px;border-color:#5a6a7a;background:#141a24;color:#c8d4e0">STORE</button>`:'';
-    return `<div class="up${sel}" data-i="${i}"><div class="ic">${u.icon}</div><div class="tx"><b>${u.name}</b> <span class="pips">${pips}</span><br><small>Now: ${u.lv[l]}</small><br>${max?'<small class="nx">⭐ Fully upgraded!</small>':`<small class="nx">Next: ${u.lv[n]}</small>${need?` <small class="${W.parts[need.k]?'nx':'need'}">· needs ${need.name}${W.parts[need.k]?' ✓':` (behind ${STATIONS[need.st].name})`}</small>`:''}`}</div>${stBtn}<button class="bb" ${why?'disabled':''}>${max?'MAX':(u.car&&!l?'ATTACH ':'')+u.cost[n]+' 🔩'}</button></div>`; }).join('');
-  $('shopList').querySelectorAll('.up').forEach(d=>{ const i=+d.dataset.i; d.onmouseenter=()=>{ shopSel=i; d.parentNode.querySelectorAll('.up').forEach(x=>x.classList.toggle('sel',x===d)); }; const bs=d.querySelectorAll('button'); bs.forEach(b=>b.onclick=()=>{ shopSel=i; shopAct(b.classList.contains('stb')?{t:'store',k:shopRows[i].k}:b.classList.contains('vt')?{t:'vtalk',id:shopRows[i].id}:shopRows[i]); }); });
-  $('shopList').querySelectorAll('.sw').forEach(sw=>sw.onclick=()=>{ if(!atYard()) return; const j=+sw.dataset.p; if(net.role==='host') setPaint(j); else net.conn.send({t:'paint',i:j}); setTimeout(renderShop,250); });
+    if(stored) return `<div class="ui-row${sel}" data-i="${i}"><div class="ic">${u.icon}</div><div class="tx"><b>${u.name}</b> <span class="ui-pips">${'●'.repeat(stored)+'○'.repeat(u.max-stored)}</span><br><small>🅿️ Parked in the Yard (level ${stored})</small></div><button class="ui-btn sm" ${yard?'':'disabled'}>ATTACH</button></div>`;
+    const stBtn=u.car&&l>0&&yard?`<button class="ui-btn alt sm stb">STORE</button>`:'';
+    return `<div class="ui-row${sel}" data-i="${i}"><div class="ic">${u.icon}</div><div class="tx"><b>${u.name}</b> <span class="ui-pips">${pips}</span><br><small>Now: ${u.lv[l]}</small><br>${max?'<small class="ui-good">⭐ Fully upgraded!</small>':`<small class="ui-good">Next: ${u.lv[n]}</small>${need?` <small class="${W.parts[need.k]?'ui-good':'ui-bad'}">· needs ${need.name}${W.parts[need.k]?' ✓':` (behind ${STATIONS[need.st].name})`}</small>`:''}`}</div><div class="acts">${stBtn}<button class="ui-btn sm bb" ${why?'disabled':''}>${max?'MAX':(u.car&&!l?'ATTACH ':'')+u.cost[n]+' 🔩'}</button></div></div>`; }).join('');
+  $('shopList').querySelectorAll('.ui-row').forEach(d=>{ const i=+d.dataset.i; d.onmouseenter=()=>{ shopSel=i; d.parentNode.querySelectorAll('.ui-row').forEach(x=>x.classList.toggle('sel',x===d)); }; const bs=d.querySelectorAll('button'); bs.forEach(b=>b.onclick=()=>{ shopSel=i; shopAct(b.classList.contains('stb')?{t:'store',k:shopRows[i].k}:b.classList.contains('vt')?{t:'vtalk',id:shopRows[i].id}:shopRows[i]); }); });
+  $('shopList').querySelectorAll('.ui-swatch').forEach(sw=>sw.onclick=()=>{ if(!atYard()) return; const j=+sw.dataset.p; if(net.role==='host') setPaint(j); else net.conn.send({t:'paint',i:j}); setTimeout(renderShop,250); });
   $('shopList').querySelector('.sel')?.scrollIntoView({block:'nearest'}); }
 $('shopClose').onclick=()=>toggleShop();
 
@@ -752,7 +798,7 @@ const avatars={};
 function avatar(p){ if(avatars[p.id]) return avatars[p.id]; const g=new THREE.Group(), crew=new Crew(p.outfit|0); g.add(crew.root); g.userData.crew=crew;
   const lamp=new THREE.Mesh(new THREE.SphereGeometry(.045,8,6),new THREE.MeshBasicMaterial({color:0xffd080})); lamp.position.set(.12,1.33,.17); g.add(lamp);
   const cv=document.createElement('canvas'); cv.width=256; cv.height=64; const x=cv.getContext('2d'); x.font='bold 34px Georgia'; x.textAlign='center'; x.fillStyle='#000a'; x.fillRect(0,8,256,48); x.fillStyle=p.color; x.fillText(p.name,128,44);
-  const tag=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false})); tag.scale.set(1.1,.275,1); tag.position.y=2.12; g.add(tag);
+  const tag=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false})); tag.scale.set(1.1,.275,1); tag.position.y=2.12; g.add(tag); g.userData.tag=tag;
   avatars[p.id]=g; return g; }
 const myLamp=new THREE.PointLight(0xffc888,6,12,1.6); scene.add(myLamp);
 // first-person wrench (visible on foot)
@@ -761,10 +807,11 @@ const wrench=new THREE.Group(); { const sh=new THREE.Mesh(new THREE.BoxGeometry(
 // ---------- render ----------
 const up=new THREE.Vector3(0,1,0), fogC=new THREE.Color(), tmp=new THREE.Vector3();
 function render(){
+  const lobbyUp=!S.started&&$('lobby').style.display==='flex'; if(!S.started) S.trainS=lobbyUp?LOBBY_S:TITLE_S;   // before the game: the engine waits at the Yard
   const u=((S.trainS/TL)%1+1)%1, p=curve.getPointAt(u), t=curve.getTangentAt(u);
   train.position.set(p.x,.25,p.z); train.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),t); train.updateMatrixWorld();
   moon.position.copy(train.position).add(new THREE.Vector3(-30,45,15)); moon.target.position.copy(train.position);
-  const reg=REGIONS[regionAt(S.trainS)]; fogC.set(reg.fog); scene.fog.density=lerp(scene.fog.density,[.018,.014,.011][W.upg.light]||.018,.02); scene.fog.color.lerp(fogC,.02); scene.background.lerp(fogC,.02);
+  const reg=REGIONS[regionAt(S.trainS)]; fogC.set(reg.fog); scene.fog.density=lerp(scene.fog.density,S.started?([.018,.014,.011][W.upg.light]||.018):.009,.03); hemi.intensity=lerp(hemi.intensity,S.started?1.25:2.1,.04); scene.fog.color.lerp(fogC,.02); scene.background.lerp(fogC,.02);
   if(GUN){ GUN.rotation.y=S.gunYaw; GUN.rotation.x=-S.gunPitch; }
   W.breaks.forEach((b,i)=>{ const o=breakObjs[i]; o.bad.visible=!b.fixed; o.good.visible=b.fixed; o.ring.material.opacity=.5+Math.sin(performance.now()/200)*.3; o.ring.scale.setScalar(1+(b.prog||0)*.5); });
   crateObjs.forEach((g,i)=>{ g.visible=!W.crates[i]; });
@@ -791,10 +838,10 @@ function render(){
   for(const id in avatars) if(!S.players[id]){ avatars[id].parent?.remove(avatars[id]); delete avatars[id]; }
   // the lobby lines the crew up outside the Yard shed; in game every other player is a walking, running character
   const lobbyOn=!S.started&&$('lobby').style.display==='flex', crewList=Object.values(S.players); let li=0;
-  for(const pl of crewList){ const isMe=+pl.id===mid; if(isMe&&!lobbyOn){ if(avatars[pl.id]) avatars[pl.id].visible=false; continue; } const a=avatar(pl), cr=a.userData.crew; a.visible=true;
+  for(const pl of crewList){ const isMe=+pl.id===mid; if(isMe&&!lobbyOn){ if(avatars[pl.id]) avatars[pl.id].visible=false; continue; } const a=avatar(pl), cr=a.userData.crew; a.visible=true; a.userData.tag.visible=!lobbyOn;
     if(cr.outfit!==(pl.outfit|0)) cr.setOutfit(pl.outfit|0);
     let par, px, py, pz, yw;
-    if(lobbyOn){ par=yardG; px=(li++-(crewList.length-1)/2)*1.25-2.3; py=0; pz=27; yw=.25; }
+    if(lobbyOn){ par=yardG; const sl=Math.min(3,li++); px=PAD_X[sl]; py=PAD_Y+.1; pz=PAD_Z; yw=-PAD_X[sl]*.06; }
     else if(pl.mode==='ground'){ par=scene; px=pl.x; pz=pl.z; py=groundH(px,pz); yw=pl.yaw; } else { par=train; px=pl.x; py=DECK; pz=pl.z; yw=pl.yaw; }
     if(a.parent!==par){ par.add(a); a.userData.lp=null; }
     a.position.set(px,py,pz); a.rotation.y=yw;
@@ -807,7 +854,11 @@ function render(){
   let roll=0; if(me.mode==='train'){ const ty=trainYaw(); let dy=ty-lastTY; dy=((dy+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI; lastTY=ty; roll=clamp(-dy*60*S.v*.035,-.06,.06);
     const tt=performance.now()/1000, k=Math.min(1,S.v/10); eye.y+=Math.sin(tt*(2+S.v*1.4))*.014*k+Math.sin(tt*31)*.004*k; eye.add(new THREE.Vector3(Math.sin(tt*(1+S.v*.7))*.01*k,0,0).applyQuaternion(train.quaternion)); }
   camRoll=lerp(camRoll,roll,.06);
-  if(lobbyOn){ const V=THREE.Vector3; eye=yardG.localToWorld(new V(.2,1.45,31.6)); look=yardG.localToWorld(new V(-.1,1.0,27)).sub(eye).normalize(); }
+  { const V=THREE.Vector3, t=performance.now()/1000; lobbyPads.visible=lobbyOn; lobbyLight.visible=!S.started;
+    if(!S.started){ if(lobbyOn){ lobbyLight.position.set(0,7,37); lobbyLight.target.position.set(0,1.6,PAD_Z); } else { lobbyLight.position.set(-5,6,32); lobbyLight.target.position.set(0,1.8,20); } }
+    if(lobbyOn){ eye=yardG.localToWorld(new V(-.4+Math.sin(t*.15)*.3,2.3,35.6)); look=yardG.localToWorld(new V(-.4,1.25,PAD_Z)).sub(eye).normalize();
+      lobbyPads.children.filter(c=>c.userData.ring).forEach((pad,sl)=>{ const pl=crewList[sl], col=pl?new THREE.Color(pl.color):new THREE.Color(0x4a505c); pad.userData.ring.material.color.copy(col).multiplyScalar(pl?(pl.ready?1.5:.6):.4); const g=pad.userData.glow.material; g.color.copy(col); g.opacity=pl?(pl.ready?.55:.18):0; }); }
+    else if(!S.started){ eye=yardG.localToWorld(new V(-9+Math.sin(t*.11)*1.4,2.1+Math.sin(t*.08)*.25,35)); look=yardG.localToWorld(new V(.6,2.2,20.5)).sub(eye).normalize(); } }
   if(W.rj.on&&W.rj.ph==='tremor') shake=Math.max(shake,.25);
   if(shake>.01){ eye.add(new THREE.Vector3((Math.random()-.5)*shake*.3,(Math.random()-.5)*shake*.3,(Math.random()-.5)*shake*.3)); shake*=.9; }
   if(shopOpen()){ const mid=(REAR+14)/2, R=(14-REAR)/2+9, a=performance.now()/9000; eye=new THREE.Vector3(Math.sin(a)*R,4.5+R*.12,mid+Math.cos(a)*R).applyMatrix4(train.matrixWorld); look=new THREE.Vector3(0,1.8,mid).applyMatrix4(train.matrixWorld).sub(eye).normalize();
@@ -818,7 +869,7 @@ function render(){
   // the button marker on whatever you are looking at
   { const mk=$('mark'); if(curTarget&&S.started&&!shopOpen()){ const v=curTarget.wp.clone().project(camera); if(v.z<1&&Math.abs(v.x)<1.1&&Math.abs(v.y)<1.1){ mk.style.display='block'; mk.style.left=((v.x+1)/2*innerWidth)+'px'; mk.style.top=((1-v.y)/2*innerHeight)+'px'; const html=(curTarget.act?chip('x'):'')+`<span>${curTarget.label}</span>`; if(mk.innerHTML!==html) mk.innerHTML=html; } else mk.style.display='none'; } else mk.style.display='none'; }
   wrench.visible=me.mode==='ground'&&!shopOpen(); if(wrench.visible){ swing*=.85; wrench.position.set(.32,-.32+swing*.15,-.6); wrench.rotation.set(-.5-swing*1.4,0,-.3); }
-  if(S.started&&Math.random()<.25+S.throttle*.5){ const s=smoke.find(s=>s.life<=0); if(s){ s.m.position.copy(new THREE.Vector3(0,5.2,12.3).applyMatrix4(train.matrixWorld)); s.m.scale.setScalar(.5); s.m.visible=true; s.life=3; } }
+  if(Math.random()<(S.started?.25+S.throttle*.5:.14)){ const s=smoke.find(s=>s.life<=0); if(s){ s.m.position.copy(new THREE.Vector3(0,5.2,12.3).applyMatrix4(train.matrixWorld)); s.m.scale.setScalar(.5); s.m.visible=true; s.life=3; } }
   for(const s of smoke) if(s.life>0){ s.life-=1/60; s.m.position.y+=.05; s.m.scale.multiplyScalar(1.012); s.m.material.opacity=Math.max(0,s.life/3*.45); if(s.life<=0) s.m.visible=false; }
   for(const tr of tracers) if(tr.life>0){ tr.life-=1/60; tr.m.position.addScaledVector(tr.v,1/60); if(tr.life<=0) tr.m.visible=false; }
   if(S.started){ const [m1,m2]=missionText(), now=performance.now();
@@ -836,13 +887,25 @@ function render(){
     const ri=regionAt(S.trainS); if(ri!==S.lastRegion){ S.lastRegion=ri; const rt=$('regionTitle'); rt.textContent=reg.name.toUpperCase(); rt.classList.remove('show'); void rt.offsetWidth; rt.classList.add('show'); }
     $('speed').style.display=me.seat==='drive'?'block':'none'; $('thrBar').style.width=(S.throttle*100)+'%'; $('spd').textContent=Math.round(S.v*3.6);
     $('hpBar').style.width=clamp(W.hp/maxHp()*100,0,100)+'%';
-    const inv=`🔩 ${W.scrap} &nbsp; 🛤️ ${W.stations.filter(Boolean).length}/25`+(W.upg.gun?` &nbsp; 🔫 ${W.ammo}`:'')+` &nbsp; 🪵 ${W.rails}/${maxRails()}`+(W.upg.launcher?` &nbsp; 🚀 ${W.missiles}`:'');
+    const inv=`🔩 ${Math.floor(W.scrap)} &nbsp; 🛤️ ${W.stations.filter(Boolean).length}/25`+(W.upg.gun?` &nbsp; 🔫 ${W.ammo}`:'')+` &nbsp; 🪵 ${W.rails}/${maxRails()}`+(W.upg.launcher?` &nbsp; 🚀 ${W.missiles}`:'');
     if($('inv').innerHTML!==inv) $('inv').innerHTML=inv;
     $('boss').style.display=W.boss.on?'block':'none'; if(W.boss.on){ $('bossBar').style.width=clamp(W.boss.hp/W.boss.max*100,0,100)+'%'; $('bossPh').textContent='PHASE '+W.boss.phase+' / 3'; } }
   yardTrain.visible=camera.position.distanceTo(yardG.position)<200; ISL.update(performance.now()/1000);
+  updateNameplates(lobbyOn,crewList);
   audioFrame();
   renderer.render(scene,camera);
 }
+// ---------- lobby nameplates (name + Ready) above every character, and "+" on the empty pads ----------
+const npEls={}, plusEls=[];
+function updateNameplates(on,list){ const box=$('nameplates');
+  if(!on){ if(box.childElementCount){ box.innerHTML=''; for(const k in npEls) delete npEls[k]; plusEls.length=0; } return; }
+  camera.updateMatrixWorld(); const V=THREE.Vector3, proj=(lx,ly,lz)=>{ const v=yardG.localToWorld(new V(lx,ly,lz)).project(camera); return [(v.x+1)/2*innerWidth,(1-v.y)/2*innerHeight]; };
+  list.forEach((pl,i)=>{ const sl=Math.min(3,i); let el=npEls[pl.id]; if(!el){ el=document.createElement('div'); el.className='ui-nameplate'; box.appendChild(el); npEls[pl.id]=el; }
+    const [x,y]=proj(PAD_X[sl],PAD_Y+2.2,PAD_Z); el.style.left=x+'px'; el.style.top=y+'px';
+    const h=`<div class="n" style="color:${pl.color}">${+pl.id===0?'👑 ':''}${pl.name}${+pl.id===myId()?' (you)':''}</div><div class="s ${pl.ready?'ready':''}">${pl.ready?'READY':'Not ready'} · ${OUTFITS[pl.outfit|0].name}</div>`; if(el._h!==h){ el.innerHTML=h; el._h=h; } });
+  for(const id in npEls) if(!S.players[id]){ npEls[id].remove(); delete npEls[id]; }
+  for(let sl=0;sl<4;sl++){ let e=plusEls[sl]; if(!e){ const b=document.createElement('button'); b.className='ui-plus'; b.textContent='+'; b.onclick=flashRoom; const l=document.createElement('span'); l.textContent='Invite a friend'; box.append(b,l); e=plusEls[sl]={b,l}; }
+    const empty=sl>=list.length; e.b.style.display=e.l.style.display=empty?'block':'none'; if(empty){ const [x,y]=proj(PAD_X[sl],PAD_Y+1.15,PAD_Z); e.b.style.left=x+'px'; e.b.style.top=y+'px'; e.l.style.left=x+'px'; e.l.style.top=(y+34)+'px'; } } }
 // ---------- sound per frame: train chuffs & clacks, footsteps, gnawers, tension music ----------
 let chuffT=0, clackD=0, stepD=0, squeakT=0, ghostT=0, lastS=0, lastG=null, brakeT=0;
 function audioFrame(){ if(!S.started) return; const dt=1/60;
@@ -857,5 +920,5 @@ function audioFrame(){ if(!S.started) return; const dt=1/60;
   let ten=0; if(W.mon.on) ten=Math.max(ten,clamp(1-gap/80,.35,1)); if(W.rj.on) ten=Math.max(ten,W.rj.ph==='tremor'?.7:.95); if(W.gn.length) ten=Math.max(ten,.6); if(W.boss.on) ten=1;
   A.update(dt,{tension:ten,quake:W.rj.on&&W.rj.ph==='tremor'?.8:W.rj.on&&W.rj.ph==='up'&&W.rj.t<1.5?.6:0,region:regionAt(S.trainS),boss:W.boss.on}); }
 (function loop(now=performance.now()){ acc+=Math.min(250,now-last); last=now; while(acc>=1000/60){ step(); acc-=1000/60; } render(); requestAnimationFrame(loop); })();
-window.__rails={startBoss,bossDamage,A,S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy,WALK,SEATS,yardG,avatars,vs,PLAN,ISL,camera,PH,get padCode(){ return padCode; },get target(){ return curTarget; },yardShown,attachCar,storeCar,get REAR(){ return REAR; },train,relayout,inside,collide,groundH,COLL,OBOX,hgt,BLK};
+window.__rails={startBoss,bossDamage,A,S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy,WALK,SEATS,yardG,avatars,vs,takeCrate,earn,PLAN,ISL,camera,PH,get roomCode(){ return net.code; },get target(){ return curTarget; },yardShown,attachCar,storeCar,get REAR(){ return REAR; },train,relayout,inside,collide,groundH,COLL,OBOX,hgt,BLK};
 </script></body></html>

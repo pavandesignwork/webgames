@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rattlejaw UI kit</title>
+<link rel="stylesheet" href="ui.css">
+<style>
+ /* this page only: layout of the style guide itself */
+ html,body{overflow:auto;height:auto}
+ body{padding:var(--sp-5) var(--sp-5) 80px;max-width:1100px;margin:0 auto}
+ h2.sec{font-size:var(--fs-lg);letter-spacing:3px;color:var(--c-gold-title);margin:40px 0 var(--sp-3);padding-bottom:var(--sp-2);border-bottom:1px solid var(--c-border)}
+ .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--sp-3)}
+ .tok{border:1px solid var(--c-border);border-radius:var(--r-md);overflow:hidden;font:var(--fs-xs) var(--font-ui);background:var(--c-panel)} .tok i{display:block;height:44px} .tok div{padding:6px 8px} .tok code{color:var(--c-gold-hi)}
+ .demo{display:flex;flex-wrap:wrap;gap:var(--sp-4);align-items:center;margin:var(--sp-3) 0}
+ .stage{background:linear-gradient(#1a2030,#0b0d14);border:1px solid var(--c-border);border-radius:var(--r-md);padding:var(--sp-4);position:relative}
+ .rule{background:var(--c-panel);border-left:4px solid var(--c-gold);padding:var(--sp-3) var(--sp-4);margin:var(--sp-2) 0;border-radius:var(--r-sm)}
+ .two .ui-panel{width:auto} .two{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4)} @media(max-width:760px){.two{grid-template-columns:1fr}}
+ .sp{display:flex;align-items:center;gap:var(--sp-3);font:var(--fs-xs) var(--font-ui);margin:4px 0} .sp b{display:block;background:var(--c-gold);height:12px}
+</style></head><body>
+<h1 class="ui-title">RATTLEJAW UI KIT</h1>
+<div class="ui-tag">the design system for the game and the phone controller · <code>ui.css</code></div>
+
+<h2 class="sec">RULES</h2>
+<div class="rule"><b>1.</b> Never write a raw colour, size or radius in a page. Use a token: <code>var(--c-gold)</code>, <code>var(--sp-3)</code>, <code>var(--r-md)</code>.</div>
+<div class="rule"><b>2.</b> Build every screen from the components below. A page's own CSS is for <b>layout only</b> (where things go), never for how a button, panel or row looks.</div>
+<div class="rule"><b>3.</b> One main action per screen is a gold <code>.ui-btn</code>. Secondary is <code>.ui-btn.alt</code>. Destructive is <code>.ui-btn.danger</code>.</div>
+<div class="rule"><b>4.</b> Controller buttons are always the PlayStation four, with the same colours everywhere: ✕ blue · ○ red · □ pink · △ green. Shoulder buttons are not used.</div>
+<div class="rule"><b>5.</b> Text over the 3D game uses <code>.ui-hud</code> (soft shadow, no boxes). Keep it short. Show a hint only when it matters.</div>
+
+<h2 class="sec">COLOUR</h2>
+<div class="grid" id="colors"></div>
+
+<h2 class="sec">TYPE</h2>
+<div class="stage">
+  <div class="ui-title">Title 46 · RATTLEJAW RAILS</div>
+  <div class="ui-title md">Title md 28 · THE ISLAND IS SAVED</div>
+  <div class="ui-h2">H2 20 · SETTINGS</div>
+  <div style="font-size:var(--fs-md)">Body 16 · Georgia is the one typeface players read. <span class="ui-dim">Dim text</span> · <span class="ui-faint">faint text</span> · <span class="ui-gold">gold</span> · <span class="ui-good">good</span> · <span class="ui-bad">bad</span> · <span class="ui-warn">warn</span></div>
+  <div class="ui-label">Label · small caps</div>
+  <div class="ui-note">Note 12 · helper text under a control</div>
+  <div class="ui-code" style="font-size:44px">4727</div>
+</div>
+
+<h2 class="sec">SPACING, RADIUS</h2>
+<div class="two"><div id="space"></div><div class="demo" id="radius"></div></div>
+
+<h2 class="sec">BUTTONS &amp; CONTROLS</h2>
+<div class="stage"><div class="demo">
+  <button class="ui-btn">PRIMARY</button><button class="ui-btn alt">SECONDARY</button><button class="ui-btn danger">DANGER</button><button class="ui-btn" disabled>DISABLED</button>
+  <button class="ui-btn sm">SMALL</button><button class="ui-btn alt sm">STORE</button>
+</div>
+<div class="demo"><input class="ui-input" style="max-width:260px" placeholder="Your name"><input class="ui-input code" style="max-width:220px" value="4727"></div>
+<div class="demo">
+  <div class="ui-seg"><b>Slow</b><b class="on">Normal</b><b>Fast</b></div>
+  <div class="ui-toggle on"></div><div class="ui-toggle"></div>
+  <span><span class="ui-chipbtn on">🔊 Hear</span><span class="ui-chipbtn">🎤 Talk</span></span>
+  <span><span class="ui-swatch on" style="background:#f2c21a"></span><span class="ui-swatch" style="background:#c0442a"></span><span class="ui-swatch" style="background:#4a8ad0"></span></span>
+</div></div>
+
+<h2 class="sec">PANELS &amp; LISTS</h2>
+<div class="two">
+  <div class="ui-panel">
+    <div class="ui-h2">PANEL</div>
+    <div class="ui-list" style="max-height:none">
+      <div class="ui-row sel"><div class="ic">🔥</div><div class="tx"><b>Engine</b> <span class="ui-pips">●●○○</span><br><small>Now: Brass boiler</small><br><small class="ui-good">Next: Armoured hood</small></div><div class="acts"><button class="ui-btn sm">120 🔩</button></div></div>
+      <div class="ui-row"><div class="ic">🛡️</div><div class="tx"><b>Armour</b> <span class="ui-pips">○○○</span><br><small>Now: No armour</small><br><small class="ui-bad">needs a part</small></div><div class="acts"><button class="ui-btn sm" disabled>50 🔩</button></div></div>
+    </div>
+  </div>
+  <div class="ui-panel">
+    <div class="ui-h2">LOBBY PLAYERS</div>
+    <div class="ui-plist" style="margin-top:0">
+      <div class="ui-player" style="border-color:#e8b24a">👑 Uncle <small class="ui-faint">Rail Worker</small><span class="r">✅ READY</span></div>
+      <div class="ui-player" style="border-color:#4ab0e8">Nephew <small class="ui-faint">Explorer</small><span class="r">⏳ not ready</span></div>
+      <div class="ui-player empty" style="border-color:#333">waiting for a player…</div>
+    </div>
+    <button class="ui-btn block">I'M READY</button><button class="ui-btn alt block">▶ START GAME</button><div class="ui-err">Everyone must be ready to start</div>
+  </div>
+</div>
+
+<h2 class="sec">HUD (over the game)</h2>
+<div class="stage ui-hud" style="min-height:160px">
+  <div style="width:210px"><div class="ui-bar good"><i style="width:70%"></i></div><div style="margin-top:5px">🔩 60 &nbsp; 🛤️ 3/25 &nbsp; 🔫 120 &nbsp; 🪵 3/5</div></div>
+  <div class="demo" style="margin-top:var(--sp-3)">
+    <span class="ui-pill"><span class="ui-glyph ui-x">✕</span>Drive the train</span>
+    <span class="ui-pill gold">CLICK TO PLAY</span>
+    <span class="ui-pill"><span class="ui-glyph ui-s">□</span>Whack <span class="ui-glyph ui-o" style="margin-left:10px">○</span>Leave <span class="ui-glyph ui-t" style="margin-left:10px">△</span>Train</span>
+    <span class="ui-badge">3</span>
+  </div>
+  <div style="width:340px"><div class="ui-bar boss"><i style="width:55%"></i></div></div>
+</div>
+
+<h2 class="sec">CONTROLLER BUTTONS (phone)</h2>
+<div class="stage"><div class="demo">
+  <button class="ui-round big ui-t">△</button><button class="ui-round big ui-s">□</button><button class="ui-round big ui-o">○</button><button class="ui-round big ui-x">✕</button>
+  <button class="ui-round off">🎤</button><button class="ui-round on">🔊</button><button class="ui-round">👥<i>2</i></button><button class="ui-round">⚙️</button>
+</div></div>
+
+<script>
+const C=[['--c-bg','page'],['--c-panel','panel'],['--c-field','field'],['--c-hud','hud label'],['--c-border','border'],['--c-border-strong','border strong'],['--c-line','divider'],['--c-text','text'],['--c-text-dim','text dim'],['--c-text-faint','text faint'],['--c-gold','gold'],['--c-gold-hi','gold bright'],['--c-gold-bg','gold bg'],['--c-good','good'],['--c-good-solid','good solid'],['--c-bad','bad'],['--c-bad-solid','bad solid'],['--c-warn','warn'],['--c-info','info'],['--btn-x','✕ button'],['--btn-o','○ button'],['--btn-s','□ button'],['--btn-t','△ button']];
+document.getElementById('colors').innerHTML=C.map(([v,n])=>`<div class="tok"><i style="background:var(${v})"></i><div>${n}<br><code>${v}</code></div></div>`).join('');
+document.getElementById('space').innerHTML=[1,2,3,4,5,6].map(i=>`<div class="sp"><b style="width:var(--sp-${i})"></b>--sp-${i} · ${[4,8,12,16,24,32][i-1]}px</div>`).join('');
+document.getElementById('radius').innerHTML=[['sm',4],['md',8],['lg',12],['pill',999]].map(([n,v])=>`<div style="width:90px;height:56px;border:2px solid var(--c-border-strong);border-radius:var(--r-${n});display:flex;align-items:center;justify-content:center;font:12px var(--font-ui)">--r-${n}</div>`).join('');
+</script>
+</body></html>

@@ -4,107 +4,82 @@
 <meta name="theme-color" content="#0b0d14"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Rattlejaw Pad">
 <title>Rattlejaw Rails · phone controller</title>
+<link rel="stylesheet" href="ui.css">
 <style>
- *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
- html,body{margin:0;height:100%;overflow:hidden;touch-action:none;overscroll-behavior:none;color:#e8e2d0;font-family:Georgia,'Times New Roman',serif;
-   background:radial-gradient(ellipse at 30% 20%,#1d2436 0,#0b0d14 70%)}
- button{font:inherit;cursor:pointer}
- /* ---------- connect screen ---------- */
- #join{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px}
- .card{width:min(420px,94vw);background:#11151ee8;border:2px solid #4a3a26;border-radius:10px;padding:18px 22px;text-align:center;box-shadow:0 20px 60px #000c}
- h1{margin:0;font-size:28px;letter-spacing:3px;color:#d9c08a;text-shadow:0 0 14px #ff5a2a55}
- .tag{color:#8a8070;font-style:italic;font-size:14px;margin:4px 0 14px}
- #code{width:100%;font:bold 44px Georgia;letter-spacing:14px;text-align:center;color:#ffcf6a;background:#0a0c12;border:2px solid #3a3226;border-radius:6px;padding:6px;outline:none;user-select:text;-webkit-user-select:text}
- #go{width:100%;margin-top:12px;font:bold 22px Georgia;letter-spacing:2px;padding:12px;border-radius:6px;border:2px solid #c9a24a;background:#2a1f12;color:#f0d9a0}
- #err{color:#ff8a7a;min-height:1.3em;margin-top:8px;font-size:14px}
- .small{font-size:12px;color:#8a8070;margin-top:8px;line-height:1.5}
- /* ---------- controller ---------- */
+ /* LAYOUT ONLY. Looks come from ui.css (the design system). */
+ *{-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+ html,body{touch-action:none;overscroll-behavior:none;background:radial-gradient(ellipse at 30% 20%,#1d2436 0,#0b0d14 70%)}
+ #join{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:var(--sp-4)} #join .ui-panel{width:min(420px,94vw);text-align:center;padding:var(--sp-4) var(--sp-5)}
+ #join .ui-title{font-size:var(--fs-xl)} #join .ui-tag{margin-bottom:var(--sp-3)}
  #pad{position:fixed;inset:0;display:none}
- #stickZone{position:absolute;left:0;top:0;bottom:0;width:46%}
- #lookZone{position:absolute;right:0;top:0;bottom:0;width:54%}
- #lookZone .tip{position:absolute;left:12%;top:42%;color:#ffffff22;font-size:15px;letter-spacing:2px;pointer-events:none}
+ #stickZone{position:absolute;left:0;top:0;bottom:0;width:46%} #lookZone{position:absolute;right:0;top:0;bottom:0;width:54%}
+ #lookZone .tip{position:absolute;left:12%;top:42%;color:#ffffff22;font-size:var(--fs-md);letter-spacing:2px;pointer-events:none}
  .base{position:fixed;width:150px;height:150px;margin:-75px;border-radius:50%;border:3px solid #ffffff30;background:radial-gradient(#ffffff10,#ffffff04);pointer-events:none;transition:opacity .2s}
  .knob{position:absolute;left:50%;top:50%;width:66px;height:66px;margin:-33px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#6a6a72,#2a2a30);border:3px solid #ffffff40;box-shadow:0 6px 14px #000a}
- #stickHint{position:fixed;color:#ffffff40;font-size:13px;letter-spacing:1px;text-align:center;width:160px;margin-left:-80px;pointer-events:none}
+ #stickHint{position:fixed;color:#ffffff40;font-size:var(--fs-xs);letter-spacing:1px;text-align:center;width:160px;margin-left:-80px;pointer-events:none}
  #faces{position:absolute;right:calc(3vw + env(safe-area-inset-right));bottom:calc(6vh + 22px + env(safe-area-inset-bottom));width:240px;height:240px}
- .fb{position:absolute;width:80px;height:80px;border-radius:50%;border:3px solid;background:radial-gradient(circle at 35% 30%,#2a2c34,#121318);display:flex;align-items:center;justify-content:center;font-size:36px;font-family:system-ui,sans-serif;box-shadow:0 6px 14px #000a,inset 0 2px 0 #ffffff14;touch-action:none}
- .fb.on{transform:scale(.92);filter:brightness(1.6)}
- .fb .lb{position:absolute;top:84px;left:50%;transform:translateX(-50%);font:13px Georgia;white-space:nowrap;color:#d8ceb8;text-shadow:0 1px 3px #000}
- .fb.t{left:80px;top:0;color:#5fd6a6;border-color:#5fd6a6} .fb.o{left:160px;top:80px;color:#ff6b6b;border-color:#ff6b6b}
- .fb.x{left:80px;top:160px;color:#7fb2ff;border-color:#7fb2ff} .fb.s{left:0;top:80px;color:#f48fd0;border-color:#f48fd0}
- .fb.t .lb,.fb.o .lb,.fb.s .lb{top:auto;bottom:84px}
- .fb.dim{opacity:.35}
+ #faces .ui-round{position:absolute} #faces .lb{position:absolute;top:84px;left:50%;transform:translateX(-50%);font:var(--fs-xs) var(--font);white-space:nowrap;color:#d8ceb8;text-shadow:0 1px 3px #000}
+ #faces .t{left:80px;top:0} #faces .o{left:160px;top:80px} #faces .x{left:80px;top:160px} #faces .s{left:0;top:80px}
+ #faces .t .lb,#faces .o .lb,#faces .s .lb{top:auto;bottom:84px}
  #top{position:absolute;left:0;right:0;top:calc(6px + env(safe-area-inset-top));text-align:center;pointer-events:none}
- #hint{display:inline-block;background:#000a;border:1px solid #4a3a26;border-radius:18px;padding:5px 16px;font-size:16px;min-height:1.2em}
- #hint:empty{display:none}
- #status{position:absolute;left:calc(12px + env(safe-area-inset-left));top:calc(8px + env(safe-area-inset-top));font-size:12px;color:#8a8070;letter-spacing:2px}
- #status i{display:inline-block;width:9px;height:9px;border-radius:50%;background:#3ac05a;margin-right:6px;box-shadow:0 0 8px #3ac05a}
- /* voice: three circles above the joystick (top-left) */
+ #hint{display:inline-block;min-height:1.2em} #hint:empty{display:none}
+ #stat{display:inline-flex;align-items:center;gap:10px;font:var(--fs-xs) var(--font-ui);margin-bottom:5px} #stat:empty{display:none}
+ .hp{display:inline-block;width:86px;height:8px;background:#222;border-radius:var(--r-sm);overflow:hidden;vertical-align:middle} .hp i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--c-good-solid),#9aef6a);transition:width .3s}
+ #warnP{color:#ff9a8a;font-size:var(--fs-md);margin-top:5px;text-shadow:0 0 8px #f00c;animation:ui-blink 1s infinite} #warnP:empty{display:none}
+ #glow{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 70px 14px #ff1a0aa0;display:none;animation:ui-blink 1s infinite} body.danger #glow{display:block}
+ #status{position:absolute;left:calc(12px + env(safe-area-inset-left));top:calc(8px + env(safe-area-inset-top));font-size:var(--fs-xs);color:var(--c-text-faint);letter-spacing:2px}
+ #status i{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c-good-solid);margin-right:6px;box-shadow:0 0 8px var(--c-good-solid)}
+ #gear{position:absolute;right:calc(10px + env(safe-area-inset-right));top:calc(8px + env(safe-area-inset-top));z-index:3}
  #vdock{position:absolute;left:calc(12px + env(safe-area-inset-left));top:calc(30px + env(safe-area-inset-top));display:flex;gap:10px;z-index:3}
- .vb{width:46px;height:46px;border-radius:50%;background:#000b;border:2px solid #ffffff30;font-size:20px;color:#e8e2d0;padding:0;position:relative;touch-action:manipulation}
- .vb.on{border-color:#3ac05a;box-shadow:0 0 12px #3ac05a88} .vb.off{border-color:#c03a2a} .vb.off::after{content:'';position:absolute;left:9px;right:9px;top:50%;height:3px;background:#ff5a4a;transform:rotate(-42deg);border-radius:2px}
- .vb.talk{animation:pulse .8s infinite} @keyframes pulse{50%{box-shadow:0 0 18px 4px #7dffa8aa}}
- .vb i{position:absolute;right:-4px;top:-4px;min-width:18px;height:18px;border-radius:9px;background:#c9a24a;color:#1a1208;font:bold 11px system-ui;line-height:18px;font-style:normal;padding:0 4px} .vb i:empty{display:none}
- body.left #vdock{left:auto;right:calc(12px + env(safe-area-inset-right));top:calc(62px + env(safe-area-inset-top))}
- #vp{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000c;z-index:6}
- .pr{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:17px}
- .pr .nm{display:flex;align-items:center;gap:8px;min-width:0} .pr .dot{width:12px;height:12px;border-radius:50%;flex:none} .pr .sp{color:#7dffa8;opacity:0;font-size:12px} .pr .sp.on{opacity:1;animation:bl .6s infinite}
- .tg{display:inline-block;padding:7px 11px;border-radius:16px;border:2px solid #4a3a26;font-size:14px;color:#c8bca0;background:#1a1d26;margin-left:6px} .tg.on{border-color:#3ac05a;color:#fff;background:#173a22} .tg:not(.on){border-color:#7a3a2a;color:#ffb09a;background:#2a1512}
- .vnote{font-size:12px;color:#8a8070;margin:8px 0 0;text-align:center} .verr{color:#ff9a8a;font-size:13px;text-align:center;min-height:1em;margin-top:6px}
- /* status bar, danger glow, settings, left-handed */
- #stat{display:inline-flex;align-items:center;gap:10px;background:#000b;border:1px solid #ffffff1a;border-radius:14px;padding:3px 12px;font:13px system-ui,sans-serif;color:#e8e2d0;margin-bottom:5px}
- #stat:empty{display:none} .hp{display:inline-block;width:86px;height:8px;background:#222;border-radius:4px;overflow:hidden;vertical-align:middle} .hp i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#3ac05a,#9aef6a);transition:width .3s}
- #warnP{color:#ff9a8a;font-size:15px;margin-top:5px;text-shadow:0 0 8px #f00c;animation:bl 1s infinite} #warnP:empty{display:none}
- @keyframes bl{50%{opacity:.45}}
- #glow{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 70px 14px #ff1a0aa0;display:none;animation:bl 1s infinite} body.danger #glow{display:block}
- #gear{position:absolute;right:calc(10px + env(safe-area-inset-right));top:calc(8px + env(safe-area-inset-top));width:44px;height:44px;border-radius:50%;background:#000b;border:1px solid #4a3a26;font-size:21px;color:#e8e2d0;z-index:3;padding:0}
- #set{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000c;z-index:6}
- .set{width:min(520px,92vw);text-align:left;padding:14px 20px} .set h2{margin:0 0 8px;text-align:center;letter-spacing:3px;color:#d9c08a;font-size:20px}
- .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:16px}
- .seg{display:flex;border:2px solid #4a3a26;border-radius:8px;overflow:hidden} .seg b{padding:6px 12px;font-weight:normal;font-size:14px;color:#c8bca0} .seg b.on{background:#c9a24a;color:#1a1208;font-weight:bold}
- .tog{width:52px;height:30px;border-radius:15px;background:#2a2a30;position:relative;flex:none} .tog::after{content:'';position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#888;transition:.2s} .tog.on{background:#3a8a4a} .tog.on::after{left:25px;background:#fff}
- .btns{display:flex;gap:10px;margin-top:12px} .btns button{flex:1;font:bold 16px Georgia;padding:10px;border-radius:6px;border:2px solid #c9a24a;background:#2a1f12;color:#f0d9a0} .btns .alt{border-color:#7a3a2a;background:#1a0f0c;color:#ffb09a}
+ #set,#vp{align-items:center;justify-content:center;z-index:6}
+ .dlg{width:min(520px,92vw);text-align:left;padding:var(--sp-4) var(--sp-5)}
+ .dlg .acts{display:flex;gap:10px;margin-top:var(--sp-3)} .dlg .acts .ui-btn{flex:1}
+ .pr .nm{display:flex;align-items:center;gap:var(--sp-2);min-width:0} .pr .dot{width:12px;height:12px;border-radius:50%;flex:none} .pr .sp{color:var(--c-good);opacity:0;font-size:var(--fs-xs)} .pr .sp.on{opacity:1;animation:ui-blink .6s infinite}
  body.left #stickZone{left:auto;right:0} body.left #lookZone{right:auto;left:0} body.left #lookZone .tip{left:auto;right:14%}
  body.left #faces{right:auto;left:calc(3vw + env(safe-area-inset-left))}
+ body.left #vdock{left:auto;right:calc(12px + env(safe-area-inset-right));top:calc(62px + env(safe-area-inset-top))}
  #rotate{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:#0b0d14;z-index:9;font-size:22px;text-align:center;padding:20px}
- #rotate b{font-size:60px;display:block;animation:spin 2s ease-in-out infinite}
- @keyframes spin{50%{transform:rotate(90deg)}}
+ #rotate b{font-size:60px;display:block;animation:spin 2s ease-in-out infinite} @keyframes spin{50%{transform:rotate(90deg)}}
  @media (orientation:portrait){ body.playing #rotate{display:flex} }
 </style></head><body>
-<div id="join"><div class="card">
-  <h1>RATTLEJAW PAD</h1><div class="tag">use this phone as your controller</div>
-  <input id="code" inputmode="numeric" maxlength="4" placeholder="····" autocomplete="off">
-  <button id="go">CONNECT</button><div id="err"></div>
-  <div class="small">Type the <b>phone code</b> shown on the game screen (in the lobby).<br>Then turn your phone sideways.</div>
+<div id="join"><div class="ui-panel">
+  <h1 class="ui-title">RATTLEJAW PAD</h1><div class="ui-tag">use this phone as your controller</div>
+  <input class="ui-input code" id="code" inputmode="numeric" maxlength="4" placeholder="····" autocomplete="off">
+  <button class="ui-btn block" id="go">CONNECT</button><div class="ui-err" id="err"></div>
+  <div class="ui-note">Type the <b>room code</b> from the lobby, or scan its QR.<br>Then turn your phone sideways.</div>
 </div></div>
 <div id="pad">
   <div id="stickZone"><div class="base" id="base"><div class="knob" id="knob"></div></div><div id="stickHint">move</div></div>
   <div id="lookZone"><div class="tip">drag to look</div></div>
   <div id="faces">
-    <div class="fb t" data-k="t">△<span class="lb"></span></div>
-    <div class="fb s" data-k="s">□<span class="lb"></span></div>
-    <div class="fb o" data-k="o">○<span class="lb"></span></div>
-    <div class="fb x" data-k="x">✕<span class="lb"></span></div>
+    <div class="ui-round big ui-t t" data-k="t">△<span class="lb"></span></div>
+    <div class="ui-round big ui-s s" data-k="s">□<span class="lb"></span></div>
+    <div class="ui-round big ui-o o" data-k="o">○<span class="lb"></span></div>
+    <div class="ui-round big ui-x x" data-k="x">✕<span class="lb"></span></div>
   </div>
-  <div id="vdock"><button class="vb off" id="vMic" aria-label="microphone">🎤</button><button class="vb on" id="vSnd" aria-label="sound">🔊</button><button class="vb" id="vPpl" aria-label="players">👥<i id="vCnt"></i></button></div>
+  <div id="vdock"><button class="ui-round off" id="vMic" aria-label="microphone">🎤</button><button class="ui-round on" id="vSnd" aria-label="sound">🔊</button><button class="ui-round" id="vPpl" aria-label="players">👥<i id="vCnt"></i></button></div>
   <div id="glow"></div>
-  <div id="top"><div id="stat"></div><div><span id="hint"></span></div><div id="warnP"></div></div>
-  <button id="gear" aria-label="settings">⚙️</button>
+  <div id="top"><div id="stat" class="ui-pill"></div><div><span id="hint" class="ui-pill gold"></span></div><div id="warnP"></div></div>
+  <button id="gear" class="ui-round" aria-label="settings">⚙️</button>
   <div id="status"><i></i>CONNECTED</div>
 </div>
-<div id="set"><div class="card set">
-  <h2>SETTINGS</h2>
-  <div class="row"><span>Look speed</span><div class="seg" data-k="look"><b data-v=".6">Slow</b><b data-v="1">Normal</b><b data-v="1.6">Fast</b></div></div>
-  <div class="row"><span>Invert look up / down</span><div class="tog" data-k="inv"></div></div>
-  <div class="row"><span>Left-handed (swap sides)</span><div class="tog" data-k="left"></div></div>
-  <div class="row"><span>Tilt the phone to aim the gun</span><div class="tog" data-k="tilt"></div></div>
-  <div class="btns"><button id="setDone">DONE</button><button id="disc" class="alt">DISCONNECT</button></div>
+<div id="who" class="ui-scrim" style="background:#05070bf0"><div class="ui-panel dlg">
+  <h2 class="ui-h2">WHO ARE YOU?</h2><div class="ui-note" style="margin:0 0 var(--sp-3)">Pick your player. This phone becomes your controller.</div>
+  <div id="whoList"></div><div class="ui-err" id="whoErr"></div>
 </div></div>
-<div id="vp"><div class="card set">
-  <h2>VOICE CHAT</h2>
+<div id="set" class="ui-scrim"><div class="ui-panel dlg">
+  <h2 class="ui-h2">SETTINGS</h2>
+  <div class="ui-row"><span>Look speed</span><div class="ui-seg" data-k="look"><b data-v=".6">Slow</b><b data-v="1">Normal</b><b data-v="1.6">Fast</b></div></div>
+  <div class="ui-row"><span>Invert look up / down</span><div class="ui-toggle" data-k="inv"></div></div>
+  <div class="ui-row"><span>Left-handed (swap sides)</span><div class="ui-toggle" data-k="left"></div></div>
+  <div class="ui-row"><span>Tilt the phone to aim the gun</span><div class="ui-toggle" data-k="tilt"></div></div>
+  <div class="acts"><button class="ui-btn" id="setDone">DONE</button><button class="ui-btn danger" id="disc">DISCONNECT</button></div>
+</div></div>
+<div id="vp" class="ui-scrim"><div class="ui-panel dlg">
+  <h2 class="ui-h2">VOICE CHAT</h2>
   <div id="vlist"></div>
-  <div class="vnote">🔊 Hear = you listen to them &nbsp;·&nbsp; 🎤 Talk = they hear you</div><div class="verr" id="verr"></div>
-  <div class="btns"><button id="vpDone">DONE</button></div>
+  <div class="ui-note">🔊 Hear = you listen to them &nbsp;·&nbsp; 🎤 Talk = they hear you</div><div class="ui-err" id="verr"></div>
+  <div class="acts"><button class="ui-btn" id="vpDone">DONE</button></div>
 </div></div>
 <div id="rotate"><b>📱</b>Turn your phone sideways</div>
 <script src="vendor/peerjs.min.js"></script>
@@ -112,15 +87,15 @@
 <script src="voice.js"></script>
 <script>
 const $=id=>document.getElementById(id);
-NetLink.setPrefix('pdw-webgames-railpad-');
+NetLink.setPrefix('pdw-webgames-rails-');   // same code as the lobby: the phone joins the ROOM
 let conn=null;
 const S={lx:0,ly:0,dx:0,dy:0,b:{x:false,o:false,s:false,t:false},c:{x:0,o:0,s:0,t:0}};
 const q=new URLSearchParams(location.search); $('code').value=q.get('code')||localStorage.getItem('railpad-code')||'';
 // settings (saved on this phone)
 const SET=Object.assign({look:1,inv:false,left:false,tilt:false},JSON.parse(localStorage.getItem('railpad-set')||'{}'));
-function applySet(){ document.body.classList.toggle('left',SET.left); document.querySelectorAll('.seg b').forEach(b=>b.classList.toggle('on',+b.dataset.v===SET.look)); document.querySelectorAll('.tog').forEach(t=>t.classList.toggle('on',!!SET[t.dataset.k])); localStorage.setItem('railpad-set',JSON.stringify(SET)); if(stickId===null&&$('pad').style.display==='block') placeBase(); }
-document.querySelectorAll('.seg b').forEach(b=>b.onclick=()=>{ SET.look=+b.dataset.v; applySet(); });
-document.querySelectorAll('.tog').forEach(t=>t.onclick=async()=>{ const k=t.dataset.k; SET[k]=!SET[k];
+function applySet(){ document.body.classList.toggle('left',SET.left); document.querySelectorAll('.ui-seg b').forEach(b=>b.classList.toggle('on',+b.dataset.v===SET.look)); document.querySelectorAll('.ui-toggle').forEach(t=>t.classList.toggle('on',!!SET[t.dataset.k])); localStorage.setItem('railpad-set',JSON.stringify(SET)); if(stickId===null&&$('pad').style.display==='block') placeBase(); }
+document.querySelectorAll('.ui-seg b').forEach(b=>b.onclick=()=>{ SET.look=+b.dataset.v; applySet(); });
+document.querySelectorAll('.ui-toggle').forEach(t=>t.onclick=async()=>{ const k=t.dataset.k; SET[k]=!SET[k];
   if(k==='tilt'&&SET.tilt&&typeof DeviceMotionEvent!=='undefined'&&DeviceMotionEvent.requestPermission){ try{ if(await DeviceMotionEvent.requestPermission()!=='granted') SET.tilt=false; }catch(e){ SET.tilt=false; } } applySet(); });
 $('gear').onclick=()=>{ $('set').style.display='flex'; }; $('setDone').onclick=()=>{ $('set').style.display='none'; };
 $('disc').onclick=()=>{ wantConn=false; Voice.stop(); try{ conn&&conn.close(); }catch(e){} conn=null; $('set').style.display='none'; $('pad').style.display='none'; $('join').style.display='flex'; document.body.classList.remove('playing','danger'); $('go').disabled=false; $('err').textContent=''; };
@@ -133,48 +108,57 @@ function retry(){ clearTimeout(retryT); if(!wantConn||conn) return; setStatus(fa
 function connect(){ const code=$('code').value.replace(/\D/g,''); if(code.length!==4){ $('err').textContent='Type the 4-digit phone code'; return; }
   $('err').textContent='Connecting…'; $('go').disabled=true;
   lastCode=code; wantConn=true; localStorage.setItem('railpad-code',code);
-  NetLink.join(code,{ onOpen:c=>{ opened(c); try{ document.documentElement.requestFullscreen?.(); screen.orientation?.lock?.('landscape').catch(()=>{}); }catch(e){} },
+  NetLink.join(code,{ onOpen:c=>{ opened(c); try{ document.documentElement.requestFullscreen?.()?.catch?.(()=>{}); screen.orientation?.lock?.("landscape")?.catch?.(()=>{}); }catch(e){} },
     onError:e=>{ $('err').textContent=e; $('go').disabled=false; wantConn=false; } }); }
-function opened(c){ conn=c; $('join').style.display='none'; $('pad').style.display='block'; document.body.classList.add('playing'); placeBase(); applySet(); setStatus(true,'CONNECTED'); keepAwake();
+let pickId=null;
+function showWho(list){ $('whoErr').textContent=''; $('whoList').innerHTML=list.map(p=>`<button class="ui-btn alt block" data-id="${p.id}" ${p.taken?'disabled':''} style="text-align:left;border-left:8px solid ${p.color}"><span style="color:${p.color}">●</span> ${p.name}${p.taken?' <small class="ui-faint">(has a phone)</small>':''}</button>`).join(''); $('who').style.display='flex'; }
+$('whoList').addEventListener('click',e=>{ const b=e.target.closest('button[data-id]'); if(b&&conn){ pickId=+b.dataset.id; conn.send({t:'padpick',id:pickId}); } });
+function enterPad(){ $('who').style.display='none'; $('join').style.display='none'; $('pad').style.display='block'; document.body.classList.add('playing'); placeBase(); applySet(); setStatus(true,'CONNECTED'); keepAwake(); }
+function opened(c){ conn=c; setStatus(false,'JOINING…'); c.send({t:'padhello'});
   c.on('data',onMsg); c.on('close',()=>{ if(conn!==c) return; conn=null; Voice.stop(); renderVoice(Voice.st); document.body.classList.remove('danger'); if(wantConn){ setStatus(false,'RECONNECTING…'); retryT=setTimeout(retry,1500); } }); }
 $('go').onclick=connect; $('code').addEventListener('keydown',e=>{ if(e.key==='Enter') connect(); });
 if(q.get('code')&&q.get('code').length===4) setTimeout(connect,300);
 // ---------- what the game says the buttons do right now ----------
 let mode='move', vPlayers=[];
 function onMsg(m){
+  if(m.t==='padlist'){ const free=m.players.filter(p=>!p.taken); if(pickId!=null&&m.players.some(p=>p.id===pickId&&!p.taken)) conn.send({t:'padpick',id:pickId}); else if(free.length===1&&m.players.length===1) { pickId=free[0].id; conn.send({t:'padpick',id:pickId}); } else { $('join').style.display='none'; showWho(m.players); } return; }
+  if(m.t==='padok'){ enterPad(); return; }
+  if(m.t==='padno'){ pickId=null; $('whoErr').textContent=m.why||''; if($('who').style.display!=='flex'&&conn) conn.send({t:'padhello'}); return; }
+  if(m.t==='padgone'){ pickId=null; $('pad').style.display='none'; document.body.classList.remove('playing','danger'); conn&&conn.send({t:'padhello'}); return; }
+  if(m.t==='plist'){ $('stat').innerHTML=m.started?'':m.players.map(p=>`<span style="color:${p.c}">${p.me?'● ':''}${p.n}${p.r?' ✓':''}</span>`).join(' &nbsp; '); return; }
   if(m.t==='voice'){ if(m.stop){ Voice.stop(); vPlayers=[]; renderVoice(Voice.st); return; } vPlayers=m.players||[];
     Voice.init({me:m.me,send:(to,d)=>conn&&conn.send({t:'vsig',to,d}),onState:renderVoice}); Voice.setPlayers(vPlayers); }
   if(m.t==='vsig') Voice.signal(m.from,m.d); if(m.t==='stat'){ $('stat').innerHTML=`<span class="hp"><i style="width:${Math.round(Math.max(0,Math.min(1,m.hp))*100)}%"></i></span><span>🔩 ${m.scrap}</span>`+(m.ammo!=null?`<span>🔫 ${m.ammo}</span>`:'')+(m.mis!=null?`<span>🚀 ${m.mis}</span>`:'')+`<span>🪵 ${m.rails}/${m.rmax}</span>`;
     $('warnP').textContent=m.warn||''; document.body.classList.toggle('danger',!!m.warn); }
-  if(m.t==='ui'){ mode=m.stick||'move'; for(const k of ['x','o','s','t']){ const el=document.querySelector('.fb.'+k); el.querySelector('.lb').textContent=m.labels[k]||''; el.classList.toggle('dim',!m.labels[k]); }
+  if(m.t==='ui'){ mode=m.stick||'move'; for(const k of ['x','o','s','t']){ const el=document.querySelector('#faces .'+k); el.querySelector('.lb').textContent=m.labels[k]||''; el.classList.toggle('dim',!m.labels[k]); }
     $('hint').textContent=m.hint||''; $('stickHint').textContent=m.stick||'move'; }
   if(m.t==='buzz') navigator.vibrate?.(m.ms||40); }
 // ---------- voice circles + player list ----------
 let lastSp='';
 function renderVoice(st){
   const talking=Object.keys(st.speaking).some(k=>st.speaking[k]&&+k!==st.me), mine=st.speaking[st.me];
-  $('vMic').className='vb '+(st.mic?'on':'off')+(mine?' talk':''); $('vSnd').className='vb '+(st.snd?'on':'off')+(talking&&st.snd?' talk':'');
-  $('vPpl').className='vb'+(talking?' talk':''); $('vCnt').textContent=vPlayers.length||'';
+  $('vMic').className='ui-round '+(st.mic?'on':'off')+(mine?' talk':''); $('vSnd').className='ui-round '+(st.snd?'on':'off')+(talking&&st.snd?' talk':'');
+  $('vPpl').className='ui-round'+(talking?' talk':''); $('vCnt').textContent=vPlayers.length||'';
   $('verr').textContent=st.micErr||'';
-  if($('vp').style.display==='flex') $('vlist').innerHTML=vPlayers.length?vPlayers.map(p=>`<div class="pr"><span class="nm"><span class="dot" style="background:${p.color}"></span><span style="overflow:hidden;text-overflow:ellipsis">${p.name}</span><span class="sp ${st.speaking[p.id]?'on':''}">● talking</span></span><span><span class="tg ${st.hear[p.id]!==false?'on':''}" data-id="${p.id}" data-k="hear">🔊 Hear</span><span class="tg ${st.talk[p.id]!==false?'on':''}" data-id="${p.id}" data-k="talk">🎤 Talk</span></span></div>`).join(''):'<div class="vnote" style="font-size:15px;margin:14px 0">No other players yet. Voice starts when friends join the room.</div>';
+  if($('vp').style.display==='flex') $('vlist').innerHTML=vPlayers.length?vPlayers.map(p=>`<div class="ui-row pr"><span class="nm"><span class="dot" style="background:${p.color}"></span><span style="overflow:hidden;text-overflow:ellipsis">${p.name}</span><span class="sp ${st.speaking[p.id]?'on':''}">● talking</span></span><span><span class="ui-chipbtn ${st.hear[p.id]!==false?'on':''}" data-id="${p.id}" data-k="hear">🔊 Hear</span><span class="ui-chipbtn ${st.talk[p.id]!==false?'on':''}" data-id="${p.id}" data-k="talk">🎤 Talk</span></span></div>`).join(''):'<div class="ui-note" style="font-size:15px;margin:14px 0">No other players yet. Voice starts when friends join the room.</div>';
   const sp=JSON.stringify([st.mic,st.snd,Object.keys(st.speaking).filter(k=>st.speaking[k])]); if(conn&&sp!==lastSp){ lastSp=sp; conn.send({t:'vstate',mic:st.mic,snd:st.snd,speaking:Object.keys(st.speaking).filter(k=>st.speaking[k]).map(Number),err:st.micErr}); } }
 $('vMic').onclick=()=>{ if(!Voice.st.up){ $('verr').textContent=''; renderVoice(Voice.st); $('vp').style.display='flex'; renderVoice(Voice.st); return; } Voice.setMic(!Voice.st.mic); };
 $('vSnd').onclick=()=>Voice.setSnd(!Voice.st.snd);
 $('vPpl').onclick=()=>{ $('vp').style.display='flex'; renderVoice(Voice.st); };
 $('vpDone').onclick=()=>{ $('vp').style.display='none'; };
-$('vlist').addEventListener('click',e=>{ const t=e.target.closest('.tg'); if(!t) return; const id=+t.dataset.id; if(t.dataset.k==='hear') Voice.setHear(id,Voice.st.hear[id]===false); else Voice.setTalk(id,Voice.st.talk[id]===false); });
+$('vlist').addEventListener('click',e=>{ const t=e.target.closest('.ui-chipbtn'); if(!t) return; const id=+t.dataset.id; if(t.dataset.k==='hear') Voice.setHear(id,Voice.st.hear[id]===false); else Voice.setTalk(id,Voice.st.talk[id]===false); });
 // ---------- touch handling: left = floating joystick, right = look, face buttons ----------
 const R=62, base=$('base'), knob=$('knob'); let stickId=null, cx=0, cy=0; const looks=new Map();
 function placeBase(){ cx=SET.left?innerWidth-Math.min(innerWidth*.2,170):Math.min(innerWidth*.2,170); cy=innerHeight*.68; base.style.left=cx+'px'; base.style.top=cy+'px'; base.style.opacity=.5; $('stickHint').style.left=cx+'px'; $('stickHint').style.top=(cy+84)+'px'; knob.style.transform=''; }
-function btn(k,v){ if(S.b[k]===v) return; S.b[k]=v; if(v){ S.c[k]++; navigator.vibrate?.(12); } document.querySelector('.fb.'+k).classList.toggle('on',v); send(true); }
+function btn(k,v){ if(S.b[k]===v) return; S.b[k]=v; if(v){ S.c[k]++; navigator.vibrate?.(12); } document.querySelector('#faces .'+k).classList.toggle('pressed',v); send(true); }
 const btnOf=new Map();
-addEventListener('pointerdown',e=>{ if($('pad').style.display!=='block'||$('set').style.display==='flex'||$('vp').style.display==='flex'||(e.target.closest&&(e.target.closest('#gear')||e.target.closest('.vb')))) return; const fb=e.target.closest&&e.target.closest('.fb');
+addEventListener('pointerdown',e=>{ if($('pad').style.display!=='block'||$('set').style.display==='flex'||$('vp').style.display==='flex'||(e.target.closest&&(e.target.closest('#gear')||e.target.closest('.ui-round:not(.big)')))) return; const fb=e.target.closest&&e.target.closest('#faces .big');
   if(fb){ btnOf.set(e.pointerId,fb.dataset.k); btn(fb.dataset.k,true); e.preventDefault(); return; }
   if(SET.left?e.clientX>innerWidth*.54:e.clientX<innerWidth*.46){ if(stickId===null){ stickId=e.pointerId; cx=e.clientX; cy=e.clientY; base.style.left=cx+'px'; base.style.top=cy+'px'; base.style.opacity=1; } }
   else looks.set(e.pointerId,{x:e.clientX,y:e.clientY}); e.preventDefault(); },{passive:false});
 addEventListener('pointermove',e=>{ if(e.pointerId===stickId){ let dx=e.clientX-cx, dy=e.clientY-cy; const d=Math.hypot(dx,dy); if(d>R){ dx*=R/d; dy*=R/d; } knob.style.transform=`translate(${dx}px,${dy}px)`; S.lx=dx/R; S.ly=dy/R; }
   const l=looks.get(e.pointerId); if(l){ S.dx+=(e.clientX-l.x)*SET.look; S.dy+=(e.clientY-l.y)*SET.look*(SET.inv?-1:1); l.x=e.clientX; l.y=e.clientY; }
-  if(btnOf.has(e.pointerId)){ const el=document.elementFromPoint(e.clientX,e.clientY), fb=el&&el.closest('.fb'), k=btnOf.get(e.pointerId); if(!fb||fb.dataset.k!==k){ btn(k,false); btnOf.delete(e.pointerId); } } e.preventDefault(); },{passive:false});
+  if(btnOf.has(e.pointerId)){ const el=document.elementFromPoint(e.clientX,e.clientY), fb=el&&el.closest('#faces .big'), k=btnOf.get(e.pointerId); if(!fb||fb.dataset.k!==k){ btn(k,false); btnOf.delete(e.pointerId); } } e.preventDefault(); },{passive:false});
 function up(e){ if(e.pointerId===stickId){ stickId=null; S.lx=S.ly=0; placeBase(); } looks.delete(e.pointerId); if(btnOf.has(e.pointerId)){ btn(btnOf.get(e.pointerId),false); btnOf.delete(e.pointerId); } }
 addEventListener('pointerup',up); addEventListener('pointercancel',up); addEventListener('resize',()=>{ if(stickId===null) placeBase(); });
 document.addEventListener('contextmenu',e=>e.preventDefault()); document.addEventListener('gesturestart',e=>e.preventDefault());

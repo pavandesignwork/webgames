@@ -1,0 +1,184 @@
+/* =====================================================================================
+   RATTLEJAW UI DESIGN SYSTEM  ·  ui.css
+   One stylesheet for every screen of the game and the phone controller.
+   See ui-kit.html for a live page showing every token and component.
+
+   RULES
+   1. Never write a raw colour, size or radius in a page. Use a token (var(--…)).
+   2. Build screens from the components below (.ui-…). A page's own CSS is for LAYOUT only
+      (where things go), never for how a button, panel or row looks.
+   3. One main action per screen = .ui-btn (gold). Secondary = .ui-btn.alt. Destructive = .ui-btn.danger.
+   4. Buttons on controllers are always the PlayStation four: ✕ blue · ○ red · □ pink · △ green.
+   ===================================================================================== */
+
+/* ---------- 1. TOKENS ---------- */
+:root {
+  /* typeface */
+  --font: Georgia, 'Times New Roman', serif;          /* everything the player reads */
+  --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;   /* only button glyphs and tiny key labels */
+  /* type scale */
+  --fs-xs: 12px; --fs-sm: 14px; --fs-md: 16px; --fs-lg: 20px; --fs-xl: 28px; --fs-hero: 46px;
+  /* surfaces */
+  --c-bg: #07090f;            /* page background */
+  --c-panel: #11151ee8;       /* panels and cards */
+  --c-panel-solid: #0d1018ee; /* in-game panels that sit over the 3D view */
+  --c-field: #0a0c12;         /* inputs and recessed areas */
+  --c-hud: #000b;             /* small floating labels over the game */
+  --c-scrim: #000c;           /* dim layer behind dialogs */
+  /* lines */
+  --c-line: #2a2a2a;          /* dividers between rows */
+  --c-border: #4a3a26;        /* normal borders */
+  --c-border-strong: #c9a24a; /* focused / primary borders */
+  /* text */
+  --c-text: #e8e2d0; --c-text-strong: #f4ecd8; --c-text-dim: #b8ad94; --c-text-faint: #8a8070;
+  /* brand (gold) */
+  --c-gold: #c9a24a; --c-gold-hi: #ffcf6a; --c-gold-text: #f0d9a0; --c-gold-bg: #2a1f12; --c-gold-bg-hi: #3a2a16; --c-gold-title: #d9c08a;
+  /* meaning */
+  --c-good: #7dffa8; --c-good-solid: #3ac05a; --c-good-bg: #173a22;
+  --c-bad: #ff8a7a;  --c-bad-solid: #c03a2a;  --c-bad-bg: #2a1512;
+  --c-warn: #ffb48a; --c-info: #7fb2ff;
+  --c-slate: #5a6a7a; --c-slate-bg: #141a24; --c-slate-text: #c8d4e0;
+  /* controller buttons (same everywhere) */
+  --btn-x: #7fb2ff; --btn-o: #ff6b6b; --btn-s: #f48fd0; --btn-t: #5fd6a6;
+  /* shape + space */
+  --r-sm: 4px; --r-md: 8px; --r-lg: 12px; --r-pill: 999px;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+  --shadow-panel: 0 20px 60px #000c; --shadow-hud: 0 1px 3px #000, 0 0 8px #000a;
+  --glow-gold: 0 0 18px #ff5a2a55;
+}
+
+/* ---------- 2. BASE ---------- */
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--c-bg); color: var(--c-text); font-family: var(--font); }
+canvas { display: block; }
+button { font-family: inherit; }
+
+/* ---------- 3. SURFACES ---------- */
+.ui-screen { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 40%, #1b2233cc, #05070bf2 75%); }
+.ui-scrim  { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: var(--c-scrim); }
+.ui-panel  { width: min(560px, 92vw); box-sizing: border-box; background: var(--c-panel); border: 2px solid var(--c-border); border-radius: var(--r-md); padding: var(--sp-5) var(--sp-6); box-shadow: var(--shadow-panel); }
+.ui-panel.hud { background: var(--c-panel-solid); border-color: var(--c-border-strong); padding: var(--sp-3) var(--sp-4); pointer-events: auto; }
+.ui-panel.tight { padding: var(--sp-4) var(--sp-5); }
+
+/* ---------- 4. TYPE ---------- */
+.ui-title { margin: 0 0 var(--sp-1); font-size: var(--fs-hero); letter-spacing: 3px; color: var(--c-gold-title); text-shadow: var(--glow-gold); text-align: center; font-weight: bold; }
+.ui-title.md { font-size: var(--fs-xl); letter-spacing: 3px; }
+.ui-h2 { margin: 0 0 var(--sp-2); font-size: var(--fs-lg); letter-spacing: 3px; color: var(--c-gold-title); text-align: center; font-weight: bold; }
+.ui-tag { text-align: center; color: var(--c-text-faint); margin: 0 0 var(--sp-5); font-style: italic; }
+.ui-label { display: block; font-size: var(--fs-xs); letter-spacing: 2px; color: var(--c-text-faint); margin: var(--sp-3) 0 var(--sp-2); text-transform: uppercase; }
+.ui-note { font-size: var(--fs-xs); color: var(--c-text-faint); text-align: center; margin-top: var(--sp-3); line-height: 1.5; }
+.ui-err  { color: var(--c-bad); min-height: 1.2em; margin-top: var(--sp-3); text-align: center; font-size: var(--fs-sm); }
+.ui-code { font-size: 64px; font-weight: bold; letter-spacing: 12px; text-align: center; color: var(--c-gold-hi); margin: var(--sp-2) 0 var(--sp-1); text-shadow: 0 0 20px #ff8a2a66; }
+.ui-dim { color: var(--c-text-dim); } .ui-faint { color: var(--c-text-faint); } .ui-gold { color: var(--c-gold-hi); } .ui-good { color: var(--c-good); } .ui-bad { color: var(--c-bad); } .ui-warn { color: var(--c-warn); }
+
+/* ---------- 5. CONTROLS ---------- */
+.ui-input { width: 100%; box-sizing: border-box; font: 22px var(--font); color: var(--c-text-strong); background: var(--c-field); border: 2px solid #3a3226; border-radius: var(--r-sm); padding: 10px var(--sp-3); outline: none; user-select: text; -webkit-user-select: text; }
+.ui-input:focus { border-color: var(--c-border-strong); }
+.ui-input.code { font-size: 40px; font-weight: bold; letter-spacing: 12px; text-align: center; color: var(--c-gold-hi); padding: 6px; }
+.ui-btn { font: bold var(--fs-lg) var(--font); letter-spacing: 2px; cursor: pointer; border-radius: var(--r-sm); padding: 13px var(--sp-4); border: 2px solid var(--c-border-strong); background: var(--c-gold-bg); color: var(--c-gold-text); touch-action: manipulation; }
+.ui-btn:hover { background: var(--c-gold-bg-hi); }
+.ui-btn.alt { border-color: var(--c-slate); background: var(--c-slate-bg); color: var(--c-slate-text); }
+.ui-btn.alt:hover { background: #1c2430; }
+.ui-btn.danger { border-color: #7a3a2a; background: #1a0f0c; color: #ffb09a; }
+.ui-btn.block { display: block; width: 100%; margin-top: var(--sp-3); }
+.ui-btn.sm { font-size: var(--fs-md); padding: 8px 14px; white-space: nowrap; letter-spacing: 1px; }
+.ui-btn:disabled { opacity: .4; cursor: default; }
+.ui-btn.on { background: var(--c-gold-bg-hi); }
+/* segmented choice  (Slow | Normal | Fast) */
+.ui-seg { display: flex; border: 2px solid var(--c-border); border-radius: var(--r-md); overflow: hidden; }
+.ui-seg > b { padding: 6px var(--sp-3); font-weight: normal; font-size: var(--fs-sm); color: #c8bca0; cursor: pointer; }
+.ui-seg > b.on { background: var(--c-gold); color: #1a1208; font-weight: bold; }
+/* on / off switch */
+.ui-toggle { width: 52px; height: 30px; border-radius: 15px; background: #2a2a30; position: relative; flex: none; cursor: pointer; }
+.ui-toggle::after { content: ''; position: absolute; left: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #888; transition: .2s; }
+.ui-toggle.on { background: #3a8a4a; } .ui-toggle.on::after { left: 25px; background: #fff; }
+/* small on/off pill  (🔊 Hear · 🎤 Talk) */
+.ui-chipbtn { display: inline-block; padding: 7px var(--sp-3); border-radius: 16px; border: 2px solid; font-size: var(--fs-sm); margin-left: 6px; cursor: pointer; user-select: none; }
+.ui-chipbtn.on  { border-color: var(--c-good-solid); color: #fff; background: var(--c-good-bg); }
+.ui-chipbtn:not(.on) { border-color: #7a3a2a; color: #ffb09a; background: var(--c-bad-bg); }
+/* colour swatch */
+.ui-swatch { display: inline-block; width: 28px; height: 28px; border-radius: 50%; margin-left: 6px; cursor: pointer; border: 2px solid #000; vertical-align: middle; }
+.ui-swatch.on { outline: 3px solid var(--c-gold-hi); }
+
+/* ---------- 6. LISTS (menus, shop, settings, voice) ---------- */
+.ui-list { max-height: 62vh; overflow: auto; }
+.ui-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) var(--sp-2); border-bottom: 1px solid var(--c-line); border-radius: var(--r-sm); font-size: var(--fs-md); }
+.ui-row.sel { background: #2e2610; outline: 2px solid var(--c-gold-hi); }
+.ui-row .ic { font-size: 26px; width: 36px; text-align: center; flex: none; }
+.ui-row .tx { flex: 1; min-width: 0; }
+.ui-row .tx small { color: var(--c-text-dim); font-size: var(--fs-sm); }
+.ui-row .acts { display: flex; align-items: center; gap: 6px; flex: none; }
+.ui-pips { color: var(--c-gold-hi); letter-spacing: 2px; font-size: var(--fs-sm); }
+/* player line in the lobby */
+.ui-plist { margin-top: var(--sp-4); }
+.ui-player { display: flex; align-items: center; gap: var(--sp-3); padding: 9px var(--sp-3); margin-bottom: 6px; background: var(--c-field); border-left: 6px solid; border-radius: 3px; font-size: 19px; }
+.ui-player .r { margin-left: auto; font-size: 15px; } .ui-player.empty { opacity: .35; }
+.ui-hrow { display: flex; gap: var(--sp-3); } .ui-hrow > * { flex: 1; }
+
+/* ---------- 7. HUD (text and meters floating over the game) ---------- */
+.ui-hud { text-shadow: var(--shadow-hud); }
+.ui-bar { height: 8px; background: #0008; border-radius: var(--r-sm); margin-top: var(--sp-1); overflow: hidden; box-shadow: 0 0 0 1px #0006; }
+.ui-bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--c-gold), #ff6a2a); }
+.ui-bar.good > i { background: linear-gradient(90deg, var(--c-good-solid), #9aef6a); }
+.ui-bar.boss { height: 12px; } .ui-bar.boss > i { background: linear-gradient(90deg, #8a0a06, #ff3a1a); }
+.ui-pill { display: inline-block; background: var(--c-hud); border: 1px solid #ffffff22; border-radius: 18px; padding: 4px 12px; font-size: var(--fs-md); white-space: nowrap; }
+.ui-pill.gold { border-color: var(--c-border-strong); }
+.ui-badge { display: inline-block; min-width: 18px; height: 18px; border-radius: 9px; background: var(--c-gold); color: #1a1208; font: bold 11px/18px var(--font-ui); text-align: center; padding: 0 4px; }
+
+/* ---------- 8. CONTROLLER BUTTONS (✕ ○ □ △) ---------- */
+.ui-x { --c: var(--btn-x); } .ui-o { --c: var(--btn-o); } .ui-s { --c: var(--btn-s); } .ui-t { --c: var(--btn-t); }
+/* the little glyph used inside hints ("✕ Drive the train") */
+.ui-glyph { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--c); color: var(--c); font: bold 13px var(--font-ui); margin-right: 6px; vertical-align: middle; background: #0008; text-shadow: none; }
+.ui-key { font: bold 11px var(--font-ui); color: #cfc6b0; margin: 0 6px 0 -3px; vertical-align: middle; opacity: .8; }
+/* round touch buttons (phone): .ui-round = small utility circle, .ui-round.big = ✕ ○ □ △ */
+.ui-round { width: 46px; height: 46px; border-radius: 50%; background: var(--c-hud); border: 2px solid #ffffff30; font-size: 20px; color: var(--c-text); padding: 0; position: relative; touch-action: manipulation; cursor: pointer; }
+.ui-round.on { border-color: var(--c-good-solid); box-shadow: 0 0 12px #3ac05a88; }
+.ui-round.off { border-color: var(--c-bad-solid); }
+.ui-round.off::after { content: ''; position: absolute; left: 9px; right: 9px; top: 50%; height: 3px; background: #ff5a4a; transform: rotate(-42deg); border-radius: 2px; }
+.ui-round.talk { animation: ui-pulse .8s infinite; }
+.ui-round > i { position: absolute; right: -4px; top: -4px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--c-gold); color: #1a1208; font: bold 11px/18px var(--font-ui); font-style: normal; padding: 0 4px; text-align: center; }
+.ui-round > i:empty { display: none; }
+.ui-round.big { width: 80px; height: 80px; border: 3px solid var(--c); color: var(--c); font: 36px var(--font-ui); background: radial-gradient(circle at 35% 30%, #2a2c34, #121318); box-shadow: 0 6px 14px #000a, inset 0 2px 0 #ffffff14; display: flex; align-items: center; justify-content: center; }
+.ui-round.big.pressed { transform: scale(.92); filter: brightness(1.6); }
+.ui-round.big.dim { opacity: .35; }
+
+/* ---------- 9. MOTION ---------- */
+@keyframes ui-blink { 50% { opacity: .5; } }
+@keyframes ui-pulse { 50% { box-shadow: 0 0 18px 4px #7dffa8aa; } }
+@keyframes ui-fadeout { 0% { opacity: 0; } 6% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+.ui-blink { animation: ui-blink 1s infinite; }
+
+/* ---------- 10. FRONT-END SCREENS (title, join, lobby) ---------- */
+/* game logo: big two-line word mark with a railway-track ornament */
+.ui-logo { text-align: left; line-height: .92; font-weight: bold; color: var(--c-text-strong); text-shadow: 0 3px 0 #000, 0 0 26px #ff5a2a66; }
+.ui-logo .l1 { font-size: 60px; letter-spacing: 5px; }
+.ui-logo .l2 { font-size: 46px; letter-spacing: 14px; color: var(--c-gold-hi); display: flex; align-items: center; gap: var(--sp-3); }
+.ui-logo .l2::after { content: ''; flex: 1; height: 12px; border-top: 3px solid var(--c-gold); border-bottom: 3px solid var(--c-gold); background: repeating-linear-gradient(90deg, var(--c-gold) 0 4px, transparent 4px 16px); opacity: .75; }
+.ui-logo .l3 { font-size: var(--fs-sm); font-weight: normal; letter-spacing: 3px; color: var(--c-text-faint); margin-top: var(--sp-3); font-style: italic; text-shadow: none; }
+.ui-logo.sm .l1 { font-size: 26px; letter-spacing: 3px; } .ui-logo.sm .l2 { font-size: 20px; letter-spacing: 8px; } .ui-logo.sm .l2::after { height: 7px; border-width: 2px; } .ui-logo.sm .l3 { display: none; }
+/* big text menu (title screen) */
+.ui-menu { display: flex; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-5); }
+.ui-menu-item { all: unset; box-sizing: border-box; cursor: pointer; padding: 12px var(--sp-4); border-left: 4px solid transparent; font: bold 30px var(--font); letter-spacing: 4px; color: var(--c-text); text-shadow: var(--shadow-hud); }
+.ui-menu-item small { display: block; font: normal var(--fs-sm) var(--font); letter-spacing: 1px; color: var(--c-text-faint); margin-top: 2px; text-shadow: none; }
+.ui-menu-item.sel, .ui-menu-item:hover { color: var(--c-gold-hi); border-left-color: var(--c-gold-hi); background: linear-gradient(90deg, #ffcf6a26, transparent); }
+.ui-menu-item:disabled { opacity: .4; cursor: default; }
+/* lobby card (side panels over the 3D scene) */
+.ui-card { box-sizing: border-box; background: var(--c-panel); border: 2px solid var(--c-border); border-radius: var(--r-md); padding: var(--sp-4); box-shadow: var(--shadow-panel); }
+.ui-card .ui-label:first-child { margin-top: 0; }
+.ui-card-title { margin: 2px 0 var(--sp-1); font-size: var(--fs-xl); letter-spacing: 3px; color: var(--c-gold-title); line-height: 1.05; }
+.ui-card.flash { animation: ui-flash .8s 2; }
+@keyframes ui-flash { 50% { border-color: var(--c-gold-hi); box-shadow: 0 0 30px #ffcf6a88; } }
+.ui-btn.big { font-size: 26px; padding: 16px var(--sp-4); letter-spacing: 4px; }
+.ui-btn.go { background: #e8c53a; border-color: #ffe27a; color: #1a1208; }   /* THE one big "play" button */
+.ui-btn.go:hover { background: #f5d44a; } .ui-btn.go:disabled { background: #6a5d2a; border-color: #8a7a3a; color: #2a2210; }
+/* name + ready state above a character */
+.ui-nameplate { position: absolute; transform: translate(-50%, -100%); text-align: center; pointer-events: none; text-shadow: var(--shadow-hud); white-space: nowrap; }
+.ui-nameplate .n { font-size: var(--fs-lg); font-weight: bold; } .ui-nameplate .s { font-size: var(--fs-sm); color: var(--c-text-dim); } .ui-nameplate .s.ready { color: var(--c-good); font-weight: bold; }
+/* empty slot "+" invite */
+.ui-plus { position: absolute; transform: translate(-50%, -50%); width: 52px; height: 52px; border-radius: 50%; background: var(--c-hud); border: 3px solid #ffffff66; color: #fff; font: 32px/1 var(--font-ui); cursor: pointer; padding: 0; box-shadow: 0 4px 14px #000a; }
+.ui-plus:hover { border-color: var(--c-gold-hi); color: var(--c-gold-hi); } .ui-plus + span { position: absolute; transform: translate(-50%, 0); font-size: var(--fs-sm); color: var(--c-text-dim); text-shadow: var(--shadow-hud); }
+/* bottom bar of button hints */
+.ui-hintbar { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: var(--sp-5); background: var(--c-hud); border-radius: var(--r-pill); padding: 8px var(--sp-5); font-size: var(--fs-md); white-space: nowrap; text-shadow: none; }
+/* checkbox drawn as a switch */
+.ui-check { -webkit-appearance: none; appearance: none; width: 52px; height: 30px; border-radius: 15px; background: #2a2a30; position: relative; cursor: pointer; flex: none; margin: 0; border: 0; }
+.ui-check::after { content: ''; position: absolute; left: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #888; transition: .2s; }
+.ui-check:checked { background: #3a8a4a; } .ui-check:checked::after { left: 25px; background: #fff; }
