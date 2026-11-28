@@ -110,7 +110,7 @@ function connect(){ const code=$('code').value.replace(/\D/g,''); if(code.length
   lastCode=code; wantConn=true; localStorage.setItem('railpad-code',code);
   NetLink.join(code,{ onOpen:c=>{ opened(c); try{ document.documentElement.requestFullscreen?.()?.catch?.(()=>{}); screen.orientation?.lock?.("landscape")?.catch?.(()=>{}); }catch(e){} },
     onError:e=>{ $('err').textContent=e; $('go').disabled=false; wantConn=false; } }); }
-let pickId=null;
+let pickId=(q.get('p')!==null&&/^\d$/.test(q.get('p')))?+q.get('p'):null;   // scanned from a player's own screen: already knows who it is
 function showWho(list){ $('whoErr').textContent=''; $('whoList').innerHTML=list.map(p=>`<button class="ui-btn alt block" data-id="${p.id}" ${p.taken?'disabled':''} style="text-align:left;border-left:8px solid ${p.color}"><span style="color:${p.color}">●</span> ${p.name}${p.taken?' <small class="ui-faint">(has a phone)</small>':''}</button>`).join(''); $('who').style.display='flex'; }
 $('whoList').addEventListener('click',e=>{ const b=e.target.closest('button[data-id]'); if(b&&conn){ pickId=+b.dataset.id; conn.send({t:'padpick',id:pickId}); } });
 function enterPad(){ $('who').style.display='none'; $('join').style.display='none'; $('pad').style.display='block'; document.body.classList.add('playing'); placeBase(); applySet(); setStatus(true,'CONNECTED'); keepAwake(); }
@@ -121,7 +121,7 @@ if(q.get('code')&&q.get('code').length===4) setTimeout(connect,300);
 // ---------- what the game says the buttons do right now ----------
 let mode='move', vPlayers=[];
 function onMsg(m){
-  if(m.t==='padlist'){ const free=m.players.filter(p=>!p.taken); if(pickId!=null&&m.players.some(p=>p.id===pickId&&!p.taken)) conn.send({t:'padpick',id:pickId}); else if(free.length===1&&m.players.length===1) { pickId=free[0].id; conn.send({t:'padpick',id:pickId}); } else { $('join').style.display='none'; showWho(m.players); } return; }
+  if(m.t==='padlist'){ const free=m.players.filter(p=>!p.taken); if(pickId!=null&&m.players.some(p=>p.id===pickId&&!p.taken)) conn.send({t:'padpick',id:pickId}); else if(free.length===1) { pickId=free[0].id; conn.send({t:'padpick',id:pickId}); } else { $('join').style.display='none'; showWho(m.players); } return; }
   if(m.t==='padok'){ enterPad(); return; }
   if(m.t==='padno'){ pickId=null; $('whoErr').textContent=m.why||''; if($('who').style.display!=='flex'&&conn) conn.send({t:'padhello'}); return; }
   if(m.t==='padgone'){ pickId=null; $('pad').style.display='none'; document.body.classList.remove('playing','danger'); conn&&conn.send({t:'padhello'}); return; }

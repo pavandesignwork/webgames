@@ -447,7 +447,7 @@ function showLobby(){ $('menu').style.display='none'; $('joinScreen').style.disp
   if(net.role==='host'&&localStorage.getItem(saveKey)){ try{ const d=JSON.parse(localStorage.getItem(saveKey)); $('saveInfo').textContent='off: continue your save ('+d.stations.filter(Boolean).length+'/25 stations)'; }catch(e){} $('saveRow').style.display='flex'; }
   renderLobby(); showRoomCode(); }
 function showRoomCode(){ if(!net.code) return; $('roomCode').textContent=net.code;
-  const url=new URL('railpad.html',location.href).href.split('?')[0]+'?code='+net.code+(NetLink.LOCAL?'&local':'');
+  const url=new URL('railpad.html',location.href).href.split('?')[0]+'?code='+net.code+'&p='+myId()+(NetLink.LOCAL?'&local':'');   // the QR on MY screen pairs the phone with ME
   try{ const q=qrcode(0,'M'); q.addData(url); q.make(); $('roomQrImg').src=q.createDataURL(5,1); }catch(e){}
   document.querySelectorAll('.padInfo').forEach(el=>el.innerHTML=phoneConn?'<span class="ui-good">📱 Your phone is connected</span>':'📱 Phone: scan this QR or open <b class="ui-gold">'+url.replace(/^https?:\/\//,'').replace(/\?.*/,'')+'</b> and type the code'); }
 function flashRoom(){ const c=$('roomCard'); c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); }
