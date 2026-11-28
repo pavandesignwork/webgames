@@ -11,6 +11,8 @@ const SLOT={workshop:6.1,material:6.0,cargo:6.0}, ENDS={workshop:-2.4,material:-
 // walkable floor rectangles [x0,x1,z0,z1] (each car owns the gangway in front of it), side doors, in train-local space before shifting
 export const WALKS={cab:[[-1.35,1.35,4.15,6.9]],workshop:[[-.5,.5,3.4,4.3],[-1.35,1.35,-2.05,3.5]],material:[[-.5,.5,-2.95,-1.7],[-1.45,1.45,-8.1,-2.5]],
   cargo:[[-.5,.5,-8.7,-7.6],[-1.45,1.45,-14.1,-8.5]],gun:[[-.5,.5,-14.7,-13.6],[-1.45,1.45,-19.85,-14.85]]};
+export const BLOCKS={cab:[],workshop:[[-1.5,-.55,-.35,1.95],[-1.5,-1.05,-2.1,-.45],[.85,1.45,2.0,2.6]],material:[[-1.45,-.3,-7.7,-2.9],[.95,1.45,-7.2,-5.5],[.65,1.15,-8.15,-7.65]],
+  cargo:[[.5,1.5,-13.3,-12.3],[-1.5,-.5,-13.3,-12.3],[.5,1.5,-10.7,-9.7],[-1.5,-.5,-10.7,-9.7]],gun:[[-.75,.75,-18.95,-17.45],[.85,1.35,-17.0,-16.1],[-1.35,.1,-19.9,-19.4]]};
 export const DOORZ={cab:4.6,workshop:1.0,material:-5.3,cargo:-11.3,gun:-17.5};
 // u = upgrade levels; returns z offset of every owned car (null = not owned) and the rear end of the train
 export function layout(u){ const o={}; let off=0, rear=3.9; for(const c of CARS){ if((u[c]||0)>0){ o[c]=off; rear=ENDS[c]+off; } else { o[c]=null; if(SLOT[c]) off+=SLOT[c]; } } o.rear=rear; return o; }
@@ -180,7 +182,7 @@ for(const [z0,len] of [[4,4],[-2.2,5.8]]){ cur=z0>0?G.cab:G.workshop; const lo=z
   const roundBoiler=m=>{ cylZ(.86,.86,5.6,m,0,1.8,10.9,24); cylZ(.92,.92,.3,D,0,1.8,13.6,24); cylZ(.7,.7,.06,D,0,1.8,13.77,24); cylZ(.12,.12,.1,brass,0,1.8,13.82,12); };
   part('cab','engine',l=>l<=1,()=>{ roundBoiler(iron);
     for(const z of [8.6,11,13.2]) ring(.89,.05,D,0,1.8,z);
-    for(let i=0;i<9;i++){ const p=box(.35+Math.random()*.4,.03,.4+Math.random()*.5,rust,(Math.random()-.5)*.9,2.64,8.6+i*.55); p.rotation.z=(Math.random()-.5)*.4; }   // rust patches
+    for(let i=0;i<9;i++){ const p=box(.2+Math.random()*.15,.03,.4+Math.random()*.5,rust,(Math.random()-.5)*.2,2.66,8.6+i*.55); p.rotation.z=(Math.random()-.5)*.4; }   // rust patches
     mesh(new THREE.CylinderGeometry(.28,.24,.9,14),iron,0,2.95,12.7); ring(.3,.05,D,0,3.38,12.7,'y');
     mesh(new THREE.SphereGeometry(.36,14,10,0,Math.PI*2,0,Math.PI/2),iron,0,2.55,10.6); });
   part('cab','engine',l=>l===2,()=>{ roundBoiler(green);
@@ -206,11 +208,11 @@ for(const [z0,len] of [[4,4],[-2.2,5.8]]){ cur=z0>0?G.cab:G.workshop; const lo=z
       for(let z=8.6;z<13.4;z+=.95){ rv(1.61*k,1.62,z+.45); rv(1.61*k,1.28,z+.45); } } });
   const xBrace=(g,z0,n,w,lo)=>{ for(const k of [-1,1]) for(let i=0;i<n;i++){ const zc=z0+w/2+i*w; for(const s of [-1,1]){ const xb=box(.06,.09,Math.hypot(w,lo-.1)+.05,D,1.63*k,DECK+lo/2,zc); xb.rotation.x=s*Math.atan2(lo-.1,w); } box(.06,lo,.09,D,1.63*k,DECK+lo/2,z0+(i+1)*w); } };
   part('cab','armor',l=>l>=2,()=>{ xBrace(cur,4,2,2,.8); for(const k of [-1,1]) box(.5,.08,4.6,D,1.75*k,DECK+2.7,6);
-    for(const z of [4.6,5.8,7.0]) box(2.6,.06,.7,P,0,DECK+3.3,z); });
+    for(const z of [4.6,5.8,7.0]){ const rg=new THREE.CylinderGeometry(2.26,2.26,.7,20,1,true,Math.PI-.7,1.4); rg.rotateX(Math.PI/2); const pl=new THREE.Mesh(rg,new THREE.MeshStandardMaterial({map:panelTex,color:0x1c1d22,metalness:.5,roughness:.6,side:THREE.DoubleSide})); pl.position.set(0,DECK+1.05,z); cur.add(pl); }; });
   part('workshop','armor',l=>l>=2,()=>{ xBrace(cur,-2.2,3,5.8/3,1.05); });
   const spikeRow=(pts,dir)=>{ for(const [x,y,z] of pts){ const sp=mesh(new THREE.ConeGeometry(.14,.4,4),P,x,y,z); if(dir==='up'){} else if(dir==='back') sp.rotation.x=-Math.PI/2; else sp.rotation.z=-Math.PI/2*dir; } };
-  part('cab','armor',l=>l>=3,()=>{ for(const k of [-1,1]){ spikeRow([...Array(6)].map((_,i)=>[1.78*k,1.45,8.6+i*.95]),k); spikeRow([...Array(4)].map((_,i)=>[1.62*k,DECK+2.95,4.4+i*1.05]),k); } });
-  part('workshop','armor',l=>l>=3,()=>{ for(const k of [-1,1]) spikeRow([...Array(6)].map((_,i)=>[1.62*k,DECK+2.95,-1.8+i*1.0]),k); });
+  part('cab','armor',l=>l>=3,()=>{ for(const k of [-1,1]){ spikeRow([...Array(6)].map((_,i)=>[1.78*k,1.45,8.6+i*.95]),k); spikeRow([...Array(4)].map((_,i)=>[1.62*k,DECK+2.62,4.4+i*1.05]),k); } });
+  part('workshop','armor',l=>l>=3,()=>{ for(const k of [-1,1]) spikeRow([...Array(6)].map((_,i)=>[1.62*k,DECK+2.62,-1.8+i*1.0]),k); });
   part('gun','armor',l=>l>=3,()=>{ spikeRow([...Array(7)].map((_,i)=>[-1.35+i*.45,DECK+.9,-20.2]),'back'); for(const k of [-1,1]) spikeRow([...Array(4)].map((_,i)=>[1.72*k,DECK+.9,-19.5+i*1.3]),k); });
   // ---------- PLOUGH: 0 little cowcatcher, 1 steel plough, 2 spiked plough, 3 horned ram ----------
   part('cab','plough',l=>l===0,()=>{ for(let i=-3;i<=3;i++){ const bar=box(.07,.07,.9,rust,i*.24,.72,14.55); bar.rotation.x=.75; bar.rotation.y=-i*.05; } box(1.9,.08,.08,rust,0,.38,14.85); });
@@ -231,8 +233,8 @@ for(const [z0,len] of [[4,4],[-2.2,5.8]]){ cur=z0>0?G.cab:G.workshop; const lo=z
     cylZ(.28,.32,.5,D,.85,y+.1,7.35,16); mesh(new THREE.CircleGeometry(.25,18),glow,.85,y+.1,7.61); });
   const head=new THREE.SpotLight(0xfff0c8,500,100,.38,.5,1.4); head.castShadow=true; cur.add(head,head.target); T.userData.headLight=head;
   // ---------- HORN: 0 brass whistle, 1 twin scare-horns ----------
-  part('cab','horn',l=>l===0,()=>{ mesh(new THREE.CylinderGeometry(.07,.1,.5,10),brass,-.7,DECK+3.5,7.3); mesh(new THREE.SphereGeometry(.09,8,6),brass,-.7,DECK+3.78,7.3); });
-  part('cab','horn',l=>l>=1,()=>{ box(.5,.1,.3,D,-.8,DECK+3.32,7.1); for(const [x,len] of [[-.95,1.0],[-.62,.75]]){ const h=mesh(new THREE.ConeGeometry(.17,len,14,1,true),D,x,DECK+3.55,7.1+len/2-.3); h.rotation.x=Math.PI/2; h.material=std(0x1b1c20,{metalness:.7,roughness:.35,side:THREE.DoubleSide}); mesh(new THREE.TorusGeometry(.17,.025,6,16),P,x,DECK+3.55,7.1+len-.3); } });
+  part('cab','horn',l=>l===0,()=>{ mesh(new THREE.CylinderGeometry(.07,.1,.5,10),brass,-.7,DECK+3.38,7.3); mesh(new THREE.SphereGeometry(.09,8,6),brass,-.7,DECK+3.66,7.3); });
+  part('cab','horn',l=>l>=1,()=>{ box(.5,.14,.3,D,-.8,DECK+3.17,7.1); for(const [x,len] of [[-.95,1.0],[-.62,.75]]){ const h=mesh(new THREE.ConeGeometry(.17,len,14,1,true),D,x,DECK+3.4,7.1+len/2-.3); h.rotation.x=Math.PI/2; h.material=std(0x1b1c20,{metalness:.7,roughness:.35,side:THREE.DoubleSide}); mesh(new THREE.TorusGeometry(.17,.025,6,16),P,x,DECK+3.4,7.1+len-.3); } });
   // ---------- MISSILE LAUNCHER on the cab roof: 1 one tube, 2 two tubes, 3 four tubes + guidance dish ----------
   const LZ=5.5, LY=DECK+3.4;
   const tubeAt=(x,y)=>{ const t=cylZ(.16,.16,1.4,std(0x2a2c32,{metalness:.6}),x,y,LZ,12); t.rotation.x=Math.PI/2-.3; const tip=mesh(new THREE.ConeGeometry(.15,.3,10),std(0xc02020),x,y+.2,LZ+.68); tip.rotation.x=Math.PI/2-.3; ring(.17,.03,P,x,y,LZ-.2); };
@@ -241,16 +243,16 @@ for(const [z0,len] of [[4,4],[-2.2,5.8]]){ cur=z0>0?G.cab:G.workshop; const lo=z
   part('cab','launcher',l=>l===2,()=>{ tubeAt(-.22,LY+.35); tubeAt(.22,LY+.35); });
   part('cab','launcher',l=>l>=3,()=>{ for(const x of [-.22,.22]) for(const y of [.32,.66]) tubeAt(x,LY+y); box(.04,.6,.04,D,.55,LY+.4,LZ-.4); const dish=mesh(new THREE.SphereGeometry(.22,12,8,0,Math.PI*2,0,Math.PI/3),steel,.55,LY+.75,LZ-.4); dish.rotation.x=-1; });
   // cab roof marker lamp
-  box(.3,.2,.25,D,0,DECK+3.0,7.85); mesh(new THREE.PlaneGeometry(.22,.12),glow,0,DECK+3.0,7.98);
+  box(.3,.2,.2,D,0,DECK+2.95,8.12); mesh(new THREE.PlaneGeometry(.22,.12),glow,0,DECK+2.95,8.23);
 }
 // ---------- WORKSHOP CAR levels: 2 tool chest + drill press, 3 repair crane on the roof ----------
 part('workshop','workshop',l=>l>=2,()=>{ const z0=-2.2, red=std(0xb02a20,{metalness:.4,roughness:.5});
   box(.5,.9,.5,red,1.15,DECK+.45,z0+4.5); for(let i=0;i<4;i++) box(.02,.04,.3,steel,.89,DECK+.15+i*.2,z0+4.5);
-  box(.25,.06,.25,dark,-1.05,DECK+1.0,z0+1.25); box(.06,.7,.06,steel,-1.15,DECK+1.35,z0+1.25); box(.3,.16,.2,red,-1.05,DECK+1.65,z0+1.25); box(.03,.2,.03,steel,-1.0,DECK+1.47,z0+1.25); });
+  box(.25,.06,.25,dark,-1.05,DECK+1.02,z0+3.9); box(.06,.7,.06,steel,-1.15,DECK+1.37,z0+3.9); box(.3,.16,.2,red,-1.05,DECK+1.67,z0+3.9); box(.03,.2,.03,steel,-1.0,DECK+1.49,z0+3.9); });
 part('workshop','workshop',l=>l>=3,()=>{ const z0=-2.2, Y=std(0xf2c21a,{metalness:.3,roughness:.5});
-  box(.35,.3,.35,dark,-.6,DECK+3.4,z0+1.2); const arm1=box(.14,1.4,.14,Y,-.6,DECK+4.1,z0+1.2); arm1.rotation.z=.3; const arm2=box(1.2,.12,.12,Y,-.05,DECK+4.7,z0+1.2); arm2.rotation.z=-.2;
+  box(.35,.3,.35,dark,-.6,DECK+3.3,z0+1.2); const arm1=box(.14,1.4,.14,Y,-.6,DECK+4.1,z0+1.2); arm1.rotation.z=.3; const arm2=box(1.2,.12,.12,Y,-.05,DECK+4.7,z0+1.2); arm2.rotation.z=-.2;
   tube([[.5,DECK+4.55,z0+1.2],[.55,DECK+4.1,z0+1.2]],.015,dark); box(.1,.18,.1,steel,.55,DECK+3.98,z0+1.2);
-  box(.12,.3,.12,dark,.6,DECK+3.45,z0+4.4); const bea=new THREE.Mesh(new THREE.SphereGeometry(.12,10,8),new THREE.MeshBasicMaterial({color:0x4aff7a})); bea.position.set(.6,DECK+3.66,z0+4.4); cur.add(bea); });
+  box(.12,.3,.12,dark,.6,DECK+3.3,z0+4.4); const bea=new THREE.Mesh(new THREE.SphereGeometry(.12,10,8),new THREE.MeshBasicMaterial({color:0x4aff7a})); bea.position.set(.6,DECK+3.51,z0+4.4); cur.add(bea); });
 // --- gun deck detail: armored shield plates, spent shells, sandbags ---
 cur=G.gun;
 { const z0=-8+GUN_SHIFT;
@@ -270,15 +272,15 @@ function flatcar(z0,len,col){ box(3.3,.3,len,tread,0,DECK-.15,z0+len/2); box(3.4
 cur=G.material;
 { const z0=-8.2, len=5.8; flatcar(z0,len,std(0xc9a24a));
   const railM=std(0xb8bec8,{metalness:.85,roughness:.3}), slM=std(0x5a3d26);
-  T.userData.railStack=[]; for(let i=0;i<7;i++){ const g=new THREE.Group(); for(const k of [-.25,.25]){ const r=new THREE.Mesh(new THREE.BoxGeometry(.12,.14,4.6),railM); r.position.set(k,0,0); g.add(r); } g.position.set(-.75+(i%2)*.0,DECK+.1+Math.floor(i/2)*.16,z0+len/2); g.position.x=-.8+(i%2)*.55; cur.add(g); T.userData.railStack.push(g); }
-  for(let i=0;i<8;i++){ const sl=new THREE.Mesh(new THREE.BoxGeometry(1.1,.18,.32),slM); sl.position.set(.85,DECK+.1+Math.floor(i/2)*.2,z0+1.2+(i%2)*.5); sl.rotation.y=Math.PI/2; cur.add(sl); } }
+  T.userData.railStack=[]; for(let i=0;i<7;i++){ const g=new THREE.Group(); for(const k of [-.25,.25]){ const r=new THREE.Mesh(new THREE.BoxGeometry(.12,.14,4.6),railM); r.position.set(k,0,0); g.add(r); } g.position.set(-.75+(i%2)*.0,DECK+.1+Math.floor(i/2)*.16,z0+len/2); g.position.x=-1.05+(i%2)*.45; cur.add(g); T.userData.railStack.push(g); }
+  for(let i=0;i<8;i++){ const sl=new THREE.Mesh(new THREE.BoxGeometry(1.1,.18,.32),slM); sl.position.set(1.15,DECK+.1+Math.floor(i/2)*.2,z0+1.6+(i%2)*.5); sl.rotation.y=Math.PI/2; cur.add(sl); } }
 part('material','material',l=>l>=2,()=>{ const z0=-8.2; for(const k of [-1,1]) for(let z=z0+.3;z<z0+5.8;z+=1.1){ box(.1,1.5,.1,dark,1.6*k,DECK+.75,z); box(.14,.14,.14,panel,1.6*k,DECK+1.55,z); } for(const k of [-1,1]) box(.05,.05,5.6,steel,1.6*k,DECK+1.35,z0+2.9); });
-part('material','material',l=>l>=3,()=>{ const z0=-8.2, Y=panel; box(.4,.3,.4,dark,1.0,DECK+.15,z0+.6); box(.16,2.3,.16,Y,1.0,DECK+1.4,z0+.6); const jib=box(2.2,.14,.14,Y,.1,DECK+2.5,z0+.6); jib.rotation.z=-.15;
-  tube([[-.85,DECK+2.6,z0+.6],[-.85,DECK+1.9,z0+.6]],.015,dark); const hook=new THREE.Mesh(new THREE.TorusGeometry(.08,.025,6,10,4.5),steel); hook.position.set(-.85,DECK+1.82,z0+.6); cur.add(hook); });
+part('material','material',l=>l>=3,()=>{ const z0=-8.2, Y=panel; box(.4,.3,.4,dark,.9,DECK+.15,z0+.3); box(.16,2.3,.16,Y,.9,DECK+1.4,z0+.3); const jib=box(2.2,.14,.14,Y,0,DECK+2.5,z0+.3); jib.rotation.z=-.15;
+  tube([[-.85,DECK+2.6,z0+.3],[-.85,DECK+1.9,z0+.3]],.015,dark); const hook=new THREE.Mesh(new THREE.TorusGeometry(.08,.025,6,10,4.5),steel); hook.position.set(-.85,DECK+1.82,z0+.3); cur.add(hook); });
 cur=G.cargo;
 { const z0=-14.2, len=5.8; flatcar(z0,len,std(0x4ab0e8));
   T.userData.cargo=[]; const cm=[std(0x6a4a2a),std(0x5a6a3a),std(0x7a3a2a)];
-  for(let i=0;i<4;i++){ const c=box(.9,.8,.9,cm[i%3],(i%2?.7:-.7),DECK+.4,z0+1.4+Math.floor(i/2)*2.6); c.visible=false; T.userData.cargo.push(c); }
+  for(let i=0;i<4;i++){ const c=box(.9,.8,.9,cm[i%3],(i%2?1.0:-1.0),DECK+.4,z0+1.4+Math.floor(i/2)*2.6); c.visible=false; T.userData.cargo.push(c); }
   const lamp=new THREE.Mesh(new THREE.SphereGeometry(.1,8,6),new THREE.MeshBasicMaterial({color:0xffc870})); lamp.position.set(1.55,DECK+1.1,z0+len/2); cur.add(lamp); }
 part('cargo','cargo',l=>l>=2,()=>{ const z0=-14.2; for(let i=0;i<4;i++){ const h=new THREE.Mesh(new THREE.TorusGeometry(1.55,.05,6,20,Math.PI),dark); h.position.set(0,DECK+1.0,z0+.5+i*1.6); cur.add(h); }
   const tarp=new THREE.Mesh(new THREE.CylinderGeometry(1.53,1.53,4.9,20,1,true,-Math.PI/2,Math.PI),std(0x5a5a3a,{side:THREE.DoubleSide,roughness:.95})); tarp.rotation.x=Math.PI/2; tarp.rotation.y=Math.PI/2; tarp.position.set(0,DECK+1.0,z0+2.9); tarp.scale.set(1,1,1); cur.add(tarp); });
