@@ -6,27 +6,27 @@
  /* LAYOUT ONLY: where things go. How things look lives in ui.css (the design system). */
  /* title + join: logo and menu on the left, the 3D Yard scene shows on the right */
  #menu,#joinScreen{justify-content:flex-start;background:linear-gradient(90deg,#05070bf2 0,#05070bd6 30%,#05070b66 52%,#05070b00 72%)}
- .fe-side{width:min(500px,94vw);height:100%;box-sizing:border-box;padding:6vh 3.5vw 4vh;display:flex;flex-direction:column;justify-content:center;overflow:auto}
+ .fe-side{width:min(500px,94cqw);height:100%;box-sizing:border-box;padding:6cqh 3.5cqw 4cqh;display:flex;flex-direction:column;justify-content:center;overflow:auto}
  .fe-side .ui-field{margin-top:var(--sp-5)} .fe-foot{margin-top:auto;text-align:left}
  #code4{display:flex;gap:var(--sp-2)}
  /* lobby: crew stands on pads in the middle; cards left and right; hints at the bottom */
  #lobby{background:linear-gradient(90deg,#05070b99 0,#05070b00 30%,#05070b00 70%,#05070b99 100%),linear-gradient(0deg,#05070bb0 0,#05070b00 18%)}
- .lb-top{position:absolute;left:3vw;right:3vw;top:2.5vh;display:flex;align-items:center;gap:var(--sp-4)} .lb-top .sp{flex:1}
- .lb-left{position:absolute;left:3vw;top:14vh;width:min(300px,25vw);display:flex;flex-direction:column;gap:var(--sp-3);max-height:78vh;overflow:auto}
- .lb-right{position:absolute;right:3vw;top:14vh;width:min(262px,22vw);display:flex;flex-direction:column;gap:var(--sp-3);max-height:78vh;overflow:auto}
+ .lb-top{position:absolute;left:3cqw;right:3cqw;top:2.5cqh;display:flex;align-items:center;gap:var(--sp-4)} .lb-top .sp{flex:1}
+ .lb-left{position:absolute;left:3cqw;top:14cqh;width:min(300px,25cqw);display:flex;flex-direction:column;gap:var(--sp-3);max-height:78cqh;overflow:auto}
+ .lb-right{position:absolute;right:3cqw;top:14cqh;width:min(262px,22cqw);display:flex;flex-direction:column;gap:var(--sp-3);max-height:78cqh;overflow:auto}
  #roomQr{display:flex;align-items:center;gap:var(--sp-3)} #roomQr img{width:96px;height:96px;border-radius:var(--r-sm);background:#fff;padding:3px;flex:none}
- #nameplates{position:absolute;inset:0;pointer-events:none} #nameplates .ui-plus{pointer-events:auto}
+ #localCards{display:flex;flex-direction:column;gap:var(--sp-2)} #localCards .ui-card{padding:var(--sp-2)} #nameplates{position:absolute;inset:0;pointer-events:none} #nameplates .ui-plus{pointer-events:auto}
  .lb-left .ui-row,.lb-right .ui-row{padding:6px 0} .padInfo{text-align:left;overflow:hidden;font-size:var(--fs-sm);line-height:1.4;color:var(--c-text-dim)}
- #hud{position:fixed;inset:0;pointer-events:none;display:none}
+ #hud{position:absolute;inset:0;pointer-events:none;display:none}
  #cross{position:absolute;left:50%;top:50%;width:5px;height:5px;margin:-2.5px;border-radius:50%;background:#fffa;box-shadow:0 0 3px #000}
  #ammo{position:absolute;left:50%;top:calc(50% + 18px);transform:translateX(-50%);font-size:var(--fs-xs);color:#ffe7b0;display:none}
  #prompt{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);font-size:var(--fs-md);color:#fff;display:none;white-space:nowrap}
- #mission{position:absolute;left:50%;top:14px;transform:translateX(-50%);text-align:center;max-width:72vw}
+ #mission{position:absolute;left:50%;top:14px;transform:translateX(-50%);text-align:center;max-width:72cqw}
  #mMain{font-size:17px;color:var(--c-text-strong)} #mSide{font-size:var(--fs-sm);color:var(--c-warn);margin-top:2px}
- #feed{position:absolute;right:18px;top:14px;text-align:right;font-size:var(--fs-sm);line-height:1.6;max-width:40vw}
+ #feed{position:absolute;right:18px;top:14px;text-align:right;font-size:var(--fs-sm);line-height:1.6;max-width:40cqw}
  #feed div{animation:ui-fadeout 4.5s forwards}
  #warn{position:absolute;left:50%;top:62px;transform:translateX(-50%);color:#ffd0c0;font-size:var(--fs-md);letter-spacing:1px;display:none;animation:ui-blink 1.2s infinite}
- #boss{position:absolute;left:50%;top:92px;transform:translateX(-50%);width:min(520px,64vw);display:none;color:#ffd0c0;font-size:var(--fs-sm)}
+ #boss{position:absolute;left:50%;top:92px;transform:translateX(-50%);width:min(520px,64cqw);display:none;color:#ffd0c0;font-size:var(--fs-sm)}
  #stats{position:absolute;left:18px;bottom:16px;font-size:var(--fs-sm);color:var(--c-text-strong)} #stats .ui-bar{width:190px} #inv{margin-top:5px;word-spacing:2px}
  #speed{position:absolute;right:20px;bottom:16px;text-align:right;display:none;color:var(--c-text-strong)} #spd{font-size:var(--fs-xl);font-weight:bold} #speed .ui-bar{width:150px}
  #help{position:absolute;left:50%;bottom:100px;transform:translateX(-50%);font-size:var(--fs-sm);color:var(--c-text);white-space:nowrap;transition:opacity 1s}
@@ -37,10 +37,18 @@
  #regionTitle.show{animation:regionIn 4s forwards}
  @keyframes regionIn{0%{opacity:0;letter-spacing:14px}15%{opacity:1}75%{opacity:1}100%{opacity:0;letter-spacing:8px}}
  #clickToPlay{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-size:22px;padding:12px 24px;display:none;pointer-events:auto;cursor:pointer;text-shadow:none}
- #shop{position:absolute;right:2vw;top:50%;transform:translateY(-50%);width:min(600px,56vw);display:none}
- #shopHint{margin-top:var(--sp-2)} #shopList{max-height:62vh;overflow:auto}
+ #shop{position:absolute;right:2cqw;top:50%;transform:translateY(-50%);width:min(600px,56cqw);display:none}
+ #shopHint{margin-top:var(--sp-2)} #shopList{max-height:62cqh;overflow:auto}
  #hud.shopping>*:not(#shop):not(#feed){display:none!important}
+ @container (max-width:700px){ #mMain{font-size:14px} #mSide{font-size:12px} #feed{font-size:12px} #stats{font-size:12px;left:10px;bottom:8px} #stats .ui-bar{width:120px} #speed{right:10px;bottom:8px} #spd{font-size:20px} #hints{font-size:12px;bottom:34px} #help{display:none} #mark{font-size:13px} #regionTitle{font-size:22px;letter-spacing:5px} }
+ @container (max-height:420px){ #mission{top:6px} #warn{top:44px} #boss{top:66px} #clickToPlay{font-size:16px;padding:8px 14px} }
+
+ /* the STAGE is this player's window: the whole screen alone, or a half / quarter when people share a screen */
+ html,body{background:#000}
+ #stage{position:fixed;left:var(--sx,0px);top:var(--sy,0px);width:var(--sw,100vw);height:var(--sh,100vh);overflow:hidden;container-type:size;background:var(--c-bg)}
+ .pane{position:fixed;border:0;background:#000;pointer-events:none}
 </style></head><body>
+<div id="stage">
 <div id="menu" class="ui-screen" style="display:flex"><div class="fe-side">
   <div class="ui-logo"><div class="l1">RATTLEJAW</div><div class="l2">RAILS</div><div class="l3">CO-OP TRAIN ADVENTURE · 1 TO 4</div></div>
   <div class="ui-field"><label class="ui-label">YOUR NAME</label><input class="ui-input" id="name" maxlength="14" placeholder="Engineer" style="max-width:300px"></div>
@@ -68,6 +76,7 @@
       <div id="saveRow" class="ui-row" style="display:none;margin-top:var(--sp-3)"><div class="tx" style="font-size:var(--fs-sm)"><b>New game</b><br><small id="saveInfo">erases your saved game</small></div><input type="checkbox" id="newSave" class="ui-check"></div>
       <div id="outfitRow" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:var(--sp-4) 0 var(--sp-2)"><button class="ui-btn alt sm ob" data-d="-1">◀</button><div style="text-align:center;flex:1"><div class="ui-label" style="margin:0">YOUR OUTFIT</div><b id="outfitName" style="font-size:20px">…</b></div><button class="ui-btn alt sm ob" data-d="1">▶</button></div>
       <button class="ui-btn go big block" id="readyBtn">READY</button>
+      <button class="ui-btn alt sm block" id="addLocal" style="display:none">＋ ADD A PLAYER ON THIS SCREEN</button>
       <button id="startBtn" class="ui-btn alt block" style="display:none">▶ START GAME</button>
       <div class="ui-err" id="lobbyErr"></div></div>
   </div>
@@ -79,6 +88,7 @@
       <label class="ui-label" style="margin-top:0">FRIENDS JOIN WITH THIS CODE</label>
       <div class="ui-code" id="roomCode" style="font-size:38px;letter-spacing:8px;margin:0;text-align:center">····</div>
       <div class="ui-note">On their own screen: <b>JOIN GAME</b>, then type the code.</div></div>
+    <div id="localCards"></div>
     <div class="ui-note" style="text-align:left">🎤 Voice chat: the mic circle on your phone, or press V on the keyboard</div>
   </div>
   <div id="nameplates"></div>
@@ -101,6 +111,7 @@
   <div style="margin-top:18px;color:#9a8a70;letter-spacing:3px;font-size:12px">YOUR CREW</div><div id="vCrew" style="font-size:22px;margin:6px 0 4px"></div>
   <div class="ui-note">A game made for a brave young engineer 🚂</div>
   <button class="ui-btn block" onclick="document.getElementById('victory').style.display='none'">KEEP PLAYING (free play)</button></div></div>
+</div>
 <script src="vendor/peerjs.min.js"></script>
 <script>window.SFX_NO_HINT=true;</script>
 <script src="sound.js"></script>
@@ -118,6 +129,8 @@ import {buildYard,YARD,slotSign} from './yard.js';
 import {Crew,OUTFITS} from './chars.js';
 import {planIsland,islandH,buildIsland,SEA_Y} from './island.js';
 const $=id=>document.getElementById(id);
+const QS=new URLSearchParams(location.search), EMBED=QS.get('embed')==='1', SLOT=+QS.get('slot')||1;   // EMBED = an extra person sharing this screen (runs in a window next to the main one)
+if(EMBED) A.setVolume(0);   // only the main window makes sound
 // ---- phone controller: ONE code. A phone joins the room (same code as the lobby), says which player it is, and becomes that player's controller.
 //      The host relays: phone <-> host <-> the player's computer. (A host's own phone is direct.) ----
 NetLink.setPrefix('pdw-webgames-rails-');
@@ -147,7 +160,7 @@ function voiceSync(force){ if(!net.role||net.myId==null&&net.role!=='host') retu
   const key=JSON.stringify([me,net.code,others,!!phoneConn]); if(key===voiceKey&&!force) return; voiceKey=key;
   if(!others.length){ if(Voice.st.up) Voice.stop(); if(phoneConn) phoneConn.send({t:'voice',stop:true}); return; }
   if(phoneConn){ if(Voice.st.up) Voice.stop(); phoneConn.send({t:'voice',me,players:others}); }
-  else { if(!Voice.st.up||Voice.st.me!==me) Voice.init({me,send:voiceSend,onState:voiceState}); Voice.setPlayers(others); } }
+  else { if(EMBED){ if(Voice.st.up) Voice.stop(); return; } if(!Voice.st.up||Voice.st.me!==me) Voice.init({me,send:voiceSend,onState:voiceState}); Voice.setPlayers(others); } }
 const COLORS=['#e8b24a','#4ab0e8','#e85a4a','#7ae84a'];
 const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t;
 Input.autoBack=false;
@@ -155,12 +168,14 @@ Input.autoBack=false;
 // =====================================================================
 //  WORLD: a big island in 5 regions, one long railway loop with 25 stations
 // =====================================================================
-const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(1.5,devicePixelRatio)); renderer.setSize(innerWidth,innerHeight);
-renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.1;
-document.body.prepend(renderer.domElement);
+const stage=document.getElementById('stage');
+const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(1.5,devicePixelRatio)); renderer.setSize(stage.clientWidth,stage.clientHeight);
+renderer.shadowMap.enabled=QS.get('q')!=='low'; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.1;
+stage.prepend(renderer.domElement);
 const scene=new THREE.Scene(); scene.background=new THREE.Color(0x1a1f2e); scene.fog=new THREE.FogExp2(0x232a3a,.022);
-const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.05,500);
-addEventListener('resize',()=>{ renderer.setSize(innerWidth,innerHeight); camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); });
+const camera=new THREE.PerspectiveCamera(75,stage.clientWidth/stage.clientHeight,.05,500);
+function fit(){ const w=Math.max(2,stage.clientWidth), h=Math.max(2,stage.clientHeight); renderer.setSize(w,h); camera.aspect=w/h; camera.fov=Math.min(92,Math.max(75,75+(1.78-w/h)*25)); camera.updateProjectionMatrix(); }
+new ResizeObserver(fit).observe(stage); addEventListener('resize',fit);
 const std=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.9,...o});
 const hemi=new THREE.HemisphereLight(0x8a98c8,0x3a3024,1.25); scene.add(hemi);
 const moon=new THREE.DirectionalLight(0xb0c4ff,1.8); moon.castShadow=true; moon.shadow.mapSize.set(2048,2048); Object.assign(moon.shadow.camera,{left:-45,right:45,top:45,bottom:-45,far:160}); scene.add(moon,moon.target);
@@ -378,8 +393,8 @@ let me={mode:'train',x:0,z:5.3,gx:0,gz:0,yaw:0,pitch:0,seat:null,view:'out'};
 const hostConns={}; let nextId=1;
 const myId=()=>net.role==='host'?0:net.myId;
 function lobbyList(){ return Object.values(S.players).map(p=>({id:p.id,name:p.name,color:p.color,ready:p.ready,outfit:p.outfit|0})); }
-const myOutfit=()=>{ const v=parseInt(localStorage.getItem('rails-outfit')); return Number.isInteger(v)?((v%OUTFITS.length)+OUTFITS.length)%OUTFITS.length:Math.floor(Math.random()*OUTFITS.length); };
-function changeOutfit(d){ const p=S.players[myId()]; if(!p) return; const i=(((p.outfit|0)+d)%OUTFITS.length+OUTFITS.length)%OUTFITS.length; p.outfit=i; localStorage.setItem('rails-outfit',i);
+const myOutfit=()=>{ const v=EMBED?parseInt(QS.get('outfit')):parseInt(localStorage.getItem('rails-outfit')); return Number.isInteger(v)?((v%OUTFITS.length)+OUTFITS.length)%OUTFITS.length:Math.floor(Math.random()*OUTFITS.length); };
+function changeOutfit(d){ const p=S.players[myId()]; if(!p) return; const i=(((p.outfit|0)+d)%OUTFITS.length+OUTFITS.length)%OUTFITS.length; p.outfit=i; if(!EMBED) localStorage.setItem('rails-outfit',i);
   if(net.role==='host'){ broadcast({t:'lobby',players:lobbyList()}); } else net.conn.send({t:'outfit',i}); renderLobby(); A.dry(); }
 document.querySelectorAll('.ob').forEach(b=>b.onclick=()=>changeOutfit(+b.dataset.d));
 function broadcast(m){ for(const id in hostConns) hostConns[id].conn.send(m); }
@@ -387,7 +402,8 @@ function feed(t,col){ const d=document.createElement('div'); d.textContent=t; if
 function announce(t,col){ feed(t,col); broadcast({t:'msg',text:t,col}); }
 function fx(k){ playFx(k); broadcast({t:'fx',k}); }
 function playFx(k){ const F={ram:()=>{ shake=1; A.ram(); },horn:()=>A.whistle(),win:()=>A.fanfare(),boom:()=>{ A.boom(); shake=.6; },fix:()=>A.hammer(),quake:()=>{ shake=.5; },roar:()=>{ A.roar(); shake=1; },bite:()=>{ A.bite(); shake=1.2; },pick:()=>A.pickup(),hit:()=>A.splat(),ghost:()=>A.ghostHorn(.35),victory:()=>A.win(),phase:()=>{ A.roar(1); shake=1.5; }}; F[k]&&F[k](); }
-$('name').value=localStorage.getItem('rails-name')||'';
+$('name').value=EMBED?(QS.get('name')||'Player'):(localStorage.getItem('rails-name')||'');
+if(EMBED) $('menu').style.display='none';
 let menuSel=0;
 function setMenuSel(i){ menuSel=i; document.querySelectorAll('#mainMenu .ui-menu-item').forEach((b,j)=>b.classList.toggle('sel',j===i)); }
 document.querySelectorAll('#mainMenu .ui-menu-item').forEach((b,j)=>b.onmouseenter=()=>setMenuSel(j));
@@ -396,7 +412,7 @@ function showTitle(){ $('joinScreen').style.display='none'; $('menu').style.disp
 $('joinOpen').onclick=showJoin; $('joinBack').onclick=showTitle; $('leaveBtn').onclick=()=>location.reload();
 $('joinCode').addEventListener('keydown',e=>{ if(e.key==='Enter') $('joinBtn').click(); if(e.key==='Escape') showTitle(); });
 { const jq=new URLSearchParams(location.search).get('join'); if(/^\d{4}$/.test(jq||'')){ $('joinCode').value=jq; showJoin(); setTimeout(()=>$('joinBtn').click(),700); } }   // invite QR: opens the game and joins by itself
-const myName=()=>{ const n=($('name').value.trim()||'Engineer').slice(0,14); localStorage.setItem('rails-name',n); return n; };
+const myName=()=>{ const n=($('name').value.trim()||'Engineer').slice(0,14); if(!EMBED) localStorage.setItem('rails-name',n); return n; };
 $('hostBtn').onclick=()=>{ net.role='host'; $('hostBtn').disabled=true; $('menuErr').textContent='Opening a room…';
   S.players[0]={id:0,name:myName(),color:COLORS[0],ready:false,outfit:myOutfit(),mode:'train',x:0,z:5.3,yaw:0,pitch:0,seat:null};
   NetLink.host({ onCode:c=>{ net.code=c; $('code').textContent=c; showLobby(); },
@@ -423,9 +439,9 @@ $('hostBtn').onclick=()=>{ net.role='host'; $('hostBtn').disabled=true; $('menuE
 $('joinBtn').onclick=()=>{ const code=$('joinCode').value.replace(/\D/g,''); if(code.length!==4){ $('joinErr').textContent='Type the 4-digit room code.'; return; }
   net.role='client'; $('joinBtn').disabled=true; $('joinErr').textContent='Connecting…';
   NetLink.join(code,{ onOpen:c=>{ net.conn=c; net.code=code; c.send({t:'hello',name:myName(),outfit:myOutfit()}); c.on('data',onHostMsg); c.on('close',()=>{ alert('Lost connection to the host.'); location.reload(); }); },
-    onError:e=>{ $('joinErr').textContent=e; $('joinBtn').disabled=false; net.role=null; } }); };
+    onError:e=>{ $('joinErr').textContent=e; $('joinBtn').disabled=false; net.role=null; tellParent({t:'paneErr',why:String(e)}); } }); };
 function onHostMsg(m){
-  if(m.t==='full'){ $('joinErr').textContent=m.why; $('joinBtn').disabled=false; net.role=null; return; }
+  if(m.t==='full'){ $('joinErr').textContent=m.why; $('joinBtn').disabled=false; net.role=null; tellParent({t:'paneErr',why:m.why}); return; }
   if(m.t==='welcome'){ net.myId=m.id; $('code').textContent=net.code; showLobby(); }
   if(m.t==='lobby'){ const old=S.players; S.players={}; for(const p of m.players){ if(p.ready&&old[p.id]&&!old[p.id].ready&&avatars[p.id]) avatars[p.id].userData.crew.wave=2.2; S.players[p.id]={...(old[p.id]||{mode:'train',x:0,z:2,yaw:0,pitch:0,seat:null}),...p}; } renderLobby(); }
   if(m.t==='start'){ S.trainS=0; S.trainSnap=null; beginGame(); }
@@ -444,16 +460,18 @@ function onHostMsg(m){
   if(m.t==='victory') showVictory();
   if(m.t==='tp'){ me.mode='train'; me.seat=null; me.x=0; me.z=2; }
 }
-function showLobby(){ $('menu').style.display='none'; $('joinScreen').style.display='none'; $('lobby').style.display='flex';
+function showLobby(){ renderLocalCards(); $('menu').style.display='none'; $('joinScreen').style.display='none'; $('lobby').style.display='flex';
   $('lobbyHint').textContent=net.role==='host'?'You are the leader: when everyone is READY, press START':'25 stations · waiting for the leader to start';
   if(net.role==='host'&&localStorage.getItem(saveKey)){ try{ const d=JSON.parse(localStorage.getItem(saveKey)); $('saveInfo').textContent='off: continue your save ('+d.stations.filter(Boolean).length+'/25 stations)'; }catch(e){} $('saveRow').style.display='flex'; }
   renderLobby(); showRoomCode(); }
 function showRoomCode(){ if(!net.code) return; $('roomCode').textContent=net.code;
   const url=new URL('railpad.html',location.href).href.split('?')[0]+'?code='+net.code+'&p='+myId()+(NetLink.LOCAL?'&local':'');   // the QR on MY screen pairs the phone with ME
   try{ const q=qrcode(0,'M'); q.addData(url); q.make(); $('roomQrImg').src=q.createDataURL(5,1); }catch(e){}
+  tellParent(paneInfo());
   document.querySelectorAll('.padInfo').forEach(el=>el.innerHTML=phoneConn?'<span class="ui-good">✓ Your phone is connected</span>':'<span class="ui-dim">Open your phone camera and scan. It opens straight into this lobby.</span>'); }
 function flashRoom(){ const c=$('roomCard'); c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); }
 function renderLobby(){ const ps=Object.values(S.players); voiceSync();
+  tellParent(paneInfo());
   const mine=S.players[myId()], host=net.role==='host', ready=!!(mine&&mine.ready), all=!!ps.length&&ps.every(p=>p.ready);
   if(mine) $('outfitName').textContent=OUTFITS[mine.outfit|0].name;
   $('readyBtn').textContent=ready?'✓ READY':'READY'; $('readyBtn').className='ui-btn big block '+(ready?'alt':'go');
@@ -585,7 +603,7 @@ function launchMissileFx(target){ const m=missiles.find(m=>!m.on); if(!m) return
 // =====================================================================
 //  GAME LOOP
 // =====================================================================
-function beginGame(){ S.started=true; sendPlist(); S.helpUntil=performance.now()+12000; $('lobby').style.display='none'; $('hud').style.display='block'; $('clickToPlay').style.display='block';
+function beginGame(){ S.started=true; sendPlist(); layoutPanes(); renderLocalCards(); S.helpUntil=performance.now()+12000; $('lobby').style.display='none'; $('hud').style.display='block'; $('clickToPlay').style.display='block';
   const p=S.players[myId()]; me.x=p?p.x:0; me.z=p?p.z:2; W.stations.forEach((c,i)=>{ if(c) lightStation(i); }); applyPaint();
   feed('All aboard! Follow the MISSION at the top. Connect all 25 stations!','#ffcf6a'); if(!W.upg.gun&&!W.upg.material) feed('🔧 Your train is just an engine. Press Tab / △ to open the TRAIN screen and attach your first cars!','#9fe'); A.whistle(); if(net.role==='host') pushWorld(); }
 $('clickToPlay').onclick=()=>renderer.domElement.requestPointerLock();
@@ -605,9 +623,9 @@ const kbOnly=()=>!padActive;
 const chip=k=>`<span class="ui-glyph ui-${k}">${BTN_ICON[k]}</span>${kbOnly()?`<small class="ui-key">${BTN_KEY[k]}</small>`:''}`;
 let lastTY=0, uiSent='', curTarget=null;
 function readControls(){
-  const typing=document.activeElement&&document.activeElement.tagName==='INPUT'&&document.activeElement.type!=='checkbox'; if(typing){ for(const k in tapped) delete tapped[k]; }
-  const K=typing?{}:keys;
-  const gp=[...(navigator.getGamepads?navigator.getGamepads():[])].find(g=>g&&g.connected), n=gp?Input.named(gp):{}, dz=v=>Math.abs(v||0)<.18?0:v;
+  const typing=document.activeElement&&document.activeElement.tagName==='INPUT'&&document.activeElement.type!=='checkbox'; if(typing||EMBED){ for(const k in tapped) delete tapped[k]; }
+  const K=(typing||EMBED)?{}:keys;
+  const pads=[...(navigator.getGamepads?navigator.getGamepads():[])].filter(g=>g&&g.connected), gp=EMBED?pads[SLOT-1]:pads[0], n=gp?Input.named(gp):{}, dz=v=>Math.abs(v||0)<.18?0:v;
   if(gp&&(gp.buttons.some(b=>b.pressed)||Math.abs(n.lx)+Math.abs(n.ly)+Math.abs(n.rx||0)+Math.abs(n.ry||0)>.6)) padActive=true;
   if(performance.now()-PH.last<1500) padActive=true;
   // buttons: held + pressed-this-frame (phone sends a press counter so quick taps are never lost)
@@ -869,7 +887,7 @@ function render(){
   camera.position.copy(eye); camera.up.copy(up); camera.lookAt(eye.clone().add(look)); if(me.mode==='train') camera.rotateZ(camRoll); myLamp.position.copy(eye).add(new THREE.Vector3(0,-.3,0));
   { const LV=train.userData.levers; if(LV){ LV[0].rotation.x=-.45+S.throttle*.95; hornPull=Math.max(0,hornPull-1/25); LV[1].rotation.x=-.3+hornPull*.7; LV[2].rotation.x=-.4+S.brake*.8; } if(train.userData.needle) train.userData.needle.rotation.z=1.25-clamp(S.v/14,0,1)*2.5; }
   // the button marker on whatever you are looking at
-  { const mk=$('mark'); if(curTarget&&S.started&&!shopOpen()){ const v=curTarget.wp.clone().project(camera); if(v.z<1&&Math.abs(v.x)<1.1&&Math.abs(v.y)<1.1){ mk.style.display='block'; mk.style.left=((v.x+1)/2*innerWidth)+'px'; mk.style.top=((1-v.y)/2*innerHeight)+'px'; const html=(curTarget.act?chip('x'):'')+`<span>${curTarget.label}</span>`; if(mk.innerHTML!==html) mk.innerHTML=html; } else mk.style.display='none'; } else mk.style.display='none'; }
+  { const mk=$('mark'); if(curTarget&&S.started&&!shopOpen()){ const v=curTarget.wp.clone().project(camera); if(v.z<1&&Math.abs(v.x)<1.1&&Math.abs(v.y)<1.1){ mk.style.display='block'; mk.style.left=((v.x+1)/2*stage.clientWidth)+'px'; mk.style.top=((1-v.y)/2*stage.clientHeight)+'px'; const html=(curTarget.act?chip('x'):'')+`<span>${curTarget.label}</span>`; if(mk.innerHTML!==html) mk.innerHTML=html; } else mk.style.display='none'; } else mk.style.display='none'; }
   wrench.visible=me.mode==='ground'&&!shopOpen(); if(wrench.visible){ swing*=.85; wrench.position.set(.32,-.32+swing*.15,-.6); wrench.rotation.set(-.5-swing*1.4,0,-.3); }
   if(Math.random()<(S.started?.25+S.throttle*.5:.14)){ const s=smoke.find(s=>s.life<=0); if(s){ s.m.position.copy(new THREE.Vector3(0,5.2,12.3).applyMatrix4(train.matrixWorld)); s.m.scale.setScalar(.5); s.m.visible=true; s.life=3; } }
   for(const s of smoke) if(s.life>0){ s.life-=1/60; s.m.position.y+=.05; s.m.scale.multiplyScalar(1.012); s.m.material.opacity=Math.max(0,s.life/3*.45); if(s.life<=0) s.m.visible=false; }
@@ -881,7 +899,7 @@ function render(){
     if($('mMain').textContent!==m1) $('mMain').textContent=m1; const m2s=imp?m2:''; if($('mSide').textContent!==m2s) $('mSide').textContent=m2s;
     lastWarn=wtxt; $('warn').style.display=wtxt?'block':'none'; if($('warn').textContent!==wtxt) $('warn').textContent=wtxt;
     $('hud').classList.toggle('shopping',shopOpen());
-    $('clickToPlay').style.display=!document.pointerLockElement&&!shopOpen()&&!padActive&&$('victory').style.display!=='flex'?'block':'none';
+    $('clickToPlay').style.display=!EMBED&&!document.pointerLockElement&&!shopOpen()&&!padActive&&$('victory').style.display!=='flex'?'block':'none';
     $('cross').style.display=me.seat==='drive'?'none':'block';
     $('ammo').style.display=me.seat==='gun'?'block':'none'; if(me.seat==='gun') $('ammo').textContent=W.ammo;
     $('help').style.opacity=now<(S.helpUntil||0)?1:0;
@@ -897,11 +915,33 @@ function render(){
   audioFrame();
   renderer.render(scene,camera);
 }
+// ---------- people sharing this screen: each one runs in their own window next to this one ----------
+const panes=[];   // {slot, frame, info}
+function paneInfo(){ return {pane:true,slot:SLOT,t:'pane',qr:$('roomQrImg').src,connected:!!phoneConn,name:myName(),id:myId(),ready:!!(S.players[myId()]&&S.players[myId()].ready)}; }
+function tellParent(m){ if(EMBED&&parent!==window) parent.postMessage({pane:true,slot:SLOT,...m},'*'); }
+function canAddLocal(){ return !EMBED&&!S.started&&!!net.code&&panes.length<3&&Object.keys(S.players).length<4; }
+function addLocalPlayer(){ if(!canAddLocal()) return; const slot=panes.length+2, u=new URL('rails.html',location.href); u.search=''; const q=u.searchParams;
+  q.set('embed','1'); q.set('slot',slot); q.set('join',net.code); q.set('name',myName()+' '+slot); q.set('outfit',(myOutfitNow()+slot*2)%OUTFITS.length); if(NetLink.LOCAL) q.set('local',''); if(slot>=3) q.set('q','low');
+  const f=document.createElement('iframe'); f.className='pane'; f.tabIndex=-1; f.setAttribute('allow','autoplay; gamepad'); f.src=u.href; f.style.cssText='left:-4000px;top:0;width:960px;height:540px'; document.body.appendChild(f); panes.push({slot,frame:f,info:null,err:''}); renderLocalCards(); }
+const myOutfitNow=()=>{ const p=S.players[myId()]; return p?(p.outfit|0):0; };
+function renderLocalCards(){ $('addLocal').style.display=EMBED?'none':'block'; $('addLocal').disabled=!canAddLocal();
+  $('localCards').innerHTML=panes.map(p=>{ const i=p.info; return `<div class="ui-card" style="padding:var(--sp-3)"><label class="ui-label">PLAYER ${p.slot} ON THIS SCREEN${i&&i.name?' · '+i.name:''}</label>`+(p.err?`<div class="ui-err">${p.err}</div>`:!i?'<div class="ui-dim">joining…</div>':i.connected?'<div class="ui-good">✓ phone connected</div>':`<div style="display:flex;gap:12px;align-items:center"><img src="${i.qr}" alt="" style="width:92px;height:92px;border-radius:4px;background:#fff;padding:3px"><div class="ui-dim" style="font-size:var(--fs-sm)">Scan with ${i.name||'their'} phone to use it as the controller</div></div>`)+'</div>'; }).join(''); }
+addEventListener('message',e=>{ const d=e.data; if(EMBED||!d||!d.pane) return; const p=panes.find(x=>x.slot===d.slot); if(!p) return; if(d.t==='pane') p.info=d; if(d.t==='paneErr') p.err=d.why||'could not join'; renderLocalCards(); });
+$('addLocal').onclick=addLocalPlayer; $('addLocal').textContent='＋ ADD A PLAYER HERE';
+// 1 person: the whole screen · 2: left | right (vertical split) · 3-4: four windows
+function layoutPanes(){ if(EMBED) return; const n=1+panes.length, W=innerWidth, H=innerHeight, g=3, h2=(W-g)/2, v2=(H-g)/2; let cells;
+  if(!S.started||n===1) cells=[[0,0,W,H]];
+  else if(n===2) cells=[[0,0,h2,H],[h2+g,0,h2,H]];
+  else if(n===3) cells=[[0,0,h2,v2],[h2+g,0,h2,v2],[0,v2+g,W,v2]];
+  else cells=[[0,0,h2,v2],[h2+g,0,h2,v2],[0,v2+g,h2,v2],[h2+g,v2+g,h2,v2]];
+  const c0=cells[0]; stage.style.setProperty('--sx',c0[0]+'px'); stage.style.setProperty('--sy',c0[1]+'px'); stage.style.setProperty('--sw',c0[2]+'px'); stage.style.setProperty('--sh',c0[3]+'px');
+  panes.forEach((p,i)=>{ const c=cells[i+1]; p.frame.style.cssText=S.started&&c?`left:${c[0]}px;top:${c[1]}px;width:${c[2]}px;height:${c[3]}px`:'left:-4000px;top:0;width:960px;height:540px'; }); }
+addEventListener('resize',layoutPanes);
 // ---------- lobby nameplates (name + Ready) above every character, and "+" on the empty pads ----------
 const npEls={}, plusEls=[];
 function updateNameplates(on,list){ const box=$('nameplates');
   if(!on){ if(box.childElementCount){ box.innerHTML=''; for(const k in npEls) delete npEls[k]; plusEls.length=0; } return; }
-  camera.updateMatrixWorld(); const V=THREE.Vector3, proj=(lx,ly,lz)=>{ const v=yardG.localToWorld(new V(lx,ly,lz)).project(camera); return [(v.x+1)/2*innerWidth,(1-v.y)/2*innerHeight]; };
+  camera.updateMatrixWorld(); const V=THREE.Vector3, proj=(lx,ly,lz)=>{ const v=yardG.localToWorld(new V(lx,ly,lz)).project(camera); return [(v.x+1)/2*stage.clientWidth,(1-v.y)/2*stage.clientHeight]; };
   list.forEach((pl,i)=>{ const sl=Math.min(3,i); let el=npEls[pl.id]; if(!el){ el=document.createElement('div'); el.className='ui-nameplate'; box.appendChild(el); npEls[pl.id]=el; }
     const [x,y]=proj(PAD_X[sl],PAD_Y+2.2,PAD_Z); el.style.left=x+'px'; el.style.top=y+'px';
     const h=`<div class="n" style="color:${pl.color}">${+pl.id===0?'👑 ':''}${pl.name}${+pl.id===myId()?' (you)':''}</div><div class="s ${pl.ready?'ready':''}">${+pl.id===0?'Leader · ':''}${pl.ready?'READY':'Not ready'}</div>`; if(el._h!==h){ el.innerHTML=h; el._h=h; } });
@@ -922,5 +962,5 @@ function audioFrame(){ if(!S.started) return; const dt=1/60;
   let ten=0; if(W.mon.on) ten=Math.max(ten,clamp(1-gap/80,.35,1)); if(W.rj.on) ten=Math.max(ten,W.rj.ph==='tremor'?.7:.95); if(W.gn.length) ten=Math.max(ten,.6); if(W.boss.on) ten=1;
   A.update(dt,{tension:ten,quake:W.rj.on&&W.rj.ph==='tremor'?.8:W.rj.on&&W.rj.ph==='up'&&W.rj.t<1.5?.6:0,region:regionAt(S.trainS),boss:W.boss.on}); }
 (function loop(now=performance.now()){ acc+=Math.min(250,now-last); last=now; while(acc>=1000/60){ step(); acc-=1000/60; } render(); requestAnimationFrame(loop); })();
-window.__rails={startBoss,bossDamage,A,S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy,WALK,SEATS,yardG,avatars,vs,takeCrate,earn,PLAN,ISL,camera,PH,get roomCode(){ return net.code; },get target(){ return curTarget; },yardShown,attachCar,storeCar,get REAR(){ return REAR; },train,relayout,inside,collide,groundH,COLL,OBOX,hgt,BLK};
+window.__rails={startBoss,bossDamage,A,S,W,me,net,requestSeat,BREAKS,STATIONS,breakObjs,PARTS,TL,fireMissile,craft,buy,WALK,SEATS,yardG,avatars,panes,layoutPanes,addLocalPlayer,vs,takeCrate,earn,PLAN,ISL,camera,PH,get roomCode(){ return net.code; },get target(){ return curTarget; },yardShown,attachCar,storeCar,get REAR(){ return REAR; },train,relayout,inside,collide,groundH,COLL,OBOX,hgt,BLK};
 </script></body></html>
